@@ -4,7 +4,7 @@
 
 PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` (padrão do Supabase).
 
-> **Status:** Schema ainda não foi criado. Este documento define a estrutura planejada.
+> **Status:** Schema criado e funcional no Supabase (project ref: wyobbztexoofhqdttxzq).
 
 ## Tabelas
 
@@ -105,14 +105,29 @@ produtos ←── movimentacoes
 
 ## Row Level Security (RLS)
 
-Como são apenas 3-4 usuários internos, o RLS será simples:
+Como são apenas 3-4 usuários internos, o RLS é simples:
 - Todos os usuários autenticados têm acesso total (leitura e escrita)
-- Política: `auth.role() = 'authenticated'`
+- Policy: `TO authenticated USING (true) WITH CHECK (true)` em todas as tabelas
 
 ## Supabase Storage
 
-Bucket `produtos` para fotos dos perfumes. Acesso público para leitura (as fotos não são sensíveis).
+Bucket `produtos` para fotos dos perfumes.
+- Leitura pública (SELECT sem restrição)
+- Upload e delete apenas para `authenticated`
 
 ## SQL de criação
 
-> A ser gerado quando o projeto Supabase estiver configurado. Usar o painel SQL do Supabase ou migrations.
+Schema já aplicado no Supabase. Para recriar, use os scripts em duas partes:
+
+**Parte 1 — Tabelas:**
+```sql
+create extension if not exists "uuid-ossp";
+-- (ver LOGS sessão 2 para SQL completo)
+```
+
+**Parte 2 — RLS + Storage:**
+```sql
+alter table <tabela> enable row level security;
+create policy "Acesso total autenticados" on <tabela> for all to authenticated using (true) with check (true);
+-- (ver LOGS sessão 2 para SQL completo)
+```

@@ -10,9 +10,6 @@ export function Home() {
       <div className="w-full max-w-[860px] flex flex-col gap-8">
         <div className="flex flex-col items-center gap-4">
           <Mark size={64} />
-          <h1 className="font-serif font-semibold text-4xl tracking-wide text-center">
-            HORUS<span className="block text-[0.42em] tracking-[.62em] text-gold font-medium mt-1">PARFUM</span>
-          </h1>
           <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold mt-1">
             Painel administrativo · uso interno
           </p>

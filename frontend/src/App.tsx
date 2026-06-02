@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom'
 import { Home } from '@/pages/home/Home'
+import { Login } from '@/pages/auth/Login'
 import { Layout } from '@/components/layout/Layout'
+import { ProtectedRoute } from '@/components/shared/ProtectedRoute'
 import { FinDashboard } from '@/pages/financeiro/Dashboard'
 import { FinTransacoes } from '@/pages/financeiro/Transacoes'
 import { FinContas } from '@/pages/financeiro/Contas'
@@ -16,8 +18,9 @@ import { EstRelatorios } from '@/pages/estoque/Relatorios'
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route element={<Layout />}>
+      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/financeiro" element={<FinDashboard />} />
         <Route path="/financeiro/transacoes" element={<FinTransacoes />} />
         <Route path="/financeiro/contas-pagar" element={<FinContas tipo="pagar" />} />

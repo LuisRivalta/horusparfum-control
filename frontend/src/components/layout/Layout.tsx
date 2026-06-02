@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Mark } from '@/components/shared/Mark'
 import { Icon } from '@/components/shared/Icon'
+import { useAuth } from '@/contexts/AuthContext'
 
 const FIN_NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/financeiro' },
@@ -26,9 +27,14 @@ export function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
+  const { user, signOut } = useAuth()
 
   const isFin = location.pathname.startsWith('/financeiro')
   const nav = isFin ? FIN_NAV : EST_NAV
+
+  const initials = user?.email
+    ? user.email.substring(0, 2).toUpperCase()
+    : '??'
 
   return (
     <div className={cn('flex h-screen', collapsed && 'group/collapsed')}>
@@ -44,11 +50,6 @@ export function Layout() {
           title="Início"
         >
           <Mark size={30} />
-          {!collapsed && (
-            <span className="font-serif font-semibold text-lg tracking-wide">
-              HORUS<span className="block text-[0.42em] tracking-[.34em] text-gold">PARFUM</span>
-            </span>
-          )}
         </button>
 
         <div className="px-3 pt-3 pb-1 font-mono text-[0.62rem] uppercase tracking-[.2em] text-faint">
@@ -111,9 +112,13 @@ export function Layout() {
           <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-line bg-surface-2 text-text-2 hover:text-text cursor-pointer">
             <Icon name="bell" size={18} />
           </button>
-          <span className="w-9 h-9 rounded-full border border-gold-line text-gold flex items-center justify-center text-xs font-semibold">
-            AD
-          </span>
+          <button
+            onClick={signOut}
+            title="Sair"
+            className="w-9 h-9 rounded-full border border-gold-line text-gold flex items-center justify-center text-xs font-semibold cursor-pointer hover:bg-gold-dim transition-colors"
+          >
+            {initials}
+          </button>
         </header>
 
         <div className="flex-1 overflow-auto p-7">
