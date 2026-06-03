@@ -20,6 +20,8 @@ const ICONS: Record<string, React.ReactNode> = {
   filter: <><path d="M4 5h16l-6 7v6l-4 2v-8z" /></>,
   chevron: <><path d="M9 6l6 6-6 6" /></>,
   edit: <><path d="M4 20h4L19 9l-4-4L4 16v4z" /><path d="M14 6l4 4" /></>,
+  trash: <><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /><path d="M10 11v6M14 11v6" /></>,
+  warn: <><path d="M12 3l9 16H3z" /><path d="M12 10v4M12 17h.01" /></>,
 }
 
 interface IconProps {

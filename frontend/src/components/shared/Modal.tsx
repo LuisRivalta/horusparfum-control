@@ -8,9 +8,10 @@ interface ModalProps {
   title: string
   children: React.ReactNode
   className?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl'
 }
 
-export function Modal({ open, onClose, title, children, className }: ModalProps) {
+export function Modal({ open, onClose, title, children, className, size = 'md' }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -18,12 +19,20 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
     else ref.current?.close()
   }, [open])
 
+  const sizeClass = {
+    sm: 'max-w-sm',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+  }[size]
+
   return (
     <dialog
       ref={ref}
       onClose={onClose}
       className={cn(
-        'backdrop:bg-black/60 bg-surface border border-line rounded-xl p-0 w-full max-w-lg shadow-2xl text-text m-auto',
+        'backdrop:bg-black/60 bg-surface border border-line rounded-xl p-0 w-full shadow-2xl text-text m-auto',
+        sizeClass,
         className
       )}
     >

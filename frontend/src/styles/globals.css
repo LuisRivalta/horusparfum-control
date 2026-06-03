@@ -22,9 +22,61 @@
   --font-mono: "JetBrains Mono", monospace;
 }
 
+/* Light theme — activated by `.light` class on <html> */
+:root.light {
+  --color-bg: #F5F1E8;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #EBE5D5;
+  --color-raise: #FFFFFF;
+  --color-line: rgba(26, 20, 7, 0.10);
+  --color-line-2: rgba(26, 20, 7, 0.18);
+  --color-text: #1A1407;
+  --color-text-2: #3F3929;
+  --color-muted: #6B6450;
+  --color-faint: #8B8470;
+  --color-gold: #B08D2E;
+  --color-gold-dim: rgba(176, 141, 46, 0.16);
+  --color-gold-line: rgba(176, 141, 46, 0.36);
+  --color-up: #4A8A57;
+  --color-down: #B05A48;
+  --color-warn: #A88A2E;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+* {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+input, textarea, select {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--color-surface) inset !important;
+  -webkit-text-fill-color: var(--color-text) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Logo: em ambos os modos, o fundo se mistura com a página (sem flicker na transição) */
+.logo-theme-aware {
+  mix-blend-mode: screen;
+  transition: filter 0.3s ease;
+}
+
+:root.light .logo-theme-aware {
+  mix-blend-mode: multiply;
+  filter: invert(1);
 }

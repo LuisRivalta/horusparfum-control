@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Mark } from '@/components/shared/Mark'
 import ColorBends from '@/components/shared/ColorBends'
 import { ModelViewer } from '@/components/shared/ModelViewer'
+import { AnimatedButton } from '@/components/shared/AnimatedButton'
 
 export function Login() {
   const { signIn } = useAuth()
@@ -49,20 +50,20 @@ export function Login() {
         />
       </div>
 
-      <div className="w-full max-w-[900px] grid grid-cols-1 lg:grid-cols-2 border border-line-2 rounded-2xl bg-surface overflow-hidden min-h-[560px] relative z-10">
+      <div className="w-full max-w-[900px] grid grid-cols-1 lg:grid-cols-2 border border-line-2 rounded-2xl overflow-hidden min-h-[560px] relative z-10" style={{ backgroundColor: '#0A0A0A' }}>
         {/* Lado esquerdo — Modelo 3D */}
         <div className="relative hidden lg:flex flex-col items-center justify-center bg-bg/80">
-          <div className="absolute top-4 left-4 z-10">
-            <Mark size={28} />
+          <div className="absolute top-4 left-4 z-10" style={{ mixBlendMode: 'screen' }}>
+            <Mark size={60} />
           </div>
           <div className="w-full h-full">
             <ModelViewer autoRotate autoRotateSpeed={2} />
           </div>
-          <p className="absolute bottom-4 text-xs text-muted">Arraste para girar</p>
+          <p className="absolute bottom-4 text-xs text-muted hidden"></p>
         </div>
 
         {/* Lado direito — Formulário */}
-        <div className="flex flex-col justify-center p-8 lg:p-10 bg-surface-2">
+        <div className="flex flex-col justify-center p-8 lg:p-10 bg-bg">
           {/* Logo mobile */}
           <div className="flex items-center mb-8 lg:hidden">
             <Mark size={32} />
@@ -88,7 +89,8 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 required
-                className="w-full px-4 py-3 rounded-lg border border-line bg-raise text-text text-sm placeholder:text-faint focus:outline-none focus:border-gold/60 transition-colors"
+                className="w-full px-4 py-3 rounded-lg border border-line text-text text-sm placeholder:text-faint focus:outline-none focus:border-gold/60 transition-colors"
+                style={{ backgroundColor: '#131312' }}
               />
             </div>
 
@@ -105,22 +107,20 @@ export function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full px-4 py-3 rounded-lg border border-line bg-raise text-text text-sm placeholder:text-faint focus:outline-none focus:border-gold/60 transition-colors"
+                className="w-full px-4 py-3 rounded-lg border border-line text-text text-sm placeholder:text-faint focus:outline-none focus:border-gold/60 transition-colors"
+                style={{ backgroundColor: '#131312' }}
               />
             </div>
 
-            <button
+            <AnimatedButton
               type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg bg-gold text-[#1A1407] font-semibold text-sm hover:bg-gold/90 transition-colors cursor-pointer disabled:opacity-60 mt-2"
+              loading={loading}
+              loadingText="Entrando..."
             >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
+              Entrar
+            </AnimatedButton>
           </form>
 
-          <p className="text-xs text-muted text-center mt-8">
-            Acesso restrito à equipe Horus Parfum
-          </p>
         </div>
       </div>
     </div>

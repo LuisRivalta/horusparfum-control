@@ -3,7 +3,9 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Mark } from '@/components/shared/Mark'
 import { Icon } from '@/components/shared/Icon'
+import { DayNightSwitch } from '@/components/shared/DayNightSwitch'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/contexts/ThemeContext'
 
 const FIN_NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/financeiro' },
@@ -28,6 +30,7 @@ export function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
+  const { theme, toggleTheme } = useTheme()
 
   const isFin = location.pathname.startsWith('/financeiro')
   const nav = isFin ? FIN_NAV : EST_NAV
@@ -46,10 +49,10 @@ export function Layout() {
       >
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-3 px-3 py-4 border-b border-line cursor-pointer"
+          className="flex items-center justify-center px-3 py-4 border-b border-line cursor-pointer"
           title="Início"
         >
-          <Mark size={30} />
+          <Mark size={75} />
         </button>
 
         <div className="px-3 pt-3 pb-1 font-mono text-[0.62rem] uppercase tracking-[.2em] text-faint">
@@ -109,6 +112,7 @@ export function Layout() {
             </button>
           </div>
           <div className="flex-1" />
+          <DayNightSwitch checked={theme === 'dark'} onChange={() => toggleTheme()} />
           <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-line bg-surface-2 text-text-2 hover:text-text cursor-pointer">
             <Icon name="bell" size={18} />
           </button>

@@ -1,0 +1,90 @@
+.animated-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  height: 52px;
+  padding: 0 36px;
+  border: none;
+  background: #C9A84C;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1A1407;
+  border-radius: 100px;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px #C9A84C;
+  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.animated-button .arr-1,
+.animated-button .arr-2 {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  fill: #1A1407;
+  z-index: 3;
+  transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.animated-button .arr-1 {
+  right: 24px;
+}
+
+.animated-button .arr-2 {
+  left: -30%;
+}
+
+.animated-button .text {
+  position: relative;
+  z-index: 2;
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.animated-button .circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  background-color: #B89742;
+  border-radius: 50%;
+  opacity: 0;
+  transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  z-index: 1;
+}
+
+.animated-button:hover:not(:disabled) {
+  color: #1A1407;
+  border-radius: 14px;
+  box-shadow: 0 0 0 2px #C9A84C;
+}
+
+.animated-button:hover:not(:disabled) .arr-1 {
+  right: -30%;
+}
+
+.animated-button:hover:not(:disabled) .arr-2 {
+  left: 24px;
+}
+
+.animated-button:hover:not(:disabled) .text {
+  transform: translateX(14px);
+}
+
+.animated-button:hover:not(:disabled) .circle {
+  width: 500px;
+  height: 500px;
+  opacity: 1;
+}
+
+.animated-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.animated-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
