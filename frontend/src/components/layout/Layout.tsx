@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Mark } from '@/components/shared/Mark'
 import { Icon } from '@/components/shared/Icon'
 import { DayNightSwitch } from '@/components/shared/DayNightSwitch'
+import { UserMenu } from '@/components/shared/UserMenu'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -116,13 +117,7 @@ export function Layout() {
           <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-line bg-surface-2 text-text-2 hover:text-text cursor-pointer">
             <Icon name="bell" size={18} />
           </button>
-          <button
-            onClick={signOut}
-            title="Sair"
-            className="w-9 h-9 rounded-full border border-gold-line text-gold flex items-center justify-center text-xs font-semibold cursor-pointer hover:bg-gold-dim transition-colors"
-          >
-            {initials}
-          </button>
+          <UserMenu initials={initials} userEmail={user?.email} onSignOut={signOut} />
         </header>
 
         <div className="flex-1 overflow-auto p-7">
