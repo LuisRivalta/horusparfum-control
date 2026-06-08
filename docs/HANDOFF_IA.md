@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-02 (Sessão 2)
+> Última atualização: 2026-06-03 (Sessão 3)
 
 ## O que já foi feito
 
@@ -10,9 +10,9 @@
    - Layout shell (Sidebar, Header, toggle Financeiro/Estoque)
    - Página Home com cards de navegação (rota autônoma, sem sidebar)
    - 11 páginas completas com CRUDs (financeiro + estoque)
-   - Componentes: Icon, Mark (logo SVG), Modal, FormControls, Button, Input, Select
+   - Componentes: Icon, Mark (logo SVG), Modal, FormControls, AnimatedButton, DayNightSwitch, UserMenu, ImageCropper, ProductDetailsModal
    - Componentes visuais: ColorBends (shader animado), ModelViewer (Three.js 3D)
-   - Libs: supabase client, utils (cn, formatBRL)
+   - Libs: supabase client, utils (cn, formatBRL), react-easy-crop
 3. **Scaffold backend** — FastAPI (Python)
    - Estrutura: routers, models, services, auth, db
    - CORS configurado para frontend
@@ -27,18 +27,31 @@
 5. **Autenticação implementada**
    - AuthContext com sessão Supabase (signIn, signOut, onAuthStateChange)
    - ProtectedRoute (redireciona para /login se não autenticado)
-   - Tela de login: modelo 3D à esquerda, formulário à direita, fundo ColorBends animado
-   - Avatar no header mostra iniciais do email, clique faz logout
+   - Tela de login: modelo 3D à esquerda, formulário à direita, fundo ColorBends animado, botão Entrar com hover animado
+   - UserMenu dropdown (clique no avatar mostra email e logout)
 6. **CRUDs completos no frontend** (conectados ao Supabase)
-   - Produtos (com upload de foto para Storage)
+   - Produtos: criar/editar/excluir, upload de foto com cropper, grid de cards com busca e filtros, modal de detalhes
    - Movimentações (atualiza estoque automaticamente)
    - Transações financeiras
    - Contas a pagar/receber
    - Categorias
    - Fornecedores
    - Metas financeiras
-7. **Documentação** — docs/ com PRD, Arquitetura, Banco, este Handoff, Logs
-8. **Git + GitHub** — repo em https://github.com/LuisRivalta/horusparfum-control
+7. **Tema dark + light**
+   - ThemeContext com persistência em localStorage
+   - Cores claras via `:root.light` em globals.css
+   - DayNightSwitch no header (sol/lua)
+   - Transições suaves em todas as cores
+   - Logo adapta automaticamente via `mix-blend-mode`
+8. **UI/UX**
+   - Holographic hover effect nos cards de produtos
+   - Botões animados (entrar, salvar)
+   - Busca em tempo real e filtros por categoria/fornecedor/situação na tela de produtos
+9. **Testes (TDD)** — Vitest + Testing Library
+   - 6 testes passando para a página de Login
+   - Documentação em `docs/TESTING.md`
+10. **Documentação** — docs/ com PRD, Arquitetura, Banco, este Handoff, Logs, Testing
+11. **Git + GitHub** — repo em https://github.com/LuisRivalta/horusparfum-control
 
 ## Estado atual
 
@@ -46,24 +59,24 @@
 - Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000
 - Banco de dados configurado no Supabase com todas as tabelas
 - Autenticação funcional (login/logout via Supabase Auth)
-- CRUDs funcionais para todas as entidades (requerem usuário autenticado)
-- Logo SVG precisa ser ajustada (imagem do cliente não ficou perfeita)
+- CRUDs funcionais para todas as entidades (criar, editar, excluir)
+- Dark/light theme funcional
+- 6 testes automatizados passando
 
 ## Próximos passos imediatos
 
-1. Ajustar logo (obter PNG/SVG limpo do cliente)
-2. Remover policies temporárias de `anon` (se foram criadas para testes)
-3. Copiar JWT Secret do Supabase para o `.env` do backend
-4. Dashboard financeiro com dados reais (saldos, gráficos a partir das transações)
-5. Dashboard estoque com dados reais (alertas de estoque baixo)
-6. Implementar edição/exclusão nos CRUDs (hoje só tem criação)
-7. Relatórios (PDF ou tela)
+1. Remover policies temporárias de `anon` (se foram criadas para testes)
+2. Copiar JWT Secret do Supabase para o `.env` do backend
+3. Dashboard financeiro com dados reais (saldos, gráficos a partir das transações)
+4. Dashboard estoque com dados reais (alertas de estoque baixo)
+5. Relatórios (PDF ou tela)
+6. Importação em massa de produtos (botão "Importar" na topbar)
+7. Testes para outras páginas (Estoque, Financeiro, Theme)
 8. Deploy (Vercel + Railway)
 
 ## Decisões pendentes
 
 - Definir se relatórios PDF serão gerados no backend (reportlab/weasyprint) ou no frontend (jspdf)
-- Formato final da logo (SVG clean ou PNG com transparência)
 
 ## Para a IA
 

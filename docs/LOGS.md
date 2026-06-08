@@ -1,5 +1,47 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-03 — Sessão 3: Tema dark/light, UI polish e testes
+
+**Responsável:** Luis + Claude
+
+### O que foi feito
+
+- **Sistema de tema dark/light** completo:
+  - `ThemeContext` com persistência em localStorage
+  - Variáveis CSS no `@theme` + overrides em `:root.light`
+  - `DayNightSwitch` (sol/lua) no header alterna entre modos
+  - Logo adapta automaticamente via `mix-blend-mode` (sem flicker)
+- **UI/UX**:
+  - `AnimatedButton` (botão com efeito shine/glow no hover) — usado em Login e Salvar
+  - `UserMenu` dropdown no avatar (clique abre menu com email e logout)
+  - Efeito holographic nos cards de produtos (shine dourado)
+  - Filtros funcionais na tela de produtos (busca, categoria, fornecedor, situação)
+  - `ProductDetailsModal` com foto maior, edição e exclusão
+  - `ImageCropper` ao adicionar foto (drag, zoom, crop)
+  - Ctrl+V para colar imagem no upload
+  - Logo "PRINCIPAL.svg" como favicon (fundo transparente via `mix-blend-mode`)
+- **Proteção de formulário**: double-submit prevented com `submitting` state
+- **Cores ajustadas**: bg `#1A1A19`, surface `#1F1F1D` (levemente mais claros)
+- **Testes (TDD)**:
+  - Setup completo: Vitest + Testing Library + jsdom
+  - 6 testes passando para Login
+  - Documentação em `docs/TESTING.md`
+- **Documentação**: HANDOFF_IA, ARQUITETURA e LOGS atualizados
+
+### Decisões tomadas
+
+- Light mode: paleta off-white com tom dourado (`#F5F1E8`) e dourado mais escuro (`#B08D2E`) para contraste
+- Cores da sidebar/inputs levemente mais claras (`#1F1F1D`) para reduzir contraste excessivo
+- Mix-blend-mode para logo (screen no dark, multiply no light) ao invés de filter: invert
+
+### Próximo
+- Dashboard financeiro com gráficos
+- Edição e exclusão nos outros CRUDs
+- Relatórios
+- Deploy
+
+---
+
 ## 2026-06-02 — Sessão 2: Supabase + Auth + CRUDs + UI
 
 **Responsável:** Claude + Luis
