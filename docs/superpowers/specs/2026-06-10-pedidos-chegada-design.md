@@ -32,6 +32,7 @@ na tela de Produtos.
 | Coluna | Tipo | Descrição |
 |---|---|---|
 | id | uuid PK | — |
+| numero | serial (unique) | número legível do pedido (ex: #42) — usado na UI e no ledger |
 | fornecedor_id | uuid FK → fornecedores | obrigatório (1 pedido = 1 fornecedor) |
 | status | text | `aguardando` \| `recebido` \| `cancelado` |
 | previsao_chegada | date | opcional |
