@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-03 (Sessão 3)
+> Última atualização: 2026-06-10 (Sessão 4)
 
 ## O que já foi feito
 
@@ -52,6 +52,16 @@
    - Documentação em `docs/TESTING.md`
 10. **Documentação** — docs/ com PRD, Arquitetura, Banco, este Handoff, Logs, Testing
 11. **Git + GitHub** — repo em https://github.com/LuisRivalta/horusparfum-control
+12. **Repaginada premium de design (Sessão 4)**
+    - Design system global em `globals.css`: grão sutil em toda a UI, scrollbar customizada, seleção dourada, h1 serifado global, tabelas premium (thead mono + hover dourado), keyframes (rise, scale-in, sheen)
+    - Classes utilitárias: `.glow-card` (spotlight segue o mouse), `.gold-hairline`, `.sheen-hover`, `.ornament-divider`, `.stagger`, `.page-enter`
+    - Layout: header sticky com glass blur, toggle Financeiro/Estoque com indicador deslizante animado, sidebar com rail dourado gradiente, drawer mobile com hamburger (responsivo lg:)
+    - Home: fundo ColorBends (Three.js) sutil, entrada escalonada, cards com spotlight + cantos ornamentais
+    - FormControls: botão primary com gradiente dourado + sheen no hover, inputs/selects com glow de foco e chevron customizado
+    - Modal: animação de entrada, backdrop blur, título serifado
+    - Dashboard financeiro: stat cards premium responsivos
+    - Login: título serifado, ornamento, inputs com glow, animação do card
+    - Fix: `vite.config.ts` migrado para `vitest/config` (build estava quebrado)
 
 ## Estado atual
 

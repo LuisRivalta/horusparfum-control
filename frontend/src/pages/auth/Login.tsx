@@ -50,10 +50,10 @@ export function Login() {
         />
       </div>
 
-      <div className="w-full max-w-[900px] grid grid-cols-1 lg:grid-cols-2 border border-line-2 rounded-2xl overflow-hidden min-h-[560px] relative z-10" style={{ backgroundColor: '#0A0A0A' }}>
+      <div className="w-full max-w-[900px] grid grid-cols-1 lg:grid-cols-2 border border-line-2 rounded-2xl overflow-hidden min-h-[560px] relative z-10 shadow-[0_40px_120px_-30px_rgba(0,0,0,0.8)] animate-[scale-in_0.6s_cubic-bezier(0.22,1,0.36,1)_both]" style={{ backgroundColor: '#0A0A0A' }}>
         {/* Lado esquerdo — Modelo 3D */}
         <div className="relative hidden lg:flex flex-col items-center justify-center bg-bg/80">
-          <div className="absolute top-4 left-4 z-10" style={{ mixBlendMode: 'screen' }}>
+          <div className="absolute top-4 left-4 z-10">
             <Mark size={60} />
           </div>
           <div className="w-full h-full">
@@ -69,10 +69,14 @@ export function Login() {
             <Mark size={32} />
           </div>
 
-          <h1 className="text-2xl font-semibold">Entrar na sua conta</h1>
-          <p className="text-sm text-muted mt-1 mb-8">
+          <h1 className="text-3xl font-semibold tracking-wide">Entrar na sua conta</h1>
+          <p className="text-sm text-muted mt-1.5 mb-6">
             Insira suas credenciais para acessar o painel
           </p>
+
+          <div className="ornament-divider mb-6">
+            <i className="w-1.5 h-1.5 border border-gold rotate-45 shrink-0" />
+          </div>
 
           {error && (
             <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm mb-4">
@@ -82,21 +86,21 @@ export function Login() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text-2">Email</label>
+              <label className="text-xs font-medium uppercase tracking-[.08em] text-text-2">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 required
-                className="w-full px-4 py-3 rounded-lg border border-line text-text text-sm placeholder:text-faint focus:outline-none focus:border-gold/60 transition-colors"
+                className="w-full px-4 py-3 rounded-lg border border-line text-text text-sm placeholder:text-faint focus:outline-none focus:border-gold/60 focus:shadow-[0_0_0_3px_rgba(201,168,76,0.12)] hover:border-line-2 transition-all duration-200"
                 style={{ backgroundColor: '#131312' }}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-text-2">Senha</label>
+                <label className="text-xs font-medium uppercase tracking-[.08em] text-text-2">Senha</label>
                 <button type="button" className="text-xs text-gold hover:underline cursor-pointer">
                   Esqueceu a senha?
                 </button>
@@ -107,7 +111,7 @@ export function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full px-4 py-3 rounded-lg border border-line text-text text-sm placeholder:text-faint focus:outline-none focus:border-gold/60 transition-colors"
+                className="w-full px-4 py-3 rounded-lg border border-line text-text text-sm placeholder:text-faint focus:outline-none focus:border-gold/60 focus:shadow-[0_0_0_3px_rgba(201,168,76,0.12)] hover:border-line-2 transition-all duration-200"
                 style={{ backgroundColor: '#131312' }}
               />
             </div>

@@ -1,5 +1,36 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-10 — Sessão 4: Repaginada premium de design
+
+**Responsável:** Luis + Claude
+
+### O que foi feito
+
+- **Design system global** (`globals.css`):
+  - Grão (noise) sutil sobre toda a interface, scrollbar customizada, `::selection` dourada
+  - `h1` serifado global (Cormorant Garamond), tabelas premium globais (thead mono uppercase + hover dourado nas linhas)
+  - Keyframes: `rise`, `fade-in`, `scale-in`, `sheen`, `draw-line` + suporte a `prefers-reduced-motion`
+  - Utilitários: `.glow-card` (spotlight que segue o mouse), `.gold-hairline`, `.sheen-hover`, `.ornament-divider`, `.stagger`, `.page-enter`, `.gold-gradient-text`
+  - Novo token `--color-gold-bright` (dark e light)
+- **Layout**: header sticky com glass blur, toggle Financeiro/Estoque com indicador deslizante, sidebar com rail dourado em gradiente + ícones com glow no hover, **drawer mobile** com hamburger e backdrop, transição de página por rota
+- **Home**: fundo ColorBends (Three.js) sutil + véu, entrada escalonada, cards com spotlight, cantos ornamentais e seta animada
+- **FormControls**: botão primary com gradiente dourado + varredura de brilho + press feedback; inputs/selects com glow de foco e chevron SVG customizado
+- **Modal**: animação scale-in, backdrop blur, título serifado, botão fechar com rotação
+- **Dashboard financeiro**: stat cards premium com ícones, responsivos (1/2/4 colunas)
+- **Login**: título serifado maior, ornamento, inputs com glow, sombra e animação no card
+- **Fontes**: Cormorant Garamond ampliado (400–700 + itálicos)
+- **Fix**: `vite.config.ts` migrado para `vitest/config` (o `tsc -b` do build falhava na propriedade `test`)
+
+### Validação
+- `npm run build` ✓ · `npm run test:run` 6/6 ✓ · screenshot do login no preview ✓
+
+### Próximo
+- Dashboard financeiro/estoque com dados reais
+- Relatórios + PDF
+- Deploy
+
+---
+
 ## 2026-06-03 — Sessão 3: Tema dark/light, UI polish e testes
 
 **Responsável:** Luis + Claude
