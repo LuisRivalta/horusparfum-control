@@ -129,7 +129,7 @@ begin
     update pedido_itens set qtd_recebida = v_qtd where id = v_item.id;
 
     -- divergência (se houver)
-    if v_div_tipo is not null then
+    if v_div_tipo is not null and v_qtd <> v_item.qtd_pedida then
       insert into divergencias
         (pedido_id, pedido_item_id, fornecedor_id, tipo,
          qtd_pedida, qtd_recebida, observacao)
@@ -203,7 +203,7 @@ begin
     raise exception 'Produto não encontrado';
   end if;
   if coalesce(v_produto.estoque_atual, 0) < p_qtd then
-    raise exception 'Estoque insuficiente: % unidades disponíveis', v_produto.estoque_atual;
+    raise exception 'Estoque insuficiente: % unidades disponíveis', coalesce(v_produto.estoque_atual, 0);
   end if;
 
   v_novo_estoque := coalesce(v_produto.estoque_atual, 0) - p_qtd;

@@ -27,6 +27,7 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
   const { user } = useAuth()
   const [fornecedores, setFornecedores] = useState<Opcao[]>([])
   const [produtos, setProdutos] = useState<Opcao[]>([])
+  const [categorias, setCategorias] = useState<Opcao[]>([])
   const [fornecedorId, setFornecedorId] = useState('')
   const [previsao, setPrevisao] = useState('')
   const [itens, setItens] = useState<ItemForm[]>([{ ...ITEM_VAZIO }])
@@ -37,15 +38,18 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickNome, setQuickNome] = useState('')
   const [quickVolume, setQuickVolume] = useState('')
+  const [quickCategoria, setQuickCategoria] = useState('')
 
   useEffect(() => {
     if (!open) return
     Promise.all([
       supabase.from('fornecedores').select('id, nome').order('nome'),
       supabase.from('produtos').select('id, nome').order('nome'),
-    ]).then(([f, p]) => {
+      supabase.from('categorias').select('id, nome').order('nome'),
+    ]).then(([f, p, c]) => {
       setFornecedores(f.data || [])
       setProdutos(p.data || [])
+      setCategorias(c.data || [])
     })
   }, [open])
 
@@ -68,6 +72,7 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
       .insert({
         nome: quickNome.trim(),
         volume_ml: quickVolume ? Number(quickVolume) : null,
+        categoria_id: quickCategoria || null,
         estoque_atual: 0,
         estoque_minimo: 0,
       })
@@ -82,6 +87,7 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
       setProdutos(prev => [...prev, { id: data.id, nome: quickNome.trim() }])
       setQuickNome('')
       setQuickVolume('')
+      setQuickCategoria('')
       setQuickOpen(false)
     }
   }
@@ -173,6 +179,7 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
             <div className="flex items-end gap-2 p-3 border border-dashed border-gold-line rounded-lg">
               <Input label="Nome do produto" value={quickNome} onChange={(e) => setQuickNome(e.target.value)} />
               <Input label="Volume (ml)" type="number" value={quickVolume} onChange={(e) => setQuickVolume(e.target.value)} />
+              <Select label="Categoria" options={categorias.map(c => ({ value: c.id, label: c.nome }))} value={quickCategoria} onChange={(e) => setQuickCategoria(e.target.value)} />
               <Button type="button" size="sm" onClick={cadastrarProdutoRapido}>Cadastrar</Button>
             </div>
           )}

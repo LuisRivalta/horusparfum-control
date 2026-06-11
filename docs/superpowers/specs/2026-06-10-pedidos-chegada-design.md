@@ -113,7 +113,7 @@ Grava saída no ledger e baixa o estoque. Bloqueia estoque negativo.
 - **Status:** `aguardando → recebido` (confirmação) | `aguardando → cancelado`. Pedido `recebido` é imutável (correções = entrada/saída avulsa). `cancelado` nunca mexe em estoque.
 - **Validações:** fornecedor e ≥ 1 item obrigatórios; qtd ≥ 1 e preço ≥ 0 por item; produto não repete no mesmo pedido; qtd recebida ≥ 0; qtd recebida ≠ pedida exige tipo de divergência.
 - **Custo médio:** `novo = (estoque_atual × custo_medio + qtd_recebida × preco_unitario) ÷ (estoque_atual + qtd_recebida)`. Se `custo_medio` é null (primeiro custo), assume o preço do pedido. Saídas não alteram custo médio.
-- **Atomicidade:** confirmação roda em função RPC Postgres `confirmar_recebimento(pedido_id, itens[], divergencias[])` — transação tudo-ou-nada; valida `status = 'aguardando'` com lock (proteção contra dupla confirmação). Em falha, pedido permanece `aguardando` e a operação é re-tentável sem duplicar entrada.
+- **Atomicidade:** confirmação roda em função RPC Postgres `confirmar_recebimento(p_pedido_id uuid, p_itens jsonb, p_recebido_por text)` — com divergências embutidas por item em p_itens (tipo + observação) — transação tudo-ou-nada; valida `status = 'aguardando'` com lock (proteção contra dupla confirmação). Em falha, pedido permanece `aguardando` e a operação é re-tentável sem duplicar entrada.
 - **Saída rápida:** valida estoque suficiente antes de gravar (também pode ser RPC simples para atomicidade ledger+estoque).
 
 ## Testes

@@ -29,6 +29,7 @@ interface ProductDetailsModalProps {
   onClose: () => void
   onUpdated: () => void
   onDeleted: () => void
+  onRegistrarSaida?: (produtoId: string) => void
 }
 
 export function ProductDetailsModal({
@@ -39,6 +40,7 @@ export function ProductDetailsModal({
   onClose,
   onUpdated,
   onDeleted,
+  onRegistrarSaida,
 }: ProductDetailsModalProps) {
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -176,10 +178,18 @@ export function ProductDetailsModal({
               <Icon name="trash" size={14} />
               Excluir
             </Button>
-            <Button onClick={startEdit}>
-              <Icon name="edit" size={14} />
-              Editar
-            </Button>
+            <div className="flex gap-2">
+              {onRegistrarSaida && produto && (
+                <Button variant="secondary" size="sm" onClick={() => onRegistrarSaida(produto.id)}>
+                  <Icon name="down" size={14} />
+                  Registrar saída
+                </Button>
+              )}
+              <Button onClick={startEdit}>
+                <Icon name="edit" size={14} />
+                Editar
+              </Button>
+            </div>
           </div>
         </div>
       )}

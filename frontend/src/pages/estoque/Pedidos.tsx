@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Icon } from '@/components/shared/Icon'
 import { Button } from '@/components/shared/FormControls'
+import { Modal } from '@/components/shared/Modal'
 import { formatBRL } from '@/lib/utils'
 import type { PedidoStatus } from '@/lib/pedidos'
 import { NovoPedidoModal } from './pedidos/NovoPedidoModal'
@@ -30,6 +31,8 @@ export function EstPedidos() {
   const [loading, setLoading] = useState(true)
   const [novoOpen, setNovoOpen] = useState(false)
   const [conferindo, setConferindo] = useState<PedidoRow | null>(null)
+  const [cancelando, setCancelando] = useState<PedidoRow | null>(null)
+  const [cancelSubmitting, setCancelSubmitting] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -103,9 +106,14 @@ export function EstPedidos() {
                   <td className="px-4 py-3 text-text-2">{p.responsavel || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     {p.status === 'aguardando' && (
-                      <Button size="sm" onClick={() => setConferindo(p)}>
-                        Confirmar chegada
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" onClick={() => setConferindo(p)}>
+                          Confirmar chegada
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setCancelando(p)}>
+                          Cancelar
+                        </Button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -121,6 +129,36 @@ export function EstPedidos() {
         onClose={() => setConferindo(null)}
         onConfirmed={fetchData}
       />
+
+      <Modal open={!!cancelando} onClose={() => setCancelando(null)} title="Cancelar pedido" size="sm">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-text-2">
+            Cancelar o pedido <span className="font-mono">#{cancelando?.numero}</span>? Pedido cancelado não movimenta estoque e não pode ser reaberto.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setCancelando(null)}>Voltar</Button>
+            <Button
+              variant="danger"
+              disabled={cancelSubmitting}
+              onClick={async () => {
+                if (!cancelando || cancelSubmitting) return
+                setCancelSubmitting(true)
+                const { error } = await supabase
+                  .from('pedidos')
+                  .update({ status: 'cancelado' })
+                  .eq('id', cancelando.id)
+                  .eq('status', 'aguardando')
+                setCancelSubmitting(false)
+                if (error) console.error('Erro ao cancelar pedido:', error)
+                setCancelando(null)
+                fetchData()
+              }}
+            >
+              {cancelSubmitting ? 'Cancelando...' : 'Cancelar pedido'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { EstPedidos, type PedidoRow } from '../Pedidos'
@@ -43,6 +43,9 @@ vi.mock('@/lib/supabase', () => ({
           error: null,
         })),
       })),
+      update: vi.fn(() => ({
+        eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+      })),
     })),
     rpc: vi.fn(() => Promise.resolve({ data: null, error: null })),
   },
@@ -67,6 +70,40 @@ describe('EstPedidos (lista)', () => {
     render(<MemoryRouter><EstPedidos /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /novo pedido/i })).toBeInTheDocument()
+    })
+  })
+
+  it('exibe modal de confirmação ao clicar em Cancelar e chama update ao confirmar', async () => {
+    const { supabase } = await import('@/lib/supabase')
+    const updateSpy = vi.fn(() => ({
+      eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+    }))
+    ;(supabase.from as ReturnType<typeof vi.fn>).mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        order: vi.fn(() => Promise.resolve({
+          data: table === 'pedidos' ? mockPedidos : [],
+          error: null,
+        })),
+      })),
+      update: updateSpy,
+    }))
+
+    render(<MemoryRouter><EstPedidos /></MemoryRouter>)
+    await waitFor(() => expect(screen.getByText('Essências Cairo')).toBeInTheDocument())
+
+    // clicar no botão Cancelar da linha aguardando
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar$/i }))
+
+    // modal de confirmação deve aparecer
+    await waitFor(() => {
+      expect(screen.getByText(/cancelar o pedido/i)).toBeInTheDocument()
+    })
+
+    // confirmar cancelamento
+    fireEvent.click(screen.getByText('Cancelar pedido', { selector: 'button' }))
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith({ status: 'cancelado' })
     })
   })
 })

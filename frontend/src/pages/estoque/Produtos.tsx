@@ -51,6 +51,7 @@ export function EstProdutos() {
   const [submitting, setSubmitting] = useState(false)
   const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null)
   const [saidaOpen, setSaidaOpen] = useState(false)
+  const [saidaProdutoId, setSaidaProdutoId] = useState<string | undefined>(undefined)
 
   const produtosFiltrados = produtos.filter((p) => {
     if (search && !p.nome.toLowerCase().includes(search.toLowerCase())) return false
@@ -201,7 +202,7 @@ export function EstProdutos() {
               Limpar filtros
             </button>
           )}
-          <Button variant="secondary" onClick={() => setSaidaOpen(true)}>
+          <Button variant="secondary" onClick={() => { setSaidaProdutoId(undefined); setSaidaOpen(true) }}>
             <Icon name="down" size={16} />
             Registrar saída
           </Button>
@@ -371,9 +372,10 @@ export function EstProdutos() {
         onClose={() => setSelectedProduto(null)}
         onUpdated={fetchData}
         onDeleted={fetchData}
+        onRegistrarSaida={(id) => { setSelectedProduto(null); setSaidaProdutoId(id); setSaidaOpen(true) }}
       />
 
-      <SaidaRapidaModal open={saidaOpen} onClose={() => setSaidaOpen(false)} onDone={fetchData} />
+      <SaidaRapidaModal open={saidaOpen} produtoId={saidaProdutoId} onClose={() => { setSaidaOpen(false); setSaidaProdutoId(undefined) }} onDone={fetchData} />
     </div>
   )
 }
