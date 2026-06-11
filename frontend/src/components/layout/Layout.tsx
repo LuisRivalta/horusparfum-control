@@ -19,7 +19,7 @@ const FIN_NAV = [
 
 const EST_NAV = [
   { id: 'produtos', label: 'Produtos', icon: 'box', path: '/estoque' },
-  { id: 'movimentacoes', label: 'Movimentações', icon: 'swap', path: '/estoque/movimentacoes' },
+  { id: 'pedidos', label: 'Pedidos', icon: 'swap', path: '/estoque/pedidos' },
   { id: 'categorias', label: 'Categorias', icon: 'grid', path: '/estoque/categorias' },
   { id: 'fornecedores', label: 'Fornecedores', icon: 'supplier', path: '/estoque/fornecedores' },
   { id: 'alertas', label: 'Alertas', icon: 'alert', path: '/estoque/alertas' },
