@@ -1,3 +1,5 @@
+import Decimal from 'decimal.js'
+
 export type PedidoStatus = 'aguardando' | 'recebido' | 'cancelado'
 export type DivergenciaTipo = 'faltou' | 'veio_a_mais' | 'avariado' | 'produto_errado'
 
@@ -24,8 +26,10 @@ export function calcularCustoMedio(
   precoUnitario: number
 ): number {
   if (custoMedio === null || estoqueAtual <= 0) return precoUnitario
-  const total = estoqueAtual * custoMedio + qtdRecebida * precoUnitario
-  return Math.round((total / (estoqueAtual + qtdRecebida)) * 100) / 100
+  const total = new Decimal(estoqueAtual).mul(custoMedio).add(new Decimal(qtdRecebida).mul(precoUnitario))
+  // Decimal.js para aritmética exata: casa com o ROUND(numeric,2) do
+  // Postgres em casos .xx5 (ex: média exata 10.005), onde o float fica abaixo
+  return total.div(new Decimal(estoqueAtual).add(qtdRecebida)).toDecimalPlaces(2).toNumber()
 }
 
 export function calcularTotalPedido(itens: { qtd: number; preco: number }[]): number {

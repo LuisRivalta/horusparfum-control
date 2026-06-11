@@ -25,6 +25,11 @@ describe('calcularCustoMedio', () => {
     expect(calcularCustoMedio(3, 10, 3, 11)).toBe(10.5)
     expect(calcularCustoMedio(1, 100, 2, 101)).toBe(100.67)
   })
+
+  it('casa com o ROUND do Postgres em casos .xx5 (regressão float)', () => {
+    // (1×10.00 + 1×10.01) / 2 = 10.005 → 10.01 no Postgres
+    expect(calcularCustoMedio(1, 10, 1, 10.01)).toBe(10.01)
+  })
 })
 
 describe('calcularTotalPedido', () => {
