@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
-import { EstPedidos } from '../Pedidos'
+import { EstPedidos, type PedidoRow } from '../Pedidos'
 
 // Mock encadeável do supabase: from().select().order() → resolve com dados
-const mockPedidos = [
+const mockPedidos: PedidoRow[] = [
   {
     id: 'p1', numero: 1, status: 'aguardando', valor_total: 890,
     previsao_chegada: '2026-06-11', responsavel: 'Luis',
@@ -50,7 +50,7 @@ describe('EstPedidos (lista)', () => {
     expect(screen.getByText('Recebido')).toBeInTheDocument()
   })
 
-  it('tem o botão "Novo pedido"', async () => {
+  it('renderiza o botão "Novo pedido"', async () => {
     render(<MemoryRouter><EstPedidos /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /novo pedido/i })).toBeInTheDocument()

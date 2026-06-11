@@ -31,10 +31,11 @@ export function EstPedidos() {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('pedidos')
       .select('*, fornecedores(nome), pedido_itens(id)')
       .order('created_at', { ascending: false })
+    if (error) console.error('Erro ao carregar pedidos:', error)
     setPedidos(data || [])
     setLoading(false)
   }, [])
@@ -88,9 +89,14 @@ export function EstPedidos() {
                   <td className="px-4 py-3 text-right font-mono">{formatBRL(p.valor_total)}</td>
                   <td className="px-4 py-3 text-text-2 text-xs">{formatDate(p.previsao_chegada)}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${STATUS_BADGE[p.status].cls}`}>
-                      {STATUS_BADGE[p.status].label}
-                    </span>
+                    {(() => {
+                      const badge = STATUS_BADGE[p.status] ?? { label: p.status, cls: 'bg-line text-muted' }
+                      return (
+                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-text-2">{p.responsavel || '—'}</td>
                   <td className="px-4 py-3 text-right">
