@@ -29,6 +29,7 @@ export function Modal({ open, onClose, title, children, className, size = 'md' }
   return (
     <dialog
       ref={ref}
+      open={open || undefined}
       onClose={onClose}
       className={cn(
         'gold-hairline bg-surface border border-line-2 rounded-2xl p-0 w-full text-text m-auto',

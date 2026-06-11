@@ -3,6 +3,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { EstPedidos, type PedidoRow } from '../Pedidos'
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { email: 'teste@horus.com' }, signOut: vi.fn() }),
+}))
+
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn()
+  HTMLDialogElement.prototype.close = vi.fn()
+})
+
 // Mock encadeável do supabase: from().select().order() → resolve com dados
 const mockPedidos: PedidoRow[] = [
   {

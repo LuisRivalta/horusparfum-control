@@ -4,6 +4,7 @@ import { Icon } from '@/components/shared/Icon'
 import { Button } from '@/components/shared/FormControls'
 import { formatBRL } from '@/lib/utils'
 import type { PedidoStatus } from '@/lib/pedidos'
+import { NovoPedidoModal } from './pedidos/NovoPedidoModal'
 
 export interface PedidoRow {
   id: string
@@ -113,10 +114,8 @@ export function EstPedidos() {
         </table>
       </div>
 
-      {/* Modais entram nas Tasks 4 e 5: */}
-      {/* <NovoPedidoModal open={novoOpen} onClose={...} onCreated={fetchData} /> */}
+      <NovoPedidoModal open={novoOpen} onClose={() => setNovoOpen(false)} onCreated={fetchData} />
       {/* <ConferenciaModal pedido={conferindo} onClose={...} onConfirmed={fetchData} /> */}
-      {novoOpen && null}
       {conferindo && null}
     </div>
   )

@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { cn } from '@/lib/utils'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -31,17 +32,21 @@ export function Button({ variant = 'primary', size = 'md', className, children, 
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
+  id?: string
 }
 
-export function Input({ label, className, ...props }: InputProps) {
+export function Input({ label, className, id, ...props }: InputProps) {
+  const autoId = useId()
+  const inputId = id || autoId
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label className="text-xs font-medium uppercase tracking-[.08em] text-muted">
+        <label htmlFor={inputId} className="text-xs font-medium uppercase tracking-[.08em] text-muted">
           {label}
         </label>
       )}
       <input
+        id={inputId}
         className={cn(
           'w-full px-3.5 py-2.5 rounded-lg border border-line bg-surface-2 text-text text-sm placeholder:text-faint',
           'transition-all duration-200 focus:outline-none focus:border-gold/60 focus:shadow-[0_0_0_3px_rgba(201,168,76,0.12)]',
@@ -57,18 +62,22 @@ export function Input({ label, className, ...props }: InputProps) {
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
   options: { value: string; label: string }[]
+  id?: string
 }
 
-export function Select({ label, options, className, ...props }: SelectProps) {
+export function Select({ label, options, className, id, ...props }: SelectProps) {
+  const autoId = useId()
+  const selectId = id || autoId
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label className="text-xs font-medium uppercase tracking-[.08em] text-muted">
+        <label htmlFor={selectId} className="text-xs font-medium uppercase tracking-[.08em] text-muted">
           {label}
         </label>
       )}
       <div className="relative">
         <select
+          id={selectId}
           className={cn(
             'w-full appearance-none px-3.5 py-2.5 pr-9 rounded-lg border border-line bg-surface-2 text-text text-sm cursor-pointer',
             'transition-all duration-200 focus:outline-none focus:border-gold/60 focus:shadow-[0_0_0_3px_rgba(201,168,76,0.12)]',
