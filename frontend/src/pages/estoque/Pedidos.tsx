@@ -5,6 +5,7 @@ import { Button } from '@/components/shared/FormControls'
 import { formatBRL } from '@/lib/utils'
 import type { PedidoStatus } from '@/lib/pedidos'
 import { NovoPedidoModal } from './pedidos/NovoPedidoModal'
+import { ConferenciaModal } from './pedidos/ConferenciaModal'
 
 export interface PedidoRow {
   id: string
@@ -115,8 +116,11 @@ export function EstPedidos() {
       </div>
 
       <NovoPedidoModal open={novoOpen} onClose={() => setNovoOpen(false)} onCreated={fetchData} />
-      {/* <ConferenciaModal pedido={conferindo} onClose={...} onConfirmed={fetchData} /> */}
-      {conferindo && null}
+      <ConferenciaModal
+        pedido={conferindo ? { id: conferindo.id, numero: conferindo.numero } : null}
+        onClose={() => setConferindo(null)}
+        onConfirmed={fetchData}
+      />
     </div>
   )
 }
