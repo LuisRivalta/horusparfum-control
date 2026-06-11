@@ -63,7 +63,7 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
 
   async function cadastrarProdutoRapido() {
     if (!quickNome.trim()) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('produtos')
       .insert({
         nome: quickNome.trim(),
@@ -73,7 +73,12 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
       })
       .select()
       .single()
+    if (error) {
+      setErro(`Falha ao cadastrar produto: ${error.message}`)
+      return
+    }
     if (data) {
+      setErro(null)
       setProdutos(prev => [...prev, { id: data.id, nome: quickNome.trim() }])
       setQuickNome('')
       setQuickVolume('')
@@ -85,9 +90,14 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
     e.preventDefault()
     if (submitting || duplicado) return
     setErro(null)
-    const validos = itens.filter(i => i.produto_id && Number(i.qtd) >= 1)
+    const preenchidos = itens.filter(i => i.produto_id || i.preco || Number(i.qtd) > 1)
+    const validos = preenchidos.filter(i => i.produto_id && Number(i.qtd) >= 1)
     if (!fornecedorId || validos.length === 0) {
       setErro('Selecione o fornecedor e ao menos um item válido')
+      return
+    }
+    if (validos.length !== preenchidos.length) {
+      setErro('Há itens incompletos — selecione o produto e informe quantidade ≥ 1, ou remova a linha')
       return
     }
     setSubmitting(true)
@@ -97,7 +107,7 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
         .insert({
           fornecedor_id: fornecedorId,
           previsao_chegada: previsao || null,
-          valor_total: total,
+          valor_total: calcularTotalPedido(validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 }))),
           responsavel: user?.email || null,
         })
         .select()
@@ -112,7 +122,11 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
           preco_unitario: Number(i.preco) || 0,
         }))
       )
-      if (itensError) throw new Error(itensError.message)
+      if (itensError) {
+        // evita pedido órfão sem itens
+        await supabase.from('pedidos').delete().eq('id', pedido.id)
+        throw new Error(itensError.message)
+      }
 
       setFornecedorId(''); setPrevisao(''); setItens([{ ...ITEM_VAZIO }])
       onCreated()

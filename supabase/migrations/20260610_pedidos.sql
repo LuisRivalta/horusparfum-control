@@ -93,6 +93,10 @@ begin
     raise exception 'Pedido já está com status %', v_pedido.status;
   end if;
 
+  if (select count(*) from pedido_itens where pedido_id = p_pedido_id) = 0 then
+    raise exception 'Pedido sem itens não pode ser confirmado';
+  end if;
+
   -- todo item do pedido precisa vir na conferência
   if (select count(*) from pedido_itens where pedido_id = p_pedido_id)
      <> jsonb_array_length(p_itens) then
