@@ -44,16 +44,22 @@ create table if not exists divergencias (
 alter table produtos add column if not exists custo_medio numeric(12,2);
 alter table produtos add column if not exists ultimo_custo numeric(12,2);
 
+create index if not exists idx_pedido_itens_pedido on pedido_itens(pedido_id);
+create index if not exists idx_divergencias_fornecedor on divergencias(fornecedor_id);
+
 -- 2. RLS ---------------------------------------------------------
 
 alter table pedidos enable row level security;
 alter table pedido_itens enable row level security;
 alter table divergencias enable row level security;
 
+drop policy if exists "Acesso total autenticados" on pedidos;
 create policy "Acesso total autenticados" on pedidos
   for all to authenticated using (true) with check (true);
+drop policy if exists "Acesso total autenticados" on pedido_itens;
 create policy "Acesso total autenticados" on pedido_itens
   for all to authenticated using (true) with check (true);
+drop policy if exists "Acesso total autenticados" on divergencias;
 create policy "Acesso total autenticados" on divergencias
   for all to authenticated using (true) with check (true);
 
@@ -67,6 +73,7 @@ create or replace function confirmar_recebimento(
   p_recebido_por text
 ) returns void
 language plpgsql
+set search_path = public
 as $$
 declare
   v_pedido pedidos%rowtype;
@@ -92,6 +99,11 @@ begin
     raise exception 'Conferência incompleta: todos os itens devem ser informados';
   end if;
 
+  if (select count(distinct e->>'item_id') from jsonb_array_elements(p_itens) e)
+     <> jsonb_array_length(p_itens) then
+    raise exception 'Payload contém item duplicado';
+  end if;
+
   for v_entrada in select * from jsonb_array_elements(p_itens) loop
     select * into v_item from pedido_itens
       where id = (v_entrada->>'item_id')::uuid and pedido_id = p_pedido_id;
@@ -101,6 +113,10 @@ begin
 
     v_qtd := (v_entrada->>'qtd_recebida')::int;
     v_div_tipo := v_entrada->>'divergencia_tipo';
+
+    if v_qtd is null then
+      raise exception 'qtd_recebida é obrigatória para todos os itens';
+    end if;
 
     if v_qtd <> v_item.qtd_pedida and v_div_tipo is null then
       raise exception 'Item com quantidade divergente exige tipo de divergência';
@@ -123,9 +139,9 @@ begin
       select * into v_produto from produtos
         where id = v_item.produto_id for update;
 
-      v_novo_estoque := v_produto.estoque_atual + v_qtd;
+      v_novo_estoque := coalesce(v_produto.estoque_atual, 0) + v_qtd;
 
-      if v_produto.custo_medio is null or v_produto.estoque_atual <= 0 then
+      if v_produto.custo_medio is null or coalesce(v_produto.estoque_atual, 0) <= 0 then
         v_novo_custo := v_item.preco_unitario;
       else
         v_novo_custo := round(
@@ -168,6 +184,7 @@ create or replace function registrar_saida(
   p_responsavel text
 ) returns void
 language plpgsql
+set search_path = public
 as $$
 declare
   v_produto produtos%rowtype;
@@ -181,11 +198,11 @@ begin
   if not found then
     raise exception 'Produto não encontrado';
   end if;
-  if v_produto.estoque_atual < p_qtd then
+  if coalesce(v_produto.estoque_atual, 0) < p_qtd then
     raise exception 'Estoque insuficiente: % unidades disponíveis', v_produto.estoque_atual;
   end if;
 
-  v_novo_estoque := v_produto.estoque_atual - p_qtd;
+  v_novo_estoque := coalesce(v_produto.estoque_atual, 0) - p_qtd;
 
   update produtos set estoque_atual = v_novo_estoque where id = p_produto_id;
 
