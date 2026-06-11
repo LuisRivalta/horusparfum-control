@@ -43,10 +43,23 @@ export function SaidaRapidaModal({ open, onClose, onDone, produtoId }: Props) {
     e.preventDefault()
     if (submitting) return
     setErro(null)
+    if (!form.produto_id) {
+      setErro('Selecione um produto')
+      return
+    }
+    if (!form.motivo) {
+      setErro('Selecione o motivo')
+      return
+    }
+    const qtdNum = Number(form.qtd)
+    if (!Number.isInteger(qtdNum) || qtdNum < 1) {
+      setErro('Quantidade deve ser um número inteiro maior que zero')
+      return
+    }
     setSubmitting(true)
     const { error } = await supabase.rpc('registrar_saida', {
       p_produto_id: form.produto_id,
-      p_qtd: Number(form.qtd),
+      p_qtd: qtdNum,
       p_motivo: form.motivo,
       p_responsavel: user?.email || null,
     })
