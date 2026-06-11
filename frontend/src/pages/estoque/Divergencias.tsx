@@ -60,18 +60,23 @@ export function EstDivergencias() {
       </div>
 
       {resumo.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {resumo.map(r => (
-            <div key={r.nome} className="bg-surface border border-line rounded-xl px-4 py-3 flex items-center gap-3">
-              <span className="text-sm font-medium">{r.nome}</span>
-              <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-warn/15 text-warn">
-                {r.total} divergência{r.total > 1 ? 's' : ''}
-              </span>
-            </div>
-          ))}
+        <div className="flex flex-col gap-2">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[.14em] text-faint">Resumo geral por fornecedor</p>
+          <div className="flex flex-wrap gap-3">
+            {resumo.map(r => (
+              <div key={r.nome} className="bg-surface border border-line rounded-xl px-4 py-3 flex items-center gap-3">
+                <span className="text-sm font-medium">{r.nome}</span>
+                <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-warn/15 text-warn">
+                  {r.total} divergência{r.total > 1 ? 's' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
+      {/* selects crus (não FormControls.Select) — precisamos de "Todos..." como opção vazia,
+          e o Select compartilhado injeta "Selecione..." fixo */}
       <div className="flex items-center gap-2.5">
         <select
           value={filtroFornecedor}
