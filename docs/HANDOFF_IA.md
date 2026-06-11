@@ -83,7 +83,8 @@
 ## Próximos passos imediatos
 
 0. Aplicar supabase/migrations/20260610_pedidos.sql no SQL Editor do Supabase (OBRIGATÓRIO antes de usar as telas de pedidos)
-1. Remover policies temporárias de `anon` (se foram criadas para testes)
+1. Edição de pedido `aguardando` (cancelamento já existe; editar itens/fornecedor ficou de fora da v1 — spec previa)
+2. Remover policies temporárias de `anon` (se foram criadas para testes)
 2. Copiar JWT Secret do Supabase para o `.env` do backend
 3. Dashboard financeiro com dados reais (saldos, gráficos a partir das transações)
 4. Dashboard estoque com dados reais (alertas de estoque baixo)
