@@ -5,6 +5,7 @@ import { Modal } from '@/components/shared/Modal'
 import { Button, Input, Select } from '@/components/shared/FormControls'
 import { ImageCropper } from '@/components/shared/ImageCropper'
 import { ProductDetailsModal } from '@/components/shared/ProductDetailsModal'
+import { SaidaRapidaModal } from '@/components/shared/SaidaRapidaModal'
 import './Produtos.css'
 
 interface Produto {
@@ -49,6 +50,7 @@ export function EstProdutos() {
   const [filterSituacao, setFilterSituacao] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null)
+  const [saidaOpen, setSaidaOpen] = useState(false)
 
   const produtosFiltrados = produtos.filter((p) => {
     if (search && !p.nome.toLowerCase().includes(search.toLowerCase())) return false
@@ -199,6 +201,10 @@ export function EstProdutos() {
               Limpar filtros
             </button>
           )}
+          <Button variant="secondary" onClick={() => setSaidaOpen(true)}>
+            <Icon name="down" size={16} />
+            Registrar saída
+          </Button>
           <Button variant="secondary">
             <Icon name="download" size={16} />
             Importar
@@ -366,6 +372,8 @@ export function EstProdutos() {
         onUpdated={fetchData}
         onDeleted={fetchData}
       />
+
+      <SaidaRapidaModal open={saidaOpen} onClose={() => setSaidaOpen(false)} onDone={fetchData} />
     </div>
   )
 }
