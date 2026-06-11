@@ -9,7 +9,6 @@ import { FinContas } from '@/pages/financeiro/Contas'
 import { FinRelatorios } from '@/pages/financeiro/Relatorios'
 import { FinMetas } from '@/pages/financeiro/Metas'
 import { EstProdutos } from '@/pages/estoque/Produtos'
-import { EstMovimentacoes } from '@/pages/estoque/Movimentacoes'
 import { EstPedidos } from '@/pages/estoque/Pedidos'
 import { EstCategorias } from '@/pages/estoque/Categorias'
 import { EstFornecedores } from '@/pages/estoque/Fornecedores'
@@ -32,7 +31,6 @@ export function App() {
         <Route path="/estoque" element={<EstProdutos />} />
         <Route path="/estoque/pedidos" element={<EstPedidos />} />
         <Route path="/estoque/divergencias" element={<EstDivergencias />} />
-        <Route path="/estoque/movimentacoes" element={<EstMovimentacoes />} />
         <Route path="/estoque/categorias" element={<EstCategorias />} />
         <Route path="/estoque/fornecedores" element={<EstFornecedores />} />
         <Route path="/estoque/alertas" element={<EstAlertas />} />

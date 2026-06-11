@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-10 (Sessão 4)
+> Última atualização: 2026-06-11 (Sessão 5)
 
 ## O que já foi feito
 
@@ -62,19 +62,27 @@
     - Dashboard financeiro: stat cards premium responsivos
     - Login: título serifado, ornamento, inputs com glow, animação do card
     - Fix: `vite.config.ts` migrado para `vitest/config` (build estava quebrado)
+13. **Fluxo de Pedidos de compra (Sessão 5)** — substitui a tela Movimentações
+    - Tabelas `pedidos`, `pedido_itens`, `divergencias` + colunas `custo_medio`/`ultimo_custo` em produtos
+    - RPCs atômicas: `confirmar_recebimento` (entrada + custo médio + ledger + divergências) e `registrar_saida`
+    - Telas: Pedidos (lista + criar com cadastro rápido de produto + conferência de recebimento), Divergências (log + resumo por fornecedor)
+    - Saída rápida na tela de Produtos
+    - `movimentacoes` virou ledger interno (sem CRUD manual)
+    - Spec: docs/superpowers/specs/2026-06-10-pedidos-chegada-design.md
 
 ## Estado atual
 
 - Frontend compila e roda (`npm run dev`) — http://localhost:5173
 - Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000
-- Banco de dados configurado no Supabase com todas as tabelas
+- Banco de dados configurado no Supabase com todas as tabelas (migração de pedidos pendente de aplicação manual)
 - Autenticação funcional (login/logout via Supabase Auth)
-- CRUDs funcionais para todas as entidades (criar, editar, excluir)
+- CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, alertas, transações, contas, metas
 - Dark/light theme funcional
-- 6 testes automatizados passando
+- 32 testes automatizados passando
 
 ## Próximos passos imediatos
 
+0. Aplicar supabase/migrations/20260610_pedidos.sql no SQL Editor do Supabase (OBRIGATÓRIO antes de usar as telas de pedidos)
 1. Remover policies temporárias de `anon` (se foram criadas para testes)
 2. Copiar JWT Secret do Supabase para o `.env` do backend
 3. Dashboard financeiro com dados reais (saldos, gráficos a partir das transações)

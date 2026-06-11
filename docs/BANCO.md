@@ -40,9 +40,13 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | estoque_atual | int | Unidades em estoque |
 | estoque_minimo | int | Alerta quando atual < mínimo |
 | foto_url | text | URL da imagem (Supabase Storage) |
+| custo_medio | numeric(12,2) | Custo médio ponderado (atualizado na confirmação de pedidos) |
+| ultimo_custo | numeric(12,2) | Preço da última compra recebida |
 | created_at | timestamptz | — |
 
 ### `movimentacoes`
+
+> **Ledger interno** — desde o fluxo de pedidos, esta tabela não tem mais CRUD manual: entradas são gravadas pela RPC confirmar_recebimento e saídas pela RPC registrar_saida.
 
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
@@ -53,6 +57,46 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | motivo | text | Ex: "Venda balcão", "Reposição" |
 | responsavel | text | Nome do usuário |
 | saldo_resultante | int | Estoque após a movimentação |
+| created_at | timestamptz | — |
+
+### `pedidos`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| numero | serial unique | Número sequencial do pedido |
+| fornecedor_id | uuid (FK → fornecedores) | — |
+| status | text | "aguardando", "recebido" ou "cancelado" |
+| previsao_chegada | date | Data prevista de chegada |
+| valor_total | numeric(12,2) | Total do pedido (calculado no frontend) |
+| responsavel | text | Nome do usuário que criou o pedido |
+| recebido_em | timestamptz | Data/hora do recebimento |
+| recebido_por | text | Nome do usuário que fez a conferência |
+| created_at | timestamptz | — |
+
+### `pedido_itens`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| pedido_id | uuid (FK → pedidos) | Cascade delete |
+| produto_id | uuid (FK → produtos) | — |
+| qtd_pedida | int | Quantidade pedida (≥ 1) |
+| qtd_recebida | int | Quantidade efetivamente recebida (nullable até conferência) |
+| preco_unitario | numeric(12,2) | Preço de custo no momento do pedido (≥ 0) |
+
+### `divergencias`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| pedido_id | uuid (FK → pedidos) | — |
+| pedido_item_id | uuid (FK → pedido_itens) | — |
+| fornecedor_id | uuid (FK → fornecedores) | Desnormalizado para facilitar relatórios |
+| tipo | text | "faltou", "veio_a_mais", "avariado" ou "produto_errado" |
+| qtd_pedida | int | Quantidade esperada |
+| qtd_recebida | int | Quantidade efetivamente recebida |
+| observacao | text | Detalhe opcional da divergência |
 | created_at | timestamptz | — |
 
 ### `transacoes`
@@ -99,6 +143,8 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 categorias ←── produtos
 fornecedores ←── produtos
 produtos ←── movimentacoes
+fornecedores ←── pedidos ←── pedido_itens ──→ produtos
+pedidos ←── divergencias ──→ fornecedores
 ```
 
 `transacoes`, `contas` e `metas` são independentes (módulo financeiro não vincula ao estoque — ver [[PRD]]).
@@ -131,3 +177,5 @@ alter table <tabela> enable row level security;
 create policy "Acesso total autenticados" on <tabela> for all to authenticated using (true) with check (true);
 -- (ver LOGS sessão 2 para SQL completo)
 ```
+
+Migração de pedidos: supabase/migrations/20260610_pedidos.sql (tabelas + RLS + RPCs confirmar_recebimento e registrar_saida).

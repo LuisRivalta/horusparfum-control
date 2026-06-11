@@ -1,5 +1,30 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-11 — Sessão 5: Fluxo de Pedidos de compra com conferência de recebimento
+
+**Responsável:** Luis + Claude (subagent-driven development)
+
+### O que foi feito
+- Migração SQL: tabelas `pedidos`, `pedido_itens`, `divergencias`, colunas `custo_medio`/`ultimo_custo` em produtos, RLS, índices e RPCs atômicas `confirmar_recebimento` / `registrar_saida` (com guardas de payload duplicado, item nulo e pedido sem itens)
+- `lib/pedidos.ts`: custo médio ponderado (decimal.js, casa com ROUND do Postgres), totais e validação de conferência — TDD
+- Tela Pedidos: lista com status, criação com itens dinâmicos + cadastro rápido de produto, total ao vivo
+- Conferência de recebimento: qtd recebida item a item, divergência obrigatória quando difere, proteção contra divergência fantasma
+- Tela Divergências: log filtrado + resumo geral por fornecedor
+- Saída rápida na tela de Produtos via RPC (valida estoque, motivo e inteiro)
+- Movimentações removida (tabela virou ledger interno)
+- 32 testes passando; cada task passou por review de spec + review de qualidade com correções
+
+### Decisões tomadas
+- Custo: médio ponderado + último custo (FIFO documentado como evolução futura no spec)
+- Recebimento parcial fora de escopo: pedido fecha com o que chegou, falta vira divergência
+- Financeiro desacoplado (integração ERP futura é aditiva via pedido_id)
+
+### Pendências
+- Aplicar a migração SQL no Supabase (SQL Editor) — checkpoint manual
+- Testar RPC manualmente com seed (roteiro no plano, Task 1 Step 4)
+
+---
+
 ## 2026-06-10 — Sessão 4: Repaginada premium de design
 
 **Responsável:** Luis + Claude
