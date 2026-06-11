@@ -44,6 +44,10 @@ export function validarConferencia(itens: ConferenciaItem[]): string[] {
       erros.push('Quantidade recebida não pode ser negativa')
       continue
     }
+    if (!Number.isInteger(item.qtdRecebida)) {
+      erros.push('Quantidade recebida deve ser um número inteiro')
+      continue
+    }
     if (item.qtdRecebida !== item.qtdPedida && !item.divergenciaTipo) {
       erros.push('Item com quantidade divergente exige tipo de divergência')
     }

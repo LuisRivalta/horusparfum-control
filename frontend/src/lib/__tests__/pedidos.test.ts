@@ -74,6 +74,14 @@ describe('validarConferencia', () => {
     ])
     expect(erros).toHaveLength(1)
   })
+
+  it('rejeita qtd recebida não inteira', () => {
+    const erros = validarConferencia([
+      { ...itemOk, qtdRecebida: 2.5, divergenciaTipo: 'faltou' },
+    ])
+    expect(erros).toHaveLength(1)
+    expect(erros[0]).toMatch(/inteiro/i)
+  })
 })
 
 describe('DIVERGENCIA_TIPOS', () => {

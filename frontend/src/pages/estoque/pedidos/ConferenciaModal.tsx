@@ -33,15 +33,27 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
   const [erros, setErros] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [rpcError, setRpcError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!pedido) return
+    if (!pedido) { setItens([]); return }
+    setItens([])
+    setErros([])
+    setRpcError(null)
+    setFetchError(null)
+    setLoading(true)
     supabase
       .from('pedido_itens')
       .select('id, qtd_pedida, preco_unitario, produtos(nome, foto_url)')
       .eq('pedido_id', pedido.id)
-      .then(({ data }) => {
-        setItens((data as ItemRow[] | null || []).map(item => ({
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) {
+          setFetchError(error.message)
+          return
+        }
+        setItens(((data as unknown) as ItemRow[] | null || []).map(item => ({
           itemId: item.id,
           qtdPedida: item.qtd_pedida,
           qtdRecebida: item.qtd_pedida,
@@ -71,12 +83,15 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
     setSubmitting(true)
     const { error } = await supabase.rpc('confirmar_recebimento', {
       p_pedido_id: pedido.id,
-      p_itens: itens.map(i => ({
-        item_id: i.itemId,
-        qtd_recebida: i.qtdRecebida,
-        divergencia_tipo: i.divergenciaTipo,
-        divergencia_obs: i.divergenciaObs.trim() || null,
-      })),
+      p_itens: itens.map(i => {
+        const divergente = i.qtdRecebida !== i.qtdPedida
+        return {
+          item_id: i.itemId,
+          qtd_recebida: i.qtdRecebida,
+          divergencia_tipo: divergente ? i.divergenciaTipo : null,
+          divergencia_obs: divergente ? (i.divergenciaObs.trim() || null) : null,
+        }
+      }),
       p_recebido_por: user?.email || null,
     })
     setSubmitting(false)
@@ -99,6 +114,12 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
         <p className="text-sm text-muted">
           Confira fisicamente cada item e ajuste a quantidade recebida se houver diferença.
         </p>
+        {loading && <p className="text-sm text-muted py-4 text-center">Carregando itens...</p>}
+        {fetchError && (
+          <div role="alert" className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">
+            Falha ao carregar itens: {fetchError}
+          </div>
+        )}
 
         {itens.map((item) => {
           const divergente = item.qtdRecebida !== item.qtdPedida
@@ -120,9 +141,14 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
                 <div className="w-28">
                   <Input
                     label="Qtd recebida"
-                    type="number" min="0"
+                    type="number" min="0" step="1"
                     value={String(item.qtdRecebida)}
-                    onChange={(e) => setItem(item.itemId, { qtdRecebida: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const qtd = Number(e.target.value)
+                      setItem(item.itemId, qtd === item.qtdPedida
+                        ? { qtdRecebida: qtd, divergenciaTipo: null, divergenciaObs: '' }
+                        : { qtdRecebida: qtd })
+                    }}
                   />
                 </div>
               </div>
@@ -150,10 +176,10 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
         })}
 
         {erros.map((e, i) => (
-          <div key={i} className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">{e}</div>
+          <div key={i} role="alert" className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">{e}</div>
         ))}
         {rpcError && (
-          <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">
+          <div role="alert" className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">
             Falha ao confirmar: {rpcError} — o pedido continua aguardando, tente novamente.
           </div>
         )}
@@ -165,7 +191,7 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
           </span>
           <div className="flex gap-3">
             <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-            <Button type="button" onClick={handleConfirm} disabled={submitting}>
+            <Button type="button" onClick={handleConfirm} disabled={submitting || loading || itens.length === 0}>
               {submitting ? 'Confirmando...' : 'Confirmar recebimento'}
             </Button>
           </div>

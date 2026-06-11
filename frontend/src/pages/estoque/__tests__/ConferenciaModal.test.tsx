@@ -110,4 +110,30 @@ describe('ConferenciaModal', () => {
     expect(mockRpc).not.toHaveBeenCalled()
     expect(screen.getByText(/exige tipo de divergência/i)).toBeInTheDocument()
   })
+
+  it('não envia divergência fantasma quando a qtd volta ao valor pedido', async () => {
+    const user = userEvent.setup()
+    render(<ConferenciaModal pedido={pedido} onClose={vi.fn()} onConfirmed={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByText('Perfume X')).toBeInTheDocument())
+    const input = screen.getAllByLabelText(/qtd recebida/i)[0]
+
+    // diverge, classifica, e depois volta ao valor original
+    await user.clear(input)
+    await user.type(input, '3')
+    await user.selectOptions(screen.getByLabelText(/tipo de divergência/i), 'faltou')
+    await user.clear(input)
+    await user.type(input, '5')
+
+    await user.click(screen.getByRole('button', { name: /confirmar recebimento/i }))
+
+    await waitFor(() => {
+      expect(mockRpc).toHaveBeenCalledWith('confirmar_recebimento', expect.objectContaining({
+        p_itens: [
+          { item_id: 'i1', qtd_recebida: 5, divergencia_tipo: null, divergencia_obs: null },
+          { item_id: 'i2', qtd_recebida: 3, divergencia_tipo: null, divergencia_obs: null },
+        ],
+      }))
+    })
+  })
 })
