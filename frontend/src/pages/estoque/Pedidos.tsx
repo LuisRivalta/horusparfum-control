@@ -16,6 +16,7 @@ export interface PedidoRow {
   previsao_chegada: string | null
   responsavel: string | null
   created_at: string
+  fornecedor_id: string
   fornecedores: { nome: string } | null
   pedido_itens: { id: string }[]
 }
@@ -33,6 +34,7 @@ export function EstPedidos() {
   const [conferindo, setConferindo] = useState<PedidoRow | null>(null)
   const [cancelando, setCancelando] = useState<PedidoRow | null>(null)
   const [cancelSubmitting, setCancelSubmitting] = useState(false)
+  const [editando, setEditando] = useState<PedidoRow | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -110,6 +112,9 @@ export function EstPedidos() {
                         <Button size="sm" onClick={() => setConferindo(p)}>
                           Confirmar chegada
                         </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setEditando(p)}>
+                          Editar
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={() => setCancelando(p)}>
                           Cancelar
                         </Button>
@@ -123,7 +128,17 @@ export function EstPedidos() {
         </table>
       </div>
 
-      <NovoPedidoModal open={novoOpen} onClose={() => setNovoOpen(false)} onCreated={fetchData} />
+      <NovoPedidoModal
+        open={novoOpen || !!editando}
+        onClose={() => { setNovoOpen(false); setEditando(null) }}
+        onSaved={fetchData}
+        pedidoParaEditar={editando ? {
+          id: editando.id,
+          numero: editando.numero,
+          fornecedor_id: editando.fornecedor_id,
+          previsao_chegada: editando.previsao_chegada,
+        } : undefined}
+      />
       <ConferenciaModal
         pedido={conferindo ? { id: conferindo.id, numero: conferindo.numero } : null}
         onClose={() => setConferindo(null)}
