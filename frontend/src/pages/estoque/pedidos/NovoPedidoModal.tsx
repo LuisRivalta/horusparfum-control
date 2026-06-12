@@ -163,6 +163,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
     const valor_total = calcularTotalPedido(
       validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 }))
     )
+
     const { error: updateError } = await supabase
       .from('pedidos')
       .update({ fornecedor_id: fornecedorId, previsao_chegada: previsao || null, valor_total })
@@ -174,7 +175,17 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
       .from('pedido_itens')
       .delete()
       .eq('pedido_id', pedidoParaEditar!.id)
-    if (deleteError) throw new Error(deleteError.message)
+    if (deleteError) {
+      // UPDATE já aconteceu mas itens ainda existem — reverte UPDATE
+      await supabase
+        .from('pedidos')
+        .update({
+          fornecedor_id: pedidoParaEditar!.fornecedor_id,
+          previsao_chegada: pedidoParaEditar!.previsao_chegada,
+        })
+        .eq('id', pedidoParaEditar!.id)
+      throw new Error(deleteError.message)
+    }
 
     const { error: insertError } = await supabase.from('pedido_itens').insert(
       validos.map(i => ({
@@ -185,10 +196,21 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
       }))
     )
     if (insertError) {
+      // Reverte UPDATE e restaura itens originais
+      await supabase
+        .from('pedidos')
+        .update({
+          fornecedor_id: pedidoParaEditar!.fornecedor_id,
+          previsao_chegada: pedidoParaEditar!.previsao_chegada,
+        })
+        .eq('id', pedidoParaEditar!.id)
       if (itensOriginais.length > 0) {
-        await supabase.from('pedido_itens').insert(
+        const { error: rollbackError } = await supabase.from('pedido_itens').insert(
           itensOriginais.map(i => ({ pedido_id: pedidoParaEditar!.id, ...i }))
         )
+        if (rollbackError) {
+          throw new Error(`Falha ao salvar e ao restaurar itens: ${insertError.message}`)
+        }
       }
       throw new Error(insertError.message)
     }
