@@ -1,5 +1,27 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-12 — Sessão 6: Edição de pedido aguardando + Dashboard financeiro com dados reais
+
+**Responsável:** Luis + Claude (subagent-driven development)
+
+### O que foi feito
+- **Edição de pedido aguardando:** `NovoPedidoModal` ganhou prop `pedidoParaEditar` (pré-preenche fornecedor/previsão/itens e faz UPDATE+DELETE+INSERT com rollback manual completo, incluindo `valor_total`); botão "Editar" nas linhas `aguardando` da lista de pedidos
+- **Dashboard financeiro com dados reais:** `lib/financeiro.ts` (lógica pura com decimal.js e TDD — saldo histórico, resumo por período, agrupar por categoria, evolução mensal, construtores de período mês/trimestre/ano/personalizado); seletor de período flexível; 4 cards; gráficos de evolução (6 meses) e categorias (toggle despesas/receitas) com recharts; saldo/lucro negativos em vermelho
+- Migração de pedidos aplicada no Supabase pelo usuário
+- Branch `feat/pedidos` mergeada na `main` e push feito; trabalho do dashboard direto na `main`
+- 51 testes passando (eram 32); cada task passou por review de spec + qualidade
+
+### Decisões tomadas
+- Edição de pedido só para status `aguardando`; rollback manual é suficiente (sem movimentação de estoque envolvida)
+- Dashboard calcula tudo em memória a partir de um único `select` de transações (loja pequena); agregação SQL fica como evolução futura
+- Gráfico de evolução fixo em "últimos 6 meses" (independe do seletor); seletor controla cards e categorias
+- Widgets de contas/metas no dashboard ficaram fora de escopo (já têm página própria)
+
+### Pendências
+- Período personalizado não valida início ≤ fim; query de transações sem `.limit()` (ver Handoff)
+
+---
+
 ## 2026-06-11 — Sessão 5: Fluxo de Pedidos de compra com conferência de recebimento
 
 **Responsável:** Luis + Claude (subagent-driven development)

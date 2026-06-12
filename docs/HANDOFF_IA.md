@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-11 (Sessão 5)
+> Última atualização: 2026-06-12 (Sessão 6)
 
 ## O que já foi feito
 
@@ -69,6 +69,14 @@
     - Saída rápida na tela de Produtos
     - `movimentacoes` virou ledger interno (sem CRUD manual)
     - Spec: docs/superpowers/specs/2026-06-10-pedidos-chegada-design.md
+14. **Edição de pedido aguardando (Sessão 6)** — botão "Editar" nas linhas `aguardando`
+    - `NovoPedidoModal` ganhou prop `pedidoParaEditar`: pré-preenche e faz UPDATE+DELETE+INSERT com rollback manual
+    - Spec: docs/superpowers/specs/2026-06-12-editar-pedido-aguardando-design.md
+15. **Dashboard financeiro com dados reais (Sessão 6)**
+    - `lib/financeiro.ts`: lógica pura (saldo histórico, resumo por período, agrupar por categoria, evolução mensal) + construtores de período (mês/trimestre/ano/personalizado), com decimal.js e testes TDD
+    - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
+    - Saldo e lucro negativos destacados em vermelho
+    - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
 
 ## Estado atual
 
@@ -78,20 +86,23 @@
 - Autenticação funcional (login/logout via Supabase Auth)
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, alertas, transações, contas, metas
 - Dark/light theme funcional
-- 32 testes automatizados passando
+- Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
+- 51 testes automatizados passando
 
 ## Próximos passos imediatos
 
-0. Aplicar supabase/migrations/20260610_pedidos.sql no SQL Editor do Supabase (OBRIGATÓRIO antes de usar as telas de pedidos)
-1. Edição de pedido `aguardando` (cancelamento já existe; editar itens/fornecedor ficou de fora da v1 — spec previa)
-2. Remover policies temporárias de `anon` (se foram criadas para testes)
+1. Remover policies temporárias de `anon` (se foram criadas para testes)
 2. Copiar JWT Secret do Supabase para o `.env` do backend
-3. Dashboard financeiro com dados reais (saldos, gráficos a partir das transações)
-4. Dashboard estoque com dados reais (alertas de estoque baixo)
-5. Relatórios (PDF ou tela)
-6. Importação em massa de produtos (botão "Importar" na topbar)
-7. Testes para outras páginas (Estoque, Financeiro, Theme)
-8. Deploy (Vercel + Railway)
+3. Dashboard estoque com dados reais (alertas de estoque baixo)
+4. Relatórios (PDF ou tela)
+5. Importação em massa de produtos (botão "Importar" na topbar)
+6. Testes para outras páginas (Estoque, Theme)
+7. Deploy (Vercel + Railway)
+
+### Melhorias futuras conhecidas (dashboard financeiro)
+- `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
+- `PeriodSelector`: período personalizado não valida `início <= fim` (resultado zera silenciosamente)
+- Bundle do recharts é pesado (~445 kB gzip) — considerar code splitting
 
 ## Decisões pendentes
 
