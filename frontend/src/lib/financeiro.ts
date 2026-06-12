@@ -78,3 +78,62 @@ export function periodoPersonalizado(inicio: Date, fim: Date): Periodo {
   const f = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate(), 23, 59, 59, 999)
   return { inicio: i, fim: f, label: `${dd(i)} – ${dd(f)}` }
 }
+
+function somar(valores: number[]): number {
+  return valores
+    .reduce((acc, v) => acc.add(v), new Decimal(0))
+    .toDecimalPlaces(2)
+    .toNumber()
+}
+
+function dentroDoPeriodo(t: Transacao, periodo: Periodo): boolean {
+  const d = new Date(t.created_at)
+  return d >= periodo.inicio && d <= periodo.fim
+}
+
+export function calcularSaldoHistorico(transacoes: Transacao[]): number {
+  const entradas = somar(transacoes.filter(t => t.tipo === 'entrada').map(t => t.valor))
+  const saidas = somar(transacoes.filter(t => t.tipo === 'saida').map(t => t.valor))
+  return new Decimal(entradas).sub(saidas).toDecimalPlaces(2).toNumber()
+}
+
+export function resumoPeriodo(transacoes: Transacao[], periodo: Periodo): ResumoPeriodo {
+  const noPeriodo = transacoes.filter(t => dentroDoPeriodo(t, periodo))
+  const receita = somar(noPeriodo.filter(t => t.tipo === 'entrada').map(t => t.valor))
+  const despesa = somar(noPeriodo.filter(t => t.tipo === 'saida').map(t => t.valor))
+  const lucro = new Decimal(receita).sub(despesa).toDecimalPlaces(2).toNumber()
+  return { receita, despesa, lucro }
+}
+
+export function agruparPorCategoria(
+  transacoes: Transacao[],
+  periodo: Periodo,
+  tipo: 'entrada' | 'saida'
+): FatiaCategoria[] {
+  const filtradas = transacoes.filter(t => t.tipo === tipo && dentroDoPeriodo(t, periodo))
+  const mapa = new Map<string, number[]>()
+  for (const t of filtradas) {
+    const cat = t.categoria?.trim() || 'Sem categoria'
+    const arr = mapa.get(cat) ?? []
+    arr.push(t.valor)
+    mapa.set(cat, arr)
+  }
+  return Array.from(mapa.entries())
+    .map(([categoria, valores]) => ({ categoria, total: somar(valores) }))
+    .sort((a, b) => b.total - a.total)
+}
+
+export function evolucaoMensal(
+  transacoes: Transacao[],
+  referencia: Date,
+  nMeses = 6
+): PontoEvolucao[] {
+  const pontos: PontoEvolucao[] = []
+  for (let i = nMeses - 1; i >= 0; i--) {
+    const d = new Date(referencia.getFullYear(), referencia.getMonth() - i, 1)
+    const periodo = periodoMes(d.getFullYear(), d.getMonth())
+    const r = resumoPeriodo(transacoes, periodo)
+    pontos.push({ mes: MESES_CURTOS[d.getMonth()], receita: r.receita, despesa: r.despesa })
+  }
+  return pontos
+}
