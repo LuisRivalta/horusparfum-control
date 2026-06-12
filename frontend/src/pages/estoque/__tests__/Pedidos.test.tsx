@@ -108,4 +108,19 @@ describe('EstPedidos (lista)', () => {
       expect(updateSpy).toHaveBeenCalledWith({ status: 'cancelado' })
     })
   })
+
+  it('exibe botão Editar apenas para pedidos aguardando', async () => {
+    render(<MemoryRouter><EstPedidos /></MemoryRouter>)
+
+    await waitFor(() => {
+      expect(screen.getByText('Essências Cairo')).toBeInTheDocument()
+    })
+
+    // pedido aguardando (p1) deve ter o botão Editar
+    expect(screen.getByRole('button', { name: /^editar$/i })).toBeInTheDocument()
+
+    // pedido recebido (p2) não deve ter botão Editar
+    // (só há um botão Editar — o de p1)
+    expect(screen.getAllByRole('button', { name: /^editar$/i })).toHaveLength(1)
+  })
 })

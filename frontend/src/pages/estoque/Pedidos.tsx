@@ -137,6 +137,7 @@ export function EstPedidos() {
           numero: editando.numero,
           fornecedor_id: editando.fornecedor_id,
           previsao_chegada: editando.previsao_chegada,
+          valor_total: editando.valor_total,
         } : undefined}
       />
       <ConferenciaModal

@@ -30,6 +30,7 @@ interface Props {
     numero: number
     fornecedor_id: string
     previsao_chegada: string | null
+    valor_total: number
   }
 }
 
@@ -182,6 +183,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
         .update({
           fornecedor_id: pedidoParaEditar!.fornecedor_id,
           previsao_chegada: pedidoParaEditar!.previsao_chegada,
+          valor_total: pedidoParaEditar!.valor_total,
         })
         .eq('id', pedidoParaEditar!.id)
       throw new Error(deleteError.message)
@@ -202,6 +204,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
         .update({
           fornecedor_id: pedidoParaEditar!.fornecedor_id,
           previsao_chegada: pedidoParaEditar!.previsao_chegada,
+          valor_total: pedidoParaEditar!.valor_total,
         })
         .eq('id', pedidoParaEditar!.id)
       if (itensOriginais.length > 0) {

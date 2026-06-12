@@ -134,7 +134,7 @@ describe('NovoPedidoModal', () => {
         open
         onClose={vi.fn()}
         onSaved={vi.fn()}
-        pedidoParaEditar={{ id: 'p-edit', numero: 7, fornecedor_id: 'f1', previsao_chegada: '2026-07-01' }}
+        pedidoParaEditar={{ id: 'p-edit', numero: 7, fornecedor_id: 'f1', previsao_chegada: '2026-07-01', valor_total: 450 }}
       />
     )
 
@@ -156,7 +156,7 @@ describe('NovoPedidoModal', () => {
         open
         onClose={vi.fn()}
         onSaved={onSaved}
-        pedidoParaEditar={{ id: 'p-edit', numero: 7, fornecedor_id: 'f1', previsao_chegada: null }}
+        pedidoParaEditar={{ id: 'p-edit', numero: 7, fornecedor_id: 'f1', previsao_chegada: null, valor_total: 450 }}
       />
     )
 
