@@ -15,15 +15,27 @@ interface ItemForm {
   preco: string
 }
 
+interface ItensOriginal {
+  produto_id: string
+  qtd_pedida: number
+  preco_unitario: number
+}
+
 interface Props {
   open: boolean
   onClose: () => void
-  onCreated: () => void
+  onSaved: () => void
+  pedidoParaEditar?: {
+    id: string
+    numero: number
+    fornecedor_id: string
+    previsao_chegada: string | null
+  }
 }
 
 const ITEM_VAZIO: ItemForm = { produto_id: '', qtd: '1', preco: '' }
 
-export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
+export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Props) {
   const { user } = useAuth()
   const [fornecedores, setFornecedores] = useState<Opcao[]>([])
   const [produtos, setProdutos] = useState<Opcao[]>([])
@@ -33,6 +45,7 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
   const [itens, setItens] = useState<ItemForm[]>([{ ...ITEM_VAZIO }])
   const [submitting, setSubmitting] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [itensOriginais, setItensOriginais] = useState<ItensOriginal[]>([])
 
   // cadastro rápido de produto
   const [quickOpen, setQuickOpen] = useState(false)
@@ -51,7 +64,34 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
       setProdutos(p.data || [])
       setCategorias(c.data || [])
     })
-  }, [open])
+
+    if (pedidoParaEditar) {
+      setFornecedorId(pedidoParaEditar.fornecedor_id)
+      setPrevisao(pedidoParaEditar.previsao_chegada || '')
+      supabase
+        .from('pedido_itens')
+        .select('produto_id, qtd_pedida, preco_unitario')
+        .eq('pedido_id', pedidoParaEditar.id)
+        .then(({ data }) => {
+          const items = (data as ItensOriginal[]) || []
+          setItensOriginais(items)
+          setItens(
+            items.length > 0
+              ? items.map(i => ({
+                  produto_id: i.produto_id,
+                  qtd: String(i.qtd_pedida),
+                  preco: String(i.preco_unitario),
+                }))
+              : [{ ...ITEM_VAZIO }]
+          )
+        })
+    } else {
+      setFornecedorId('')
+      setPrevisao('')
+      setItens([{ ...ITEM_VAZIO }])
+      setItensOriginais([])
+    }
+  }, [open, pedidoParaEditar?.id])
 
   const duplicado = itens.some(
     (item, i) => item.produto_id && itens.findIndex(o => o.produto_id === item.produto_id) !== i
@@ -92,6 +132,68 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
     }
   }
 
+  async function handleCreateSubmit(validos: ItemForm[]) {
+    const { data: pedido, error } = await supabase
+      .from('pedidos')
+      .insert({
+        fornecedor_id: fornecedorId,
+        previsao_chegada: previsao || null,
+        valor_total: calcularTotalPedido(validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 }))),
+        responsavel: user?.email || null,
+      })
+      .select()
+      .single()
+    if (error || !pedido) throw new Error(error?.message || 'Falha ao criar pedido')
+
+    const { error: itensError } = await supabase.from('pedido_itens').insert(
+      validos.map(i => ({
+        pedido_id: pedido.id,
+        produto_id: i.produto_id,
+        qtd_pedida: Number(i.qtd),
+        preco_unitario: Number(i.preco) || 0,
+      }))
+    )
+    if (itensError) {
+      await supabase.from('pedidos').delete().eq('id', pedido.id)
+      throw new Error(itensError.message)
+    }
+  }
+
+  async function handleEditSubmit(validos: ItemForm[]) {
+    const valor_total = calcularTotalPedido(
+      validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 }))
+    )
+    const { error: updateError } = await supabase
+      .from('pedidos')
+      .update({ fornecedor_id: fornecedorId, previsao_chegada: previsao || null, valor_total })
+      .eq('id', pedidoParaEditar!.id)
+      .eq('status', 'aguardando')
+    if (updateError) throw new Error(updateError.message)
+
+    const { error: deleteError } = await supabase
+      .from('pedido_itens')
+      .delete()
+      .eq('pedido_id', pedidoParaEditar!.id)
+    if (deleteError) throw new Error(deleteError.message)
+
+    const { error: insertError } = await supabase.from('pedido_itens').insert(
+      validos.map(i => ({
+        pedido_id: pedidoParaEditar!.id,
+        produto_id: i.produto_id,
+        qtd_pedida: Number(i.qtd),
+        preco_unitario: Number(i.preco) || 0,
+      }))
+    )
+    if (insertError) {
+      if (itensOriginais.length > 0) {
+        await supabase.from('pedido_itens').insert(
+          itensOriginais.map(i => ({ pedido_id: pedidoParaEditar!.id, ...i }))
+        )
+      }
+      throw new Error(insertError.message)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (submitting || duplicado) return
@@ -108,34 +210,12 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
     }
     setSubmitting(true)
     try {
-      const { data: pedido, error } = await supabase
-        .from('pedidos')
-        .insert({
-          fornecedor_id: fornecedorId,
-          previsao_chegada: previsao || null,
-          valor_total: calcularTotalPedido(validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 }))),
-          responsavel: user?.email || null,
-        })
-        .select()
-        .single()
-      if (error || !pedido) throw new Error(error?.message || 'Falha ao criar pedido')
-
-      const { error: itensError } = await supabase.from('pedido_itens').insert(
-        validos.map(i => ({
-          pedido_id: pedido.id,
-          produto_id: i.produto_id,
-          qtd_pedida: Number(i.qtd),
-          preco_unitario: Number(i.preco) || 0,
-        }))
-      )
-      if (itensError) {
-        // evita pedido órfão sem itens
-        await supabase.from('pedidos').delete().eq('id', pedido.id)
-        throw new Error(itensError.message)
+      if (pedidoParaEditar) {
+        await handleEditSubmit(validos)
+      } else {
+        await handleCreateSubmit(validos)
       }
-
-      setFornecedorId(''); setPrevisao(''); setItens([{ ...ITEM_VAZIO }])
-      onCreated()
+      onSaved()
       onClose()
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao salvar pedido')
@@ -145,7 +225,12 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Novo pedido" size="lg">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={pedidoParaEditar ? `Editar pedido #${pedidoParaEditar.numero}` : 'Novo pedido'}
+      size="lg"
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <Select
@@ -244,7 +329,9 @@ export function NovoPedidoModal({ open, onClose, onCreated }: Props) {
         <div className="flex justify-end gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={submitting || duplicado}>
-            {submitting ? 'Salvando...' : 'Criar pedido'}
+            {submitting
+              ? (pedidoParaEditar ? 'Salvando...' : 'Criando...')
+              : (pedidoParaEditar ? 'Salvar alterações' : 'Criar pedido')}
           </Button>
         </div>
       </form>
