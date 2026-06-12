@@ -22,7 +22,7 @@ function trackMouse(e: React.MouseEvent<HTMLElement>) {
   el.style.setProperty('--my', `${e.clientY - rect.top}px`)
 }
 
-function StatCard({ label, icon, valor }: { label: string; icon: string; valor: string }) {
+function StatCard({ label, icon, valor, negativo }: { label: string; icon: string; valor: string; negativo?: boolean }) {
   return (
     <div
       onMouseMove={trackMouse}
@@ -34,7 +34,7 @@ function StatCard({ label, icon, valor }: { label: string; icon: string; valor: 
           <Icon name={icon} size={15} />
         </span>
       </div>
-      <span className="text-3xl font-light tabular-nums tracking-tight">{valor}</span>
+      <span className={cn('text-3xl font-light tabular-nums tracking-tight', negativo && 'text-down')}>{valor}</span>
       <span className="h-px w-full bg-gradient-to-r from-gold-line via-line to-transparent" />
     </div>
   )
@@ -85,10 +85,10 @@ export function FinDashboard() {
       <PeriodSelector value={periodo} onChange={setPeriodo} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <StatCard label="Saldo histórico" icon="dashboard" valor={cardValor(saldo)} />
+        <StatCard label="Saldo histórico" icon="dashboard" valor={cardValor(saldo)} negativo={!loading && saldo < 0} />
         <StatCard label="Receita" icon="up" valor={cardValor(resumo.receita)} />
         <StatCard label="Despesas" icon="down" valor={cardValor(resumo.despesa)} />
-        <StatCard label="Lucro" icon="goal" valor={cardValor(resumo.lucro)} />
+        <StatCard label="Lucro" icon="goal" valor={cardValor(resumo.lucro)} negativo={!loading && resumo.lucro < 0} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
