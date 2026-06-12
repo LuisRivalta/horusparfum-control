@@ -40,9 +40,8 @@ function StatCard({ label, icon, valor }: { label: string; icon: string; valor: 
   )
 }
 
-const hoje = new Date()
-
 export function FinDashboard() {
+  const hoje = new Date()
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
@@ -98,6 +97,7 @@ export function FinDashboard() {
           <div className="flex items-center gap-1 self-end p-0.5 border border-line-2 rounded-xl bg-surface-2">
             <button
               onClick={() => setCatTipo('saida')}
+              aria-pressed={catTipo === 'saida'}
               className={cn(
                 'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer',
                 catTipo === 'saida' ? 'bg-gold text-[#1A1407]' : 'text-muted hover:text-text'
@@ -107,6 +107,7 @@ export function FinDashboard() {
             </button>
             <button
               onClick={() => setCatTipo('entrada')}
+              aria-pressed={catTipo === 'entrada'}
               className={cn(
                 'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer',
                 catTipo === 'entrada' ? 'bg-gold text-[#1A1407]' : 'text-muted hover:text-text'
