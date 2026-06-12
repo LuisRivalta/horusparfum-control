@@ -78,7 +78,7 @@ describe('NovoPedidoModal', () => {
 
   it('calcula o total ao vivo conforme itens são preenchidos', async () => {
     const user = userEvent.setup()
-    render(<NovoPedidoModal open onClose={vi.fn()} onCreated={vi.fn()} />)
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByText(/total do pedido/i)).toBeInTheDocument())
 
@@ -93,7 +93,7 @@ describe('NovoPedidoModal', () => {
 
   it('bloqueia produto repetido em duas linhas', async () => {
     const user = userEvent.setup()
-    render(<NovoPedidoModal open onClose={vi.fn()} onCreated={vi.fn()} />)
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByLabelText(/produto 1/i)).toBeInTheDocument())
     await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
@@ -105,8 +105,8 @@ describe('NovoPedidoModal', () => {
 
   it('submete pedido e itens com payload correto', async () => {
     const user = userEvent.setup()
-    const onCreated = vi.fn()
-    render(<NovoPedidoModal open onClose={vi.fn()} onCreated={onCreated} />)
+    const onSaved = vi.fn()
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
 
     await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
     await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
@@ -117,7 +117,7 @@ describe('NovoPedidoModal', () => {
     await user.type(screen.getByLabelText(/preço 1/i), '100')
     await user.click(screen.getByRole('button', { name: /criar pedido/i }))
 
-    await waitFor(() => expect(onCreated).toHaveBeenCalled())
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
     expect(inserts.pedidos[0]).toMatchObject({
       fornecedor_id: 'f1',
       valor_total: 500,
