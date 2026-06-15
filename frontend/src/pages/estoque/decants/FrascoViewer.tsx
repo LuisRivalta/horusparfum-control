@@ -32,6 +32,9 @@ export function FrascoViewer({ percentual, size = 'sm' }: FrascoViewerProps) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setSize(w, h)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // Remove qualquer canvas órfão antes de anexar: o StrictMode (dev) e o HMR
+    // re-executam este effect e podem deixar um canvas antigo empilhado (o "reflexo").
+    mountRef.current.replaceChildren()
     mountRef.current.appendChild(renderer.domElement)
 
     // Lighting
