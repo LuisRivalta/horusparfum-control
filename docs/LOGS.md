@@ -1,5 +1,23 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-15 — Sessão 9: Deploy Vercel + fix de testes
+
+**Responsável:** Luis + Claude
+
+### O que foi feito
+- **Deploy em produção no Vercel:** `frontend/vercel.json` criado com rewrite SPA, env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`) configuradas, Supabase URL Configuration atualizada com redirect `https://horusparfum-control.vercel.app/**`
+- **Fix de teste flaky:** `Pedidos.test.tsx` — removido `waitFor` desnecessário do teste "renderiza o botão Novo pedido" (botão aparece no render inicial, não depende de dados async)
+- 84 testes passando
+
+### Decisões tomadas
+- Backend (FastAPI) não vai pro Vercel — todo o app funciona direto com Supabase; backend fica para quando houver lógica real (email, PDF, integrações externas)
+- `vercel.json` fica em `frontend/` (root directory do Vercel aponta para `frontend/`)
+
+### Pendências
+- Migração `20260615_decants.sql` ainda pendente de aplicação manual no Supabase
+
+---
+
 ## 2026-06-15 — Sessão 8: Página de Estoque + Reestruturação de Produtos
 
 **Responsável:** Luis + Claude (subagent-driven development)

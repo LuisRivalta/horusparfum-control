@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-15 (Sessão 8)
+> Última atualização: 2026-06-15 (Sessão 9)
 
 ## O que já foi feito
 
@@ -99,6 +99,7 @@
 
 ## Estado atual
 
+- **Deploy em produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
 - Frontend compila e roda (`npm run dev`) — http://localhost:5173
 - Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000
 - Banco de dados configurado no Supabase com todas as tabelas (migração de pedidos pendente de aplicação manual)
@@ -117,7 +118,6 @@
 5. Dashboard estoque com dados reais (alertas de estoque baixo)
 6. Relatórios (PDF ou tela)
 7. Importação em massa de produtos (botão "Importar" na topbar)
-8. Deploy (Vercel + Railway)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
