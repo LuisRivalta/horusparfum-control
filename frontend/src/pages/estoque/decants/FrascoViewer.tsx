@@ -102,6 +102,12 @@ export function FrascoViewer({ percentual, size = 'sm' }: FrascoViewerProps) {
 
     return () => {
       cancelAnimationFrame(rafId)
+      scene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          obj.geometry.dispose()
+          ;(obj.material as THREE.Material).dispose()
+        }
+      })
       renderer.dispose()
       if (mountRef.current?.contains(renderer.domElement)) {
         mountRef.current.removeChild(renderer.domElement)
