@@ -27,7 +27,7 @@ export function AbrirFrascoModal({ onClose, onSaved }: Props) {
   }, [])
 
   async function carregarProdutos() {
-    const [{ data: prodData }, { data: ativosData }] = await Promise.all([
+    const [{ data: prodData, error: e1 }, { data: ativosData, error: e2 }] = await Promise.all([
       supabase
         .from('produtos')
         .select('id, nome, volume_ml, estoque_atual')
@@ -38,6 +38,8 @@ export function AbrirFrascoModal({ onClose, onSaved }: Props) {
         .select('produto_id')
         .eq('status', 'ativo'),
     ])
+    if (e1) { setErro(e1.message); return }
+    if (e2) { setErro(e2.message); return }
     const idsAtivos = new Set((ativosData ?? []).map((f: { produto_id: string }) => f.produto_id))
     setProdutos((prodData ?? []).filter((p: ProdutoDisponivel) => !idsAtivos.has(p.id)))
   }
@@ -60,11 +62,18 @@ export function AbrirFrascoModal({ onClose, onSaved }: Props) {
         ml_total: produtoSelecionado.volume_ml,
         ml_restante: produtoSelecionado.volume_ml,
       })
-      if (e2) throw e2
+      if (e2) {
+        // Rollback: restore stock
+        await supabase
+          .from('produtos')
+          .update({ estoque_atual: produtoSelecionado.estoque_atual })
+          .eq('id', produtoSelecionado.id)
+        throw e2
+      }
 
       onSaved()
     } catch (e: unknown) {
-      setErro(e instanceof Error ? e.message : 'Erro ao abrir frasco')
+      setErro((e as { message?: string })?.message ?? 'Erro ao abrir frasco')
       setSubmitting(false)
     }
   }

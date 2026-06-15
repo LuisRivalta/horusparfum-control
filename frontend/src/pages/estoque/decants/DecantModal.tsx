@@ -6,7 +6,7 @@ interface FrascoComProduto {
   ml_restante: number
   status: 'ativo' | 'esgotado'
   aberto_em: string
-  produtos: { nome: string; foto_url: string | null }
+  produtos: { nome: string; foto_url: string | null; volume_ml: number }
 }
 
 interface Props {

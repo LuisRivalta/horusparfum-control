@@ -42,7 +42,8 @@ export function EstDecants() {
 
   async function excluirFrasco(id: string) {
     const { error } = await supabase.from('frascos_abertos').delete().eq('id', id)
-    if (!error) setFrascos((prev) => prev.filter((f) => f.id !== id))
+    if (error) { setErro(error.message); return }
+    setFrascos((prev) => prev.filter((f) => f.id !== id))
   }
 
   return (
@@ -68,7 +69,7 @@ export function EstDecants() {
           </div>
         )}
 
-        {!loading && frascos.length === 0 && (
+        {!loading && !erro && frascos.length === 0 && (
           <div className="text-center py-20 text-muted">
             <Icon name="droplet" size={32} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm">Nenhum frasco aberto</p>

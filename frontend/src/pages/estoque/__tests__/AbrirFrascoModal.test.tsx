@@ -50,6 +50,11 @@ vi.mock('@/lib/supabase', () => ({
   },
 }))
 
+beforeEach(() => {
+  mockOnClose.mockClear()
+  mockOnSaved.mockClear()
+})
+
 describe('AbrirFrascoModal', () => {
   it('lista produtos disponíveis no select', async () => {
     render(<AbrirFrascoModal onClose={mockOnClose} onSaved={mockOnSaved} />)
