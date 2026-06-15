@@ -24,6 +24,7 @@ export function EstDecants() {
   const [erro, setErro] = useState<string | null>(null)
   const [abrindo, setAbrindo] = useState(false)
   const [decantando, setDecantando] = useState<FrascoComProduto | null>(null)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null)
 
   useEffect(() => {
     carregar()
@@ -108,13 +109,36 @@ export function EstDecants() {
                     <span className="font-medium text-sm truncate">{frasco.produtos.nome}</span>
                   </div>
                   {esgotado && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); excluirFrasco(frasco.id) }}
-                      className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-down/60 hover:text-down hover:bg-down/10 transition-colors cursor-pointer"
-                      aria-label="Excluir frasco"
-                    >
-                      <Icon name="trash" size={14} />
-                    </button>
+                    confirmandoExclusao === frasco.id ? (
+                      <div
+                        className="flex items-center gap-1 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="text-[0.65rem] text-down/70 whitespace-nowrap">Excluir?</span>
+                        <button
+                          onClick={() => { excluirFrasco(frasco.id); setConfirmandoExclusao(null) }}
+                          className="w-6 h-6 flex items-center justify-center rounded text-down hover:bg-down/15 transition-colors cursor-pointer"
+                          aria-label="Confirmar exclusão"
+                        >
+                          <Icon name="check" size={12} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmandoExclusao(null)}
+                          className="w-6 h-6 flex items-center justify-center rounded text-muted hover:bg-surface-3 transition-colors cursor-pointer"
+                          aria-label="Cancelar exclusão"
+                        >
+                          <Icon name="x" size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmandoExclusao(frasco.id) }}
+                        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-down/60 hover:text-down hover:bg-down/10 transition-colors cursor-pointer"
+                        aria-label="Excluir frasco"
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    )
                   )}
                 </div>
 

@@ -23,6 +23,8 @@ const ICONS: Record<string, React.ReactNode> = {
   trash: <><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /><path d="M10 11v6M14 11v6" /></>,
   warn: <><path d="M12 3l9 16H3z" /><path d="M12 10v4M12 17h.01" /></>,
   droplet: <path d="M12 3C8 8 5 12 5 16a7 7 0 0014 0c0-4-3-8-7-13z" />,
+  check: <path d="M4 12l5 5L20 7" />,
+  x: <><path d="M18 6L6 18" /><path d="M6 6l12 12" /></>,
 }
 
 interface IconProps {

@@ -1,5 +1,5 @@
 // frontend/src/pages/estoque/__tests__/Decants.test.tsx
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { EstDecants } from '../Decants'
 
@@ -68,6 +68,17 @@ describe('EstDecants', () => {
   it('mostra badge Esgotado no frasco vazio', async () => {
     render(<EstDecants />)
     await waitFor(() => expect(screen.getByText('Esgotado')).toBeInTheDocument())
+  })
+
+  it('exige confirmação antes de excluir frasco esgotado', async () => {
+    render(<EstDecants />)
+    await waitFor(() => expect(screen.getByText('Lattafa 50ml')).toBeInTheDocument())
+    // Trash button visible initially
+    fireEvent.click(screen.getByLabelText('Excluir frasco'))
+    // Confirmation UI appears
+    expect(screen.getByText('Excluir?')).toBeInTheDocument()
+    expect(screen.getByLabelText('Confirmar exclusão')).toBeInTheDocument()
+    expect(screen.getByLabelText('Cancelar exclusão')).toBeInTheDocument()
   })
 
   it('mostra estado vazio quando não há frascos', async () => {
