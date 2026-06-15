@@ -20,7 +20,7 @@ Módulo de controle de frascos abertos para decants de perfume. O usuário "abre
 | `id` | uuid | PK, default gen_random_uuid() |
 | `produto_id` | uuid | FK → produtos, UNIQUE (só 1 frasco aberto por perfume) |
 | `ml_total` | int | NOT NULL — copiado de `produto.volume_ml` ao abrir |
-| `ml_restante` | int | NOT NULL — começa igual a `ml_total` |
+| `ml_restante` | int | NOT NULL, CHECK (ml_restante >= 0) — começa igual a `ml_total` |
 | `status` | text | NOT NULL, default `'ativo'` — `'ativo'` ou `'esgotado'` |
 | `aberto_em` | timestamptz | NOT NULL, default now() |
 
@@ -57,7 +57,7 @@ RLS: policy `authenticated` com acesso total (padrão do projeto).
 
 - Rota: `/estoque/decants`
 - Sidebar: entrada "Decants" na seção Estoque (após Divergências)
-- Ícone: `droplet` (existente no set de ícones do projeto)
+- Ícone: `droplet` — **adicionar ao `Icon.tsx`** (SVG: `<path d="M12 3C8 8 5 12 5 16a7 7 0 0014 0c0-4-3-8-7-13z" />`)
 
 ---
 
