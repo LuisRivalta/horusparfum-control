@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-15 (Sessão 7)
+> Última atualização: 2026-06-15 (Sessão 8)
 
 ## O que já foi feito
 
@@ -77,6 +77,16 @@
     - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
     - Saldo e lucro negativos destacados em vermelho
     - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
+17. **Página de Estoque + Reestruturação de Produtos (Sessão 8)**
+    - Nova página `EstoqueView.tsx` em `/estoque` — grid de cards só com produtos em estoque (`estoque_atual > 0`), badges de quantidade (dourado/laranja/vermelho por situação), filtros busca+categoria+fornecedor+ordenação, estado vazio diferenciado com/sem filtros
+    - `lib/estoque.ts`: lógica pura TDD — `situacaoEstoque` (critico/baixo/ok) e `ordenarProdutos` (qty_desc/qty_asc/az/za)
+    - `Produtos.tsx` virou catálogo puro: removidos "Registrar saída" do topbar, filtro "Situação" e lógica de `filterSituacao`
+    - Rota `/estoque` agora serve `EstoqueView`; `Produtos` move para `/estoque/produtos`
+    - Nav reordenada: Estoque (1º) → Decants (2º) → Produtos (3º, ícone `tag` novo)
+    - Ícone `tag` adicionado em `Icon.tsx`
+    - Spec: `docs/superpowers/specs/2026-06-15-estoque-view-design.md`
+    - 84 testes passando
+
 16. **Módulo de Decants (Sessão 7)** — `/estoque/decants`
     - Tabelas `frascos_abertos` (índice único parcial por produto/ativo, rollback de estoque se frasco falhar) e `decants`
     - `lib/decants.ts`: lógica pura TDD — `podeFrasco`, `calcularNovoML`, `statusAposDecant`
@@ -96,17 +106,17 @@
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, alertas, transações, contas, metas
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
-- 71 testes automatizados passando
+- 84 testes automatizados passando
 
 ## Próximos passos imediatos
 
 1. **Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor** (pendente — módulo de decants não funciona sem isso)
 2. Remover policies temporárias de `anon` (se foram criadas para testes)
 3. Copiar JWT Secret do Supabase para o `.env` do backend
-4. Dashboard estoque com dados reais (alertas de estoque baixo)
-5. Relatórios (PDF ou tela)
-6. Importação em massa de produtos (botão "Importar" na topbar)
-7. Testes para outras páginas (Estoque, Theme)
+4. "Registrar entrada" manual na página Estoque (atualmente entradas só via Pedidos)
+5. Dashboard estoque com dados reais (alertas de estoque baixo)
+6. Relatórios (PDF ou tela)
+7. Importação em massa de produtos (botão "Importar" na topbar)
 8. Deploy (Vercel + Railway)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)

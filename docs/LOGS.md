@@ -1,5 +1,32 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-15 — Sessão 8: Página de Estoque + Reestruturação de Produtos
+
+**Responsável:** Luis + Claude (subagent-driven development)
+
+### O que foi feito
+- **`lib/estoque.ts`** (TDD): `situacaoEstoque` (critico = `<= ceil(min*0.5)`, baixo = `<= min`, ok acima) e `ordenarProdutos` (qty_desc/qty_asc/az/za, não-mutante) — 9 testes
+- **`EstoqueView.tsx`**: nova página `/estoque` com grid de cards para produtos em estoque, badges de quantidade tipados via `Record<SituacaoEstoque, string>`, filtros cliente-side (busca+categoria+fornecedor+ordenação), estado vazio diferenciado, abre `ProductDetailsModal` + `SaidaRapidaModal` — 3 testes
+- **`Produtos.tsx`** virou catálogo puro: removidos "Registrar saída" do topbar, filtro "Situação" e lógica de `filterSituacao`; mantém `SaidaRapidaModal` via `onRegistrarSaida`
+- **Roteamento:** `/estoque` → `EstoqueView`, `/estoque/produtos` → `EstProdutos`
+- **Nav:** Estoque (1º, `box`) → Decants (2º, `droplet`) → Produtos (3º, `tag`) — ícone `tag` adicionado em `Icon.tsx`
+- **Exclusão de frasco com confirmação inline** (Sessão 7 extra): substituiu `window.confirm` por UI stateful "Excluir? ✓ ✕" com `stopPropagation`
+- Push direto na main (padrão do projeto)
+- 84 testes passando (eram 71)
+
+### Decisões tomadas
+- Estoque filtra `estoque_atual > 0` (só produtos em estoque); Produtos mostra catálogo completo
+- Critério `critico` = `<= ceil(min * 0.5)` (não exatamente metade — arredonda para cima)
+- Ordenação padrão `qty_desc` (maior quantidade primeiro)
+- Ícone `grid` já usado por Categorias — Produtos usa `tag` para evitar conflito
+- `BADGE_CLASSES` tipado como `Record<SituacaoEstoque, string>` (TypeScript pega key faltante)
+
+### Pendências
+- Migração `20260615_decants.sql` ainda pendente de aplicação manual no Supabase
+- "Registrar entrada" manual na página Estoque (entradas atuais só via Pedidos)
+
+---
+
 ## 2026-06-15 — Sessão 7: Módulo de Decants
 
 **Responsável:** Luis + Claude (subagent-driven development)
