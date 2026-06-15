@@ -31,7 +31,7 @@ export function DecantModal({ frasco, onClose, onSaved }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  const mlValor = mlRapido ?? (mlCustom !== '' ? parseInt(mlCustom, 10) : 0)
+  const mlValor = mlRapido ?? (mlCustom !== '' ? (parseInt(mlCustom, 10) || 0) : 0)
   const novoML = mlValor > 0 ? calcularNovoML(frasco.ml_restante, mlValor) : null
   const pctAtual = frasco.ml_restante / frasco.ml_total
   const novoPct = novoML !== null ? novoML / frasco.ml_total : pctAtual
@@ -69,7 +69,14 @@ export function DecantModal({ frasco, onClose, onSaved }: Props) {
       const { error: e2 } = await supabase
         .from('decants')
         .insert({ frasco_id: frasco.id, produto_id: frasco.produto_id, ml: mlValor })
-      if (e2) throw e2
+      if (e2) {
+        // Rollback: restore previous ml_restante and status
+        await supabase
+          .from('frascos_abertos')
+          .update({ ml_restante: frasco.ml_restante, status: frasco.status })
+          .eq('id', frasco.id)
+        throw e2
+      }
 
       // Brief pause for the bottle animation to run before closing
       await new Promise((r) => setTimeout(r, 700))
