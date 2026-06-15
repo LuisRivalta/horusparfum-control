@@ -15,6 +15,7 @@ import { EstFornecedores } from '@/pages/estoque/Fornecedores'
 import { EstAlertas } from '@/pages/estoque/Alertas'
 import { EstRelatorios } from '@/pages/estoque/Relatorios'
 import { EstDivergencias } from '@/pages/estoque/Divergencias'
+import { EstDecants } from '@/pages/estoque/Decants'
 
 export function App() {
   return (
@@ -31,6 +32,7 @@ export function App() {
         <Route path="/estoque" element={<EstProdutos />} />
         <Route path="/estoque/pedidos" element={<EstPedidos />} />
         <Route path="/estoque/divergencias" element={<EstDivergencias />} />
+        <Route path="/estoque/decants" element={<EstDecants />} />
         <Route path="/estoque/categorias" element={<EstCategorias />} />
         <Route path="/estoque/fornecedores" element={<EstFornecedores />} />
         <Route path="/estoque/alertas" element={<EstAlertas />} />
