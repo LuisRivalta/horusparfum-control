@@ -5,7 +5,7 @@ import { Icon } from '@/components/shared/Icon'
 import { Button, Select } from '@/components/shared/FormControls'
 import { ProductDetailsModal } from '@/components/shared/ProductDetailsModal'
 import { SaidaRapidaModal } from '@/components/shared/SaidaRapidaModal'
-import { situacaoEstoque, ordenarProdutos, type OrdemEstoque } from '@/lib/estoque'
+import { situacaoEstoque, ordenarProdutos, type OrdemEstoque, type SituacaoEstoque } from '@/lib/estoque'
 
 interface Produto {
   id: string
@@ -24,7 +24,7 @@ interface Produto {
 interface Categoria { id: string; nome: string }
 interface Fornecedor { id: string; nome: string }
 
-const BADGE_CLASSES: Record<string, string> = {
+const BADGE_CLASSES: Record<SituacaoEstoque, string> = {
   ok: 'bg-gold text-[#1A1407]',
   baixo: 'bg-orange-400 text-white',
   critico: 'bg-down text-white',

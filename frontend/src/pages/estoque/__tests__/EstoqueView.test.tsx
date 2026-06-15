@@ -1,5 +1,5 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EstEstoque } from '../EstoqueView'
 
 vi.mock('@/components/shared/ProductDetailsModal', () => ({
@@ -44,6 +44,10 @@ vi.mock('@/lib/supabase', () => ({
 }))
 
 describe('EstEstoque', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('renderiza cards com nome e badge de quantidade', async () => {
     render(<EstEstoque />)
     await waitFor(() => expect(screen.getByText('Asad')).toBeInTheDocument())
