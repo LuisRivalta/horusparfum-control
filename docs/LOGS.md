@@ -1,5 +1,28 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-15 — Sessão 7: Módulo de Decants
+
+**Responsável:** Luis + Claude (subagent-driven development)
+
+### O que foi feito
+- **Módulo de decants completo:** migração SQL (`frascos_abertos` com índice único parcial + `decants` com cascade delete), lógica pura TDD em `lib/decants.ts`, visualização 3D do frasco com Three.js (nível animado via lerp, dispose completo), página principal com grid de frascos, modal de abertura de frasco e modal de registro de decant
+- **Qualidade:** rollback de estoque se insert do frasco falhar, tratamento de erro Supabase (`PostgrestError` não é `instanceof Error`), estado vazio não aparece junto com erro, exclusão de frasco com feedback
+- Push direto na main (padrão do projeto)
+- Migração SQL criada e commitada — **pendente aplicação manual no Supabase**
+
+### Decisões tomadas
+- Índice único PARCIAL `WHERE status='ativo'` (não UNIQUE na coluna) — permite reabrir o mesmo perfume após esgotamento/exclusão
+- Rollback no frontend (não RPC) — operação de abertura é de baixíssima concorrência (3-4 usuários internos)
+- Frasco esgotado fica visível com badge "Esgotado" e botão excluir (não reverte estoque)
+- 700ms de pausa após confirmar decant para animação Three.js correr antes de fechar o modal
+
+### Pendências
+- Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor
+- Dashboard/relatórios de decants (quais perfumes mais saem, etc.) — futuro
+- Integração financeira do decant com venda — futuro
+
+---
+
 ## 2026-06-12 — Sessão 6: Edição de pedido aguardando + Dashboard financeiro com dados reais
 
 **Responsável:** Luis + Claude (subagent-driven development)

@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-12 (Sessão 6)
+> Última atualização: 2026-06-15 (Sessão 7)
 
 ## O que já foi feito
 
@@ -77,6 +77,15 @@
     - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
     - Saldo e lucro negativos destacados em vermelho
     - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
+16. **Módulo de Decants (Sessão 7)** — `/estoque/decants`
+    - Tabelas `frascos_abertos` (índice único parcial por produto/ativo, rollback de estoque se frasco falhar) e `decants`
+    - `lib/decants.ts`: lógica pura TDD — `podeFrasco`, `calcularNovoML`, `statusAposDecant`
+    - `FrascoViewer.tsx`: frasco 3D em Three.js com nível de líquido animado (lerp), dispose completo no cleanup
+    - Página `Decants.tsx`: grid de frascos ativos/esgotados, estado vazio, exclusão com feedback de erro
+    - `AbrirFrascoModal.tsx`: filtra produtos com estoque e sem frasco ativo, rollback se insert falhar
+    - `DecantModal.tsx`: botões rápidos (2/5/10ml) + input customizado, validação, animação do nível antes de fechar (700ms)
+    - Migração: `supabase/migrations/20260615_decants.sql` — **aplicar no Supabase SQL Editor**
+    - Spec: docs/superpowers/specs/2026-06-15-decants-design.md
 
 ## Estado atual
 
@@ -87,17 +96,18 @@
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, alertas, transações, contas, metas
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
-- 51 testes automatizados passando
+- 71 testes automatizados passando
 
 ## Próximos passos imediatos
 
-1. Remover policies temporárias de `anon` (se foram criadas para testes)
-2. Copiar JWT Secret do Supabase para o `.env` do backend
-3. Dashboard estoque com dados reais (alertas de estoque baixo)
-4. Relatórios (PDF ou tela)
-5. Importação em massa de produtos (botão "Importar" na topbar)
-6. Testes para outras páginas (Estoque, Theme)
-7. Deploy (Vercel + Railway)
+1. **Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor** (pendente — módulo de decants não funciona sem isso)
+2. Remover policies temporárias de `anon` (se foram criadas para testes)
+3. Copiar JWT Secret do Supabase para o `.env` do backend
+4. Dashboard estoque com dados reais (alertas de estoque baixo)
+5. Relatórios (PDF ou tela)
+6. Importação em massa de produtos (botão "Importar" na topbar)
+7. Testes para outras páginas (Estoque, Theme)
+8. Deploy (Vercel + Railway)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)

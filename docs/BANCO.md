@@ -99,6 +99,27 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | observacao | text | Detalhe opcional da divergência |
 | created_at | timestamptz | — |
 
+### `frascos_abertos`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| produto_id | uuid (FK → produtos) | Índice único parcial onde status='ativo' |
+| ml_total | int | Volume copiado de produto.volume_ml ao abrir (> 0) |
+| ml_restante | int | ML disponíveis (≥ 0) |
+| status | text | 'ativo' ou 'esgotado' |
+| aberto_em | timestamptz | — |
+
+### `decants`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| frasco_id | uuid (FK → frascos_abertos, cascade) | — |
+| produto_id | uuid (FK → produtos) | Desnormalizado para relatórios |
+| ml | int | Quantidade do decant (> 0) |
+| created_at | timestamptz | — |
+
 ### `transacoes`
 
 | Coluna | Tipo | Descrição |
@@ -145,6 +166,7 @@ fornecedores ←── produtos
 produtos ←── movimentacoes
 fornecedores ←── pedidos ←── pedido_itens ──→ produtos
 pedidos ←── divergencias ──→ fornecedores
+produtos ←── frascos_abertos ←── decants ──→ produtos
 ```
 
 `transacoes`, `contas` e `metas` são independentes (módulo financeiro não vincula ao estoque — ver [[PRD]]).
