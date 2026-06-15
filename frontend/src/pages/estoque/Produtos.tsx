@@ -47,7 +47,6 @@ export function EstProdutos() {
   const [search, setSearch] = useState('')
   const [filterCategoria, setFilterCategoria] = useState('')
   const [filterFornecedor, setFilterFornecedor] = useState('')
-  const [filterSituacao, setFilterSituacao] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null)
   const [saidaOpen, setSaidaOpen] = useState(false)
@@ -57,13 +56,6 @@ export function EstProdutos() {
     if (search && !p.nome.toLowerCase().includes(search.toLowerCase())) return false
     if (filterCategoria && p.categoria_id !== filterCategoria) return false
     if (filterFornecedor && p.fornecedor_id !== filterFornecedor) return false
-    if (filterSituacao) {
-      const e = p.estoque_atual
-      if (filterSituacao === 'disponivel' && e <= p.estoque_minimo) return false
-      if (filterSituacao === 'baixo' && (e === 0 || e > p.estoque_minimo)) return false
-      if (filterSituacao === 'critico' && (e === 0 || e > Math.ceil(p.estoque_minimo * 0.5))) return false
-      if (filterSituacao === 'sem_estoque' && e > 0) return false
-    }
     return true
   })
 
@@ -193,19 +185,15 @@ export function EstProdutos() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(search || filterCategoria || filterFornecedor || filterSituacao) && (
+          {(search || filterCategoria || filterFornecedor) && (
             <button
               type="button"
-              onClick={() => { setSearch(''); setFilterCategoria(''); setFilterFornecedor(''); setFilterSituacao('') }}
+              onClick={() => { setSearch(''); setFilterCategoria(''); setFilterFornecedor('') }}
               className="text-xs text-muted hover:text-text transition-colors cursor-pointer"
             >
               Limpar filtros
             </button>
           )}
-          <Button variant="secondary" onClick={() => { setSaidaProdutoId(undefined); setSaidaOpen(true) }}>
-            <Icon name="down" size={16} />
-            Registrar saída
-          </Button>
           <Button variant="secondary">
             <Icon name="download" size={16} />
             Importar
@@ -240,18 +228,6 @@ export function EstProdutos() {
           options={[{ value: '', label: 'Fornecedor' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))]}
           value={filterFornecedor}
           onChange={(e) => setFilterFornecedor(e.target.value)}
-        />
-        <Select
-          label=""
-          options={[
-            { value: '', label: 'Situação' },
-            { value: 'disponivel', label: 'Disponível' },
-            { value: 'baixo', label: 'Estoque baixo' },
-            { value: 'critico', label: 'Crítico' },
-            { value: 'sem_estoque', label: 'Sem estoque' },
-          ]}
-          value={filterSituacao}
-          onChange={(e) => setFilterSituacao(e.target.value)}
         />
       </div>
 
