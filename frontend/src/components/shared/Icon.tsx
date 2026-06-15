@@ -25,6 +25,7 @@ const ICONS: Record<string, React.ReactNode> = {
   droplet: <path d="M12 3C8 8 5 12 5 16a7 7 0 0014 0c0-4-3-8-7-13z" />,
   check: <path d="M4 12l5 5L20 7" />,
   x: <><path d="M18 6L6 18" /><path d="M6 6l12 12" /></>,
+  tag: <><path d="M4 4h7l9 9-7 7-9-9V4z" /><circle cx="7.5" cy="7.5" r="1.5" /></>,
 }
 
 interface IconProps {
