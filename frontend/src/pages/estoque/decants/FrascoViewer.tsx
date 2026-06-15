@@ -50,6 +50,9 @@ export function FrascoViewer({ percentual, size = 'sm' }: FrascoViewerProps) {
       roughness: 0.05,
       metalness: 0.05,
       side: THREE.DoubleSide,
+      // Casca de vidro transparente NÃO escreve profundidade: senão oclui o líquido
+      // que está atrás da parede frontal do vidro (o que sumia o dourado a 100%).
+      depthWrite: false,
     })
 
     // Bottle body
@@ -77,9 +80,6 @@ export function FrascoViewer({ percentual, size = 'sm' }: FrascoViewerProps) {
       emissiveIntensity: 0.07,
     })
     const liquid = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.92, maxH, 32), liquidMat)
-    // renderOrder explícito: a 100% o centro do líquido coincide com o do vidro (ambos em y=0),
-    // empatando o sort de transparência. renderOrder é a chave primária e desempata sempre a favor do líquido.
-    liquid.renderOrder = 1
     scene.add(liquid)
 
     function applyPct(pct: number) {
