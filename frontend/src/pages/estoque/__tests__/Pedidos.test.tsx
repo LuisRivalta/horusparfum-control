@@ -68,11 +68,9 @@ describe('EstPedidos (lista)', () => {
     expect(screen.getByText('Recebido')).toBeInTheDocument()
   })
 
-  it('renderiza o botão "Novo pedido"', async () => {
+  it('renderiza o botão "Novo pedido"', () => {
     render(<MemoryRouter><EstPedidos /></MemoryRouter>)
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /novo pedido/i })).toBeInTheDocument()
-    })
+    expect(screen.getByRole('button', { name: /novo pedido/i })).toBeInTheDocument()
   })
 
   it('exibe modal de confirmação ao clicar em Cancelar e chama update ao confirmar', async () => {
