@@ -109,6 +109,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
     .filter(l => (l.tipo === 'produto' ? l.produto_id : l.frasco_id) && l.preco !== '' && Number(l.preco) >= 0)
     .map(linhaParaItem)
   const resumo = resumoVenda(itensPreview, Number(taxa) || 0, Number(frete) || 0)
+  const taxaPct = resumo.totalBruto > 0 ? ((Number(taxa) || 0) / resumo.totalBruto) * 100 : 0
 
   function estoqueDisponivel(l: LinhaForm): string {
     if (l.tipo === 'produto') {
@@ -261,7 +262,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
           <div className="flex justify-between text-base">
             <span>Lucro</span>
             <span className={`font-mono ${resumo.lucroBruto < 0 ? 'text-down' : 'text-up'}`}>
-              {formatBRL(resumo.lucroBruto)} · ROI {resumo.roi === null ? '—' : `${(resumo.roi * 100).toFixed(0)}%`} · Margem {(resumo.margem * 100).toFixed(0)}%
+              {formatBRL(resumo.lucroBruto)} · ROI {resumo.roi === null ? '—' : `${(resumo.roi * 100).toFixed(0)}%`} · Margem {(resumo.margem * 100).toFixed(0)}% · Taxa {taxaPct.toFixed(0)}%
             </span>
           </div>
         </div>
