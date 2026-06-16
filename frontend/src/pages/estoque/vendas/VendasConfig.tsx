@@ -37,13 +37,15 @@ export function VendasConfig() {
   }
 
   async function updateCanalTaxa(id: string, taxa: number) {
-    await supabase.from('canais').update({ taxa_padrao: taxa }).eq('id', id)
-    carregar()
+    const { error } = await supabase.from('canais').update({ taxa_padrao: taxa }).eq('id', id)
+    if (error) { setErro(error.message); return }
+    setErro(null); carregar()
   }
 
   async function toggleCanal(id: string, ativo: boolean) {
-    await supabase.from('canais').update({ ativo }).eq('id', id)
-    carregar()
+    const { error } = await supabase.from('canais').update({ ativo }).eq('id', id)
+    if (error) { setErro(error.message); return }
+    setErro(null); carregar()
   }
 
   async function addEmbalagem() {
@@ -57,8 +59,9 @@ export function VendasConfig() {
   }
 
   async function updateEmbCusto(id: string, custo: number) {
-    await supabase.from('embalagens_decant').update({ custo }).eq('id', id)
-    carregar()
+    const { error } = await supabase.from('embalagens_decant').update({ custo }).eq('id', id)
+    if (error) { setErro(error.message); return }
+    setErro(null); carregar()
   }
 
   return (
