@@ -83,7 +83,7 @@
     - RPCs atômicas: `registrar_venda` (baixa estoque de produto/decant + snapshot de custo + lança receita/taxa/frete em `transacoes`) e `cancelar_venda` (estorno completo: devolve estoque/ml, remove lançamentos, marca status='cancelada')
     - `lib/vendas.ts` com testes TDD (Vitest): custo de decant, rateio proporcional, lucro por item, ROI, margem, resumo da venda
     - Telas: `Vendas.tsx` (lista + cancelamento), `vendas/NovaVendaModal.tsx` (multi-item + prévia ao vivo), `vendas/VendaDetalheModal.tsx`, `vendas/VendasConfig.tsx` (CRUD canais e embalagens)
-    - Nav: item "Vendas" adicionado ao grupo Estoque (ícone `shopping-cart`)
+    - Nav: item "Vendas" adicionado ao grupo Estoque (ícone `cart`)
     - Badge "venda" nas linhas de `transacoes` geradas por RPC
     - **Decisão contábil:** receita bruta + taxa + frete lançados no caixa; custo do produto NÃO relançado (já foi despesa na compra — evita dupla contagem); lucro gerencial vive no módulo de Vendas
     - Migração: `supabase/migrations/20260616_vendas.sql` — **pendente de aplicação no Supabase SQL Editor**

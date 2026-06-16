@@ -7,9 +7,9 @@
 ### O que foi feito
 - **Migração SQL** (`supabase/migrations/20260616_vendas.sql`): tabelas `canais`, `embalagens_decant`, `vendas`, `venda_itens`; coluna `preco_referencia` em `produtos`; colunas `venda_id` e `origem` em `transacoes`; RLS; seeds de canais (Loja física, Shopee, Mercado Livre, Site próprio, Instagram/WhatsApp) e embalagens de decant (2ml/5ml/10ml).
 - **RPCs atômicas:** `registrar_venda` (baixa estoque de produto/decant com `FOR UPDATE`, faz snapshot de custo, insere venda e itens, rateio proporcional de taxa/frete no segundo loop, lança receita + taxa + frete em `transacoes`) e `cancelar_venda` (estorno completo: devolve estoque ou ml, apaga registro de decant, remove transações da venda, marca status='cancelada').
-- **`lib/vendas.ts`** (TDD — Vitest): funções puras `custoPorMlDecant`, `ratearProporcional`, `lucroItem`, `roiItem`, `margemItem`, `resumoVenda`. Cobre rateio exato no último item (anti penny-gap).
-- **Telas frontend:** `Vendas.tsx` (lista de vendas com busca, filtro de status, card de totais, botão cancelar com confirmação), `vendas/NovaVendaModal.tsx` (multi-item com seleção tipo produto/decant, prévia ao vivo de lucro/ROI/margem por item e total da venda), `vendas/VendaDetalheModal.tsx` (detalhes da venda e seus itens), `vendas/VendasConfig.tsx` (CRUD de canais com taxa_padrao e CRUD de embalagens de decant com custo por tamanho).
-- **Nav:** item "Vendas" com ícone `shopping-cart` adicionado ao grupo Estoque na sidebar.
+- **`lib/vendas.ts`** (TDD — Vitest): funções puras `custoDecantUnitario`, `brutoItem`, `custoItem`, `ratearProporcional`, `lucroItem`, `resumoVenda`, `roi`, `margem`. Cobre rateio exato no último item (anti penny-gap).
+- **Telas frontend:** `Vendas.tsx` (tabela de vendas com Nº/data/canal/itens/bruto/lucro/ROI/status, clique abre detalhe, botão cancelar com confirmação, link "Canais e embalagens"), `vendas/NovaVendaModal.tsx` (multi-item com seleção tipo produto/decant, prévia ao vivo de lucro/ROI/margem), `vendas/VendaDetalheModal.tsx` (detalhes da venda e seus itens), `vendas/VendasConfig.tsx` (CRUD de canais com taxa_padrao e CRUD de embalagens de decant com custo por tamanho).
+- **Nav:** item "Vendas" com ícone `cart` adicionado ao grupo Estoque na sidebar.
 - **Badge no Financeiro:** `Transacoes.tsx` exibe badge "venda" nas linhas com `origem='venda'`.
 - **Campo preço de referência:** coluna `preco_referencia` adicionada a `produtos` e exposta no modal de novo produto e na prévia da nova venda.
 - **Documentação:** PRD, BANCO, HANDOFF e LOGS atualizados.
