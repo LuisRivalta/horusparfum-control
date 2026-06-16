@@ -5,6 +5,7 @@ import { Icon } from '@/components/shared/Icon'
 import { Button, Select } from '@/components/shared/FormControls'
 import { ProductDetailsModal } from '@/components/shared/ProductDetailsModal'
 import { SaidaRapidaModal } from '@/components/shared/SaidaRapidaModal'
+import { EntradaRapidaModal } from '@/components/shared/EntradaRapidaModal'
 import { situacaoEstoque, ordenarProdutos, type OrdemEstoque, type SituacaoEstoque } from '@/lib/estoque'
 
 interface Produto {
@@ -43,6 +44,8 @@ export function EstEstoque() {
   const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null)
   const [saidaOpen, setSaidaOpen] = useState(false)
   const [saidaProdutoId, setSaidaProdutoId] = useState<string | undefined>(undefined)
+  const [entradaOpen, setEntradaOpen] = useState(false)
+  const [entradaProdutoId, setEntradaProdutoId] = useState<string | undefined>(undefined)
 
   async function carregar() {
     setLoading(true)
@@ -108,6 +111,12 @@ export function EstEstoque() {
             >
               <Icon name="down" size={16} />
               Registrar saída
+            </Button>
+            <Button
+              onClick={() => { setEntradaProdutoId(undefined); setEntradaOpen(true) }}
+            >
+              <Icon name="up" size={16} />
+              Registrar entrada
             </Button>
           </div>
         </div>
@@ -238,6 +247,13 @@ export function EstEstoque() {
         open={saidaOpen}
         produtoId={saidaProdutoId}
         onClose={() => { setSaidaOpen(false); setSaidaProdutoId(undefined) }}
+        onDone={carregar}
+      />
+
+      <EntradaRapidaModal
+        open={entradaOpen}
+        produtoId={entradaProdutoId}
+        onClose={() => { setEntradaOpen(false); setEntradaProdutoId(undefined) }}
         onDone={carregar}
       />
     </>

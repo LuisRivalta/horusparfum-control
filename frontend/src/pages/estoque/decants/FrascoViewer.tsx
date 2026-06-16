@@ -6,6 +6,40 @@ interface FrascoViewerProps {
   size?: 'sm' | 'lg'
 }
 
+// Seção transversal: retângulo de cantos arredondados (footprint do flask).
+function roundedRectShape(w: number, d: number, r: number) {
+  const s = new THREE.Shape()
+  const x = -w / 2
+  const y = -d / 2
+  s.moveTo(x + r, y)
+  s.lineTo(x + w - r, y)
+  s.quadraticCurveTo(x + w, y, x + w, y + r)
+  s.lineTo(x + w, y + d - r)
+  s.quadraticCurveTo(x + w, y + d, x + w - r, y + d)
+  s.lineTo(x + r, y + d)
+  s.quadraticCurveTo(x, y + d, x, y + d - r)
+  s.lineTo(x, y + r)
+  s.quadraticCurveTo(x, y, x + r, y)
+  return s
+}
+
+// Prisma vertical centrado na origem, extrudado a partir de uma rounded-rect.
+// bevel > 0 arredonda as bordas de topo/base (ombros do flask).
+function verticalPrism(shape: THREE.Shape, height: number, bevel: number) {
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: height,
+    bevelEnabled: bevel > 0,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelSegments: 4,
+    curveSegments: 16,
+    steps: 1,
+  })
+  geo.center()
+  geo.rotateX(-Math.PI / 2) // eixo de extrusão (Z) → vertical (Y)
+  return geo
+}
+
 export function FrascoViewer({ percentual, size = 'sm' }: FrascoViewerProps) {
   const mountRef = useRef<HTMLDivElement>(null)
   // Ref for animation target — updated without recreating the scene
@@ -22,12 +56,12 @@ export function FrascoViewer({ percentual, size = 'sm' }: FrascoViewerProps) {
 
     const w = size === 'sm' ? 80 : 140
     const h = size === 'sm' ? 100 : 200
-    const maxH = 2.8 // max liquid height (bottle interior)
+    const maxH = 2.75 // altura do líquido a 100% (interior do flask)
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 100)
-    camera.position.set(1.8, 1.0, 5.5)
-    camera.lookAt(0, 0, 0)
+    camera.position.set(1.3, 1.2, 6.6)
+    camera.lookAt(0, 0.42, 0)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setSize(w, h)
@@ -58,23 +92,24 @@ export function FrascoViewer({ percentual, size = 'sm' }: FrascoViewerProps) {
       depthWrite: false,
     })
 
-    // Bottle body
-    scene.add(new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.0, 3.0, 32), glassMat))
+    // Corpo — flask retangular de cantos arredondados (silhueta tipo LV Imagination)
+    const body = new THREE.Mesh(verticalPrism(roundedRectShape(1.8, 1.05, 0.32), 2.7, 0.14), glassMat)
+    scene.add(body)
 
-    // Neck
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.82, 0.9, 32), glassMat)
-    neck.position.y = 1.95
+    // Pescoço curto de vidro entre o corpo e a tampa
+    const neck = new THREE.Mesh(verticalPrism(roundedRectShape(0.86, 0.62, 0.2), 0.18, 0.04), glassMat)
+    neck.position.y = 1.62
     scene.add(neck)
 
-    // Gold cap
+    // Tampa robusta arredondada
     const cap = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.42, 0.42, 0.2, 32),
-      new THREE.MeshStandardMaterial({ color: 0xc9a84c, roughness: 0.2, metalness: 0.8 })
+      verticalPrism(roundedRectShape(1.5, 0.9, 0.28), 0.5, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0xc9a84c, roughness: 0.25, metalness: 0.8 })
     )
-    cap.position.y = 2.5
+    cap.position.y = 2.0
     scene.add(cap)
 
-    // Liquid — full-height cylinder, repositioned via scale to animate level
+    // Líquido — prisma de altura máxima, reposicionado via escala para animar o nível
     const liquidMat = new THREE.MeshStandardMaterial({
       color: 0xc9a84c,
       transparent: true,
@@ -82,7 +117,7 @@ export function FrascoViewer({ percentual, size = 'sm' }: FrascoViewerProps) {
       emissive: 0xc9a84c,
       emissiveIntensity: 0.07,
     })
-    const liquid = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.92, maxH, 32), liquidMat)
+    const liquid = new THREE.Mesh(verticalPrism(roundedRectShape(1.58, 0.84, 0.26), maxH, 0), liquidMat)
     scene.add(liquid)
 
     function applyPct(pct: number) {
