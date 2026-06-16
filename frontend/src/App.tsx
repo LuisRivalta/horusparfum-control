@@ -18,6 +18,7 @@ import { EstRelatorios } from '@/pages/estoque/Relatorios'
 import { EstDivergencias } from '@/pages/estoque/Divergencias'
 import { EstDecants } from '@/pages/estoque/Decants'
 import { EstVendas } from '@/pages/estoque/Vendas'
+import { VendasConfig } from '@/pages/estoque/vendas/VendasConfig'
 
 export function App() {
   return (
@@ -33,6 +34,7 @@ export function App() {
         <Route path="/financeiro/metas" element={<FinMetas />} />
         <Route path="/estoque" element={<EstEstoque />} />
         <Route path="/estoque/vendas" element={<EstVendas />} />
+        <Route path="/estoque/vendas/config" element={<VendasConfig />} />
         <Route path="/estoque/produtos" element={<EstProdutos />} />
         <Route path="/estoque/pedidos" element={<EstPedidos />} />
         <Route path="/estoque/divergencias" element={<EstDivergencias />} />
