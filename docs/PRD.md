@@ -36,7 +36,7 @@ Sistema administrativo interno da **Horus Parfum**, empresa de perfumaria artesa
 
 ## Regras de negócio
 
-1. **Áreas independentes** — Financeiro e Estoque não têm vínculo direto entre si (não desconta automaticamente do financeiro ao registrar saída de estoque)
+1. **Integração via Vendas** — o módulo de Vendas vincula Estoque e Financeiro: registrar uma venda baixa o estoque (frasco cheio ou ml de decant) e lança automaticamente no caixa (receita + taxa + frete). Lançamentos manuais no Financeiro (compra de insumos, infraestrutura) continuam independentes.
 2. **PDF obrigatório em relatórios** — relatórios financeiros e de giro devem poder ser exportados
 3. **Alertas automáticos** — quando estoque atual < estoque mínimo definido, o item aparece na tela de Alertas com sugestão de reposição
 4. **Multiusuário** — cada ação registra o responsável (nome do usuário logado)
@@ -45,7 +45,7 @@ Sistema administrativo interno da **Horus Parfum**, empresa de perfumaria artesa
 ## Fora de escopo (por enquanto)
 
 - Integração com e-commerce
-- Vendas diretas pelo sistema (é só controle, não PDV)
+- PDV com captura de pagamento (o sistema registra vendas e seus efeitos em estoque/caixa, mas não processa pagamento)
 - App mobile nativo
 - Notificações push
 - Multi-empresa / multi-loja

@@ -42,6 +42,7 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | foto_url | text | URL da imagem (Supabase Storage) |
 | custo_medio | numeric(12,2) | Custo médio ponderado (atualizado na confirmação de pedidos) |
 | ultimo_custo | numeric(12,2) | Preço da última compra recebida |
+| preco_referencia | numeric(12,2) | Preço de venda sugerido (exibido no modal de nova venda) |
 | created_at | timestamptz | — |
 
 ### `movimentacoes`
@@ -120,6 +121,64 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | ml | int | Quantidade do decant (> 0) |
 | created_at | timestamptz | — |
 
+### `canais`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| nome | text | Ex: "Shopee", "Loja física", "Instagram/WhatsApp" |
+| taxa_padrao | numeric(5,2) | Percentual padrão de taxa do canal (≥ 0) |
+| ativo | boolean | Se o canal aparece nas opções de nova venda |
+| created_at | timestamptz | — |
+
+### `embalagens_decant`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| tamanho_ml | int | Volume da embalagem em ml (único, > 0) |
+| custo | numeric(12,2) | Custo da embalagem em BRL (≥ 0) |
+| ativo | boolean | Se a embalagem está disponível para seleção |
+
+### `vendas`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| numero | serial unique | Número sequencial da venda |
+| canal_id | uuid (FK → canais) | Canal de venda |
+| data_venda | date | Data da venda (default: hoje) |
+| forma_pagamento | text | Ex: "Pix", "Cartão" |
+| cliente | text | Nome do cliente (opcional) |
+| taxa_total | numeric(12,2) | Valor total de taxa do canal (≥ 0) |
+| frete | numeric(12,2) | Custo de frete (≥ 0) |
+| total_bruto | numeric(12,2) | Soma dos preços de venda dos itens |
+| total_custo | numeric(12,2) | Soma dos custos (produto + embalagem) dos itens |
+| lucro_bruto | numeric(12,2) | total_bruto − taxa_total − frete − total_custo |
+| responsavel | text | Nome do usuário |
+| observacao | text | Observação livre (opcional) |
+| status | text | "concluida" ou "cancelada" |
+| created_at | timestamptz | — |
+
+### `venda_itens`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| venda_id | uuid (FK → vendas, cascade) | Venda à qual o item pertence |
+| tipo | text | "produto" (frasco cheio) ou "decant" |
+| produto_id | uuid (FK → produtos) | Produto vendido |
+| frasco_id | uuid (FK → frascos_abertos) | Frasco origem (apenas decants) |
+| decant_id | uuid (FK → decants) | Registro do decant gerado (apenas decants) |
+| ml | int | Volume do decant em ml (apenas decants, > 0) |
+| quantidade | int | Quantidade de unidades vendidas (≥ 1) |
+| preco_unitario | numeric(12,2) | Preço de venda por unidade (≥ 0) |
+| custo_unitario | numeric(12,2) | Custo do produto por unidade (snapshot no momento da venda) |
+| custo_embalagem | numeric(12,2) | Custo da embalagem por unidade (apenas decants) |
+| taxa_rateada | numeric(12,2) | Parcela da taxa do canal rateada proporcionalmente neste item |
+| frete_rateado | numeric(12,2) | Parcela do frete rateada proporcionalmente neste item |
+| lucro | numeric(12,2) | Lucro líquido deste item (bruto − taxa − frete − custo) |
+
 ### `transacoes`
 
 | Coluna | Tipo | Descrição |
@@ -131,6 +190,8 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | categoria | text | Ex: "Vendas", "Fornecedores", "Marketing" |
 | forma_pagamento | text | "Pix", "Cartão", "Boleto", "Transferência" |
 | responsavel | text | Nome do usuário |
+| venda_id | uuid (FK → vendas) | Venda de origem (nullable; preenchido por RPCs de venda) |
+| origem | text | "manual" (padrão) ou "venda" (gerado pela RPC registrar_venda) |
 | created_at | timestamptz | — |
 
 ### `contas`
@@ -167,9 +228,11 @@ produtos ←── movimentacoes
 fornecedores ←── pedidos ←── pedido_itens ──→ produtos
 pedidos ←── divergencias ──→ fornecedores
 produtos ←── frascos_abertos ←── decants ──→ produtos
+canais ←── vendas ←── venda_itens ──→ produtos
+vendas ←── transacoes (origem='venda')
 ```
 
-`transacoes`, `contas` e `metas` são independentes (módulo financeiro não vincula ao estoque — ver [[PRD]]).
+`contas` e `metas` são independentes (módulo financeiro puro). `transacoes` agora pode ser gerada automaticamente pelas RPCs de venda (campo `origem='venda'`) ou inserida manualmente (`origem='manual'`).
 
 ## Row Level Security (RLS)
 
@@ -200,4 +263,6 @@ create policy "Acesso total autenticados" on <tabela> for all to authenticated u
 -- (ver LOGS sessão 2 para SQL completo)
 ```
 
-Migração de pedidos: supabase/migrations/20260610_pedidos.sql (tabelas + RLS + RPCs confirmar_recebimento e registrar_saida).
+Migração de pedidos: `supabase/migrations/20260610_pedidos.sql` (tabelas + RLS + RPCs `confirmar_recebimento` e `registrar_saida`).
+
+Migração de vendas: `supabase/migrations/20260616_vendas.sql` (tabelas `canais`, `embalagens_decant`, `vendas`, `venda_itens`; colunas `preco_referencia` em `produtos` e `venda_id`/`origem` em `transacoes`; RLS; RPCs `registrar_venda` e `cancelar_venda`; seeds de canais e embalagens). Aplicar manualmente no Supabase SQL Editor.

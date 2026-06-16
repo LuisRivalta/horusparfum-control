@@ -1,5 +1,31 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-16 — Sessão 11: Módulo de Vendas (integração Estoque ↔ Financeiro)
+
+**Responsável:** Luis + Claude (subagent-driven development)
+
+### O que foi feito
+- **Migração SQL** (`supabase/migrations/20260616_vendas.sql`): tabelas `canais`, `embalagens_decant`, `vendas`, `venda_itens`; coluna `preco_referencia` em `produtos`; colunas `venda_id` e `origem` em `transacoes`; RLS; seeds de canais (Loja física, Shopee, Mercado Livre, Site próprio, Instagram/WhatsApp) e embalagens de decant (2ml/5ml/10ml).
+- **RPCs atômicas:** `registrar_venda` (baixa estoque de produto/decant com `FOR UPDATE`, faz snapshot de custo, insere venda e itens, rateio proporcional de taxa/frete no segundo loop, lança receita + taxa + frete em `transacoes`) e `cancelar_venda` (estorno completo: devolve estoque ou ml, apaga registro de decant, remove transações da venda, marca status='cancelada').
+- **`lib/vendas.ts`** (TDD — Vitest): funções puras `custoPorMlDecant`, `ratearProporcional`, `lucroItem`, `roiItem`, `margemItem`, `resumoVenda`. Cobre rateio exato no último item (anti penny-gap).
+- **Telas frontend:** `Vendas.tsx` (lista de vendas com busca, filtro de status, card de totais, botão cancelar com confirmação), `vendas/NovaVendaModal.tsx` (multi-item com seleção tipo produto/decant, prévia ao vivo de lucro/ROI/margem por item e total da venda), `vendas/VendaDetalheModal.tsx` (detalhes da venda e seus itens), `vendas/VendasConfig.tsx` (CRUD de canais com taxa_padrao e CRUD de embalagens de decant com custo por tamanho).
+- **Nav:** item "Vendas" com ícone `shopping-cart` adicionado ao grupo Estoque na sidebar.
+- **Badge no Financeiro:** `Transacoes.tsx` exibe badge "venda" nas linhas com `origem='venda'`.
+- **Campo preço de referência:** coluna `preco_referencia` adicionada a `produtos` e exposta no modal de novo produto e na prévia da nova venda.
+- **Documentação:** PRD, BANCO, HANDOFF e LOGS atualizados.
+
+### Decisões tomadas
+- **Contabilidade:** a venda lança no caixa apenas receita bruta + taxa + frete. O custo do produto NÃO é relançado (ele já foi registrado como despesa na compra via Pedidos), evitando dupla contagem. Lucro e ROI gerenciais vivem no módulo de Vendas e nos campos de `vendas`/`venda_itens`.
+- Custo do decant = (ml_decant / ml_total_frasco) × custo_medio do produto — snapshot no momento da venda.
+- Rateio de taxa/frete proporcional ao bruto de cada item; o último item absorve os centavos restantes.
+- Cancelamento apaga as transações do caixa (`origem='venda'`) e devolve estoque/ml integralmente.
+
+### Pendências
+- **Aplicar `supabase/migrations/20260616_vendas.sql` no Supabase SQL Editor** — o módulo não funciona sem isso.
+- Dashboards de ROI/análise de vendas (dados já gravados por venda e item).
+
+---
+
 ## 2026-06-16 — Sessão 10: Registrar entrada manual + FrascoViewer retangular
 
 **Responsável:** Luis + Claude

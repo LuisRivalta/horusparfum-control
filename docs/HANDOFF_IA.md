@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-16 (Sessão 10)
+> Última atualização: 2026-06-16 (Sessão 11)
 
 ## O que já foi feito
 
@@ -77,6 +77,17 @@
     - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
     - Saldo e lucro negativos destacados em vermelho
     - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
+19. **Módulo de Vendas — integração Estoque ↔ Financeiro (Sessão 11)**
+    - Tabelas: `canais` (taxa_padrao %), `vendas` (header com total_bruto/total_custo/lucro_bruto), `venda_itens` (linhas com snapshot de custo + rateio proporcional de taxa/frete + lucro por item), `embalagens_decant` (custo por tamanho)
+    - Colunas adicionadas: `produtos.preco_referencia` (preço sugerido), `transacoes.venda_id` + `transacoes.origem` ('manual'|'venda')
+    - RPCs atômicas: `registrar_venda` (baixa estoque de produto/decant + snapshot de custo + lança receita/taxa/frete em `transacoes`) e `cancelar_venda` (estorno completo: devolve estoque/ml, remove lançamentos, marca status='cancelada')
+    - `lib/vendas.ts` com testes TDD (Vitest): custo de decant, rateio proporcional, lucro por item, ROI, margem, resumo da venda
+    - Telas: `Vendas.tsx` (lista + cancelamento), `vendas/NovaVendaModal.tsx` (multi-item + prévia ao vivo), `vendas/VendaDetalheModal.tsx`, `vendas/VendasConfig.tsx` (CRUD canais e embalagens)
+    - Nav: item "Vendas" adicionado ao grupo Estoque (ícone `shopping-cart`)
+    - Badge "venda" nas linhas de `transacoes` geradas por RPC
+    - **Decisão contábil:** receita bruta + taxa + frete lançados no caixa; custo do produto NÃO relançado (já foi despesa na compra — evita dupla contagem); lucro gerencial vive no módulo de Vendas
+    - Migração: `supabase/migrations/20260616_vendas.sql` — **pendente de aplicação no Supabase SQL Editor**
+    - Spec: `docs/superpowers/specs/2026-06-16-vendas-erp-design.md`
 18. **Registrar entrada manual + FrascoViewer retangular (Sessão 10)**
     - `EntradaRapidaModal.tsx`: modal para adicionar estoque diretamente (produto + qtd + motivo) sem Pedidos
     - `EstoqueView.tsx`: botão "Registrar entrada" ao lado de "Registrar saída" no cabeçalho
@@ -110,7 +121,7 @@
 - **Deploy em produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
 - Frontend compila e roda (`npm run dev`) — http://localhost:5173
 - Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000
-- Banco de dados configurado no Supabase com todas as tabelas (migração de pedidos pendente de aplicação manual)
+- Banco de dados configurado no Supabase com todas as tabelas (migrações de decants, entrada manual e vendas pendentes de aplicação manual)
 - Autenticação funcional (login/logout via Supabase Auth)
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, alertas, transações, contas, metas
 - Dark/light theme funcional
@@ -119,13 +130,15 @@
 
 ## Próximos passos imediatos
 
-1. **Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor** (pendente — módulo de decants não funciona sem isso)
-2. **Aplicar migração `supabase/migrations/20260616_registrar_entrada.sql` no Supabase SQL Editor** (pendente — botão "Registrar entrada" não funciona sem isso)
-3. Remover policies temporárias de `anon` (se foram criadas para testes)
-4. Copiar JWT Secret do Supabase para o `.env` do backend
-5. Dashboard estoque com dados reais (alertas de estoque baixo)
-6. Relatórios (PDF ou tela)
-7. Importação em massa de produtos (botão "Importar" na topbar)
+1. **Aplicar migração `supabase/migrations/20260616_vendas.sql` no Supabase SQL Editor** (pendente — o módulo de Vendas não funciona sem isso)
+2. **Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor** (pendente — módulo de decants não funciona sem isso)
+3. **Aplicar migração `supabase/migrations/20260616_registrar_entrada.sql` no Supabase SQL Editor** (pendente — botão "Registrar entrada" não funciona sem isso)
+4. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
+5. Remover policies temporárias de `anon` (se foram criadas para testes)
+6. Copiar JWT Secret do Supabase para o `.env` do backend
+7. Dashboard estoque com dados reais (alertas de estoque baixo)
+8. Relatórios (PDF ou tela)
+9. Importação em massa de produtos (botão "Importar" na topbar)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
