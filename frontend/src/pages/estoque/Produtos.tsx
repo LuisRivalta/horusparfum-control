@@ -12,6 +12,7 @@ interface Produto {
   id: string
   nome: string
   volume_ml: number | null
+  preco_referencia: number | null
   categoria_id: string | null
   fornecedor_id: string | null
   estoque_atual: number
@@ -62,6 +63,7 @@ export function EstProdutos() {
   const [form, setForm] = useState({
     nome: '',
     volume_ml: '',
+    preco_referencia: '',
     categoria_id: '',
     fornecedor_id: '',
     estoque_atual: '0',
@@ -156,6 +158,7 @@ export function EstProdutos() {
       await supabase.from('produtos').insert({
         nome: form.nome,
         volume_ml: form.volume_ml ? Number(form.volume_ml) : null,
+        preco_referencia: form.preco_referencia ? Number(form.preco_referencia) : null,
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
         estoque_atual: Number(form.estoque_atual),
@@ -163,7 +166,7 @@ export function EstProdutos() {
         foto_url,
       })
 
-      setForm({ nome: '', volume_ml: '', categoria_id: '', fornecedor_id: '', estoque_atual: '0', estoque_minimo: '0' })
+      setForm({ nome: '', volume_ml: '', preco_referencia: '', categoria_id: '', fornecedor_id: '', estoque_atual: '0', estoque_minimo: '0' })
       clearFoto()
       setModalOpen(false)
       fetchData()
@@ -319,6 +322,12 @@ export function EstProdutos() {
             <Input label="Volume (ml)" type="number" value={form.volume_ml} onChange={(e) => setForm({ ...form, volume_ml: e.target.value })} />
             <Select label="Categoria" options={categorias.map(c => ({ value: c.id, label: c.nome }))} value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} />
           </div>
+          <Input
+            label="Preço de referência (R$)"
+            type="number" step="0.01" min="0"
+            value={form.preco_referencia}
+            onChange={(e) => setForm({ ...form, preco_referencia: e.target.value })}
+          />
           <Select label="Fornecedor" options={fornecedores.map(f => ({ value: f.id, label: f.nome }))} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Estoque atual" type="number" value={form.estoque_atual} onChange={(e) => setForm({ ...form, estoque_atual: e.target.value })} />

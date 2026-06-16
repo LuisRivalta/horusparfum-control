@@ -11,6 +11,7 @@ export interface Produto {
   id: string
   nome: string
   volume_ml: number | null
+  preco_referencia: number | null
   categoria_id: string | null
   fornecedor_id: string | null
   estoque_atual: number
@@ -49,6 +50,7 @@ export function ProductDetailsModal({
   const [form, setForm] = useState({
     nome: '',
     volume_ml: '',
+    preco_referencia: '',
     categoria_id: '',
     fornecedor_id: '',
     estoque_atual: '0',
@@ -61,6 +63,7 @@ export function ProductDetailsModal({
     setForm({
       nome: produto!.nome,
       volume_ml: produto!.volume_ml?.toString() ?? '',
+      preco_referencia: produto!.preco_referencia != null ? String(produto!.preco_referencia) : '',
       categoria_id: produto!.categoria_id ?? '',
       fornecedor_id: produto!.fornecedor_id ?? '',
       estoque_atual: produto!.estoque_atual.toString(),
@@ -76,6 +79,7 @@ export function ProductDetailsModal({
       const { error } = await supabase.from('produtos').update({
         nome: form.nome,
         volume_ml: form.volume_ml ? Number(form.volume_ml) : null,
+        preco_referencia: form.preco_referencia ? Number(form.preco_referencia) : null,
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
         estoque_atual: Number(form.estoque_atual),
@@ -116,6 +120,12 @@ export function ProductDetailsModal({
             <Input label="Volume (ml)" type="number" value={form.volume_ml} onChange={(e) => setForm({ ...form, volume_ml: e.target.value })} />
             <Select label="Categoria" options={[{ value: '', label: '—' }, ...categorias.map(c => ({ value: c.id, label: c.nome }))]} value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} />
           </div>
+          <Input
+            label="Preço de referência (R$)"
+            type="number" step="0.01" min="0"
+            value={form.preco_referencia}
+            onChange={(e) => setForm({ ...form, preco_referencia: e.target.value })}
+          />
           <Select label="Fornecedor" options={[{ value: '', label: '—' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))]} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Estoque atual" type="number" value={form.estoque_atual} onChange={(e) => setForm({ ...form, estoque_atual: e.target.value })} />
@@ -163,6 +173,14 @@ export function ProductDetailsModal({
                   <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Estoque mínimo</div>
                   <div className="font-mono text-2xl text-text-2">{produto.estoque_minimo}</div>
                 </div>
+                {produto.preco_referencia != null && (
+                  <div>
+                    <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Preço de referência</div>
+                    <div className="font-mono text-text-2">
+                      {produto.preco_referencia.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+                  </div>
+                )}
               </div>
               {estoqueBaixo && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warn/10 border border-warn/30 text-warn text-xs">
