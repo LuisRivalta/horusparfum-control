@@ -19,6 +19,7 @@ const FIN_NAV = [
 
 const EST_NAV = [
   { id: 'estoque', label: 'Estoque', icon: 'box', path: '/estoque' },
+  { id: 'vendas', label: 'Vendas', icon: 'cart', path: '/estoque/vendas' },
   { id: 'decants', label: 'Decants', icon: 'droplet', path: '/estoque/decants' },
   { id: 'produtos', label: 'Produtos', icon: 'tag', path: '/estoque/produtos' },
   { id: 'pedidos', label: 'Pedidos', icon: 'swap', path: '/estoque/pedidos' },

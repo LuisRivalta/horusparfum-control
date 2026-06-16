@@ -26,6 +26,7 @@ const ICONS: Record<string, React.ReactNode> = {
   check: <path d="M4 12l5 5L20 7" />,
   x: <><path d="M18 6L6 18" /><path d="M6 6l12 12" /></>,
   tag: <><path d="M4 4h7l9 9-7 7-9-9V4z" /><circle cx="7.5" cy="7.5" r="1.5" /></>,
+  cart: <><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /><path d="M3 4h2l2.4 11.5a1 1 0 001 .8h8.7a1 1 0 001-.8L20 8H6" /></>,
 }
 
 interface IconProps {
