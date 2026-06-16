@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-15 (Sessão 9)
+> Última atualização: 2026-06-16 (Sessão 10)
 
 ## O que já foi feito
 
@@ -77,6 +77,14 @@
     - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
     - Saldo e lucro negativos destacados em vermelho
     - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
+18. **Registrar entrada manual + FrascoViewer retangular (Sessão 10)**
+    - `EntradaRapidaModal.tsx`: modal para adicionar estoque diretamente (produto + qtd + motivo) sem Pedidos
+    - `EstoqueView.tsx`: botão "Registrar entrada" ao lado de "Registrar saída" no cabeçalho
+    - Migração `20260616_registrar_entrada.sql`: RPC `registrar_entrada` (incrementa estoque + ledger)
+    - `FrascoViewer.tsx`: novo formato retangular com cantos arredondados (silhueta LV Imagination) via ExtrudeGeometry + Shape; fix `depthWrite: false` (líquido visível a 100%); fix `replaceChildren()` (remove espelhamento do canvas órfão); cleanup de `preserveDrawingBuffer` de debug
+    - Removido harness temporário `FrascoTest.tsx` e rota `/frasco-test`
+    - **Migração pendente:** aplicar `supabase/migrations/20260616_registrar_entrada.sql` no Supabase SQL Editor
+
 17. **Página de Estoque + Reestruturação de Produtos (Sessão 8)**
     - Nova página `EstoqueView.tsx` em `/estoque` — grid de cards só com produtos em estoque (`estoque_atual > 0`), badges de quantidade (dourado/laranja/vermelho por situação), filtros busca+categoria+fornecedor+ordenação, estado vazio diferenciado com/sem filtros
     - `lib/estoque.ts`: lógica pura TDD — `situacaoEstoque` (critico/baixo/ok) e `ordenarProdutos` (qty_desc/qty_asc/az/za)
@@ -112,9 +120,9 @@
 ## Próximos passos imediatos
 
 1. **Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor** (pendente — módulo de decants não funciona sem isso)
-2. Remover policies temporárias de `anon` (se foram criadas para testes)
-3. Copiar JWT Secret do Supabase para o `.env` do backend
-4. "Registrar entrada" manual na página Estoque (atualmente entradas só via Pedidos)
+2. **Aplicar migração `supabase/migrations/20260616_registrar_entrada.sql` no Supabase SQL Editor** (pendente — botão "Registrar entrada" não funciona sem isso)
+3. Remover policies temporárias de `anon` (se foram criadas para testes)
+4. Copiar JWT Secret do Supabase para o `.env` do backend
 5. Dashboard estoque com dados reais (alertas de estoque baixo)
 6. Relatórios (PDF ou tela)
 7. Importação em massa de produtos (botão "Importar" na topbar)

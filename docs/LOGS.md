@@ -1,5 +1,25 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-16 — Sessão 10: Registrar entrada manual + FrascoViewer retangular
+
+**Responsável:** Luis + Claude
+
+### O que foi feito
+- **FrascoViewer — novo formato:** frasco 3D refeito com `ExtrudeGeometry` sobre `THREE.Shape` (rounded-rect). Silhueta retangular com cantos arredondados (inspiração LV Imagination), pescoço curto e tampa dourada robusta.
+- **FrascoViewer — fix líquido a 100%:** `glassMat.depthWrite = false` impede a casca de vidro de ocluir o líquido via depth buffer.
+- **FrascoViewer — fix espelhamento:** `mountRef.current.replaceChildren()` antes de `appendChild` elimina canvas órfão que o StrictMode empilhava.
+- **Registrar entrada manual:** `EntradaRapidaModal.tsx` (produto + qtd + motivo) + botão "Registrar entrada" no cabeçalho do `EstoqueView`. Chama RPC `registrar_entrada` (incrementa `estoque_atual` + insere em `movimentacoes`).
+- **Migração SQL:** `supabase/migrations/20260616_registrar_entrada.sql` — precisa ser aplicada no Supabase SQL Editor.
+- **Limpeza:** removidos `preserveDrawingBuffer: true` (era só para debug via `readPixels`), `FrascoTest.tsx` e rota `/frasco-test`.
+
+### Decisões tomadas
+- Entrada manual não cria pedido: vai direto na tabela `movimentacoes` via RPC, mantendo o ledger consistente.
+
+### Pendências
+- Aplicar `supabase/migrations/20260615_decants.sql` (decants) e `20260616_registrar_entrada.sql` (entrada manual) no Supabase SQL Editor.
+
+---
+
 ## 2026-06-15 — Sessão 9: Deploy Vercel + fix de testes
 
 **Responsável:** Luis + Claude
