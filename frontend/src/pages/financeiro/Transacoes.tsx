@@ -14,6 +14,7 @@ interface Transacao {
   forma_pagamento: string | null
   responsavel: string | null
   created_at: string
+  origem?: string
 }
 
 export function FinTransacoes() {
@@ -109,7 +110,14 @@ export function FinTransacoes() {
               transacoes.map((t) => (
                 <tr key={t.id} className="border-b border-line last:border-0 hover:bg-surface-2/50">
                   <td className="px-4 py-3 text-text-2 text-xs">{formatDate(t.created_at)}</td>
-                  <td className="px-4 py-3 font-medium">{t.descricao}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {t.descricao}
+                    {t.origem === 'venda' && (
+                      <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[0.6rem] font-medium bg-gold-dim text-gold align-middle">
+                        venda
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${t.tipo === 'entrada' ? 'bg-up/15 text-up' : 'bg-down/15 text-down'}`}>
                       {t.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}
