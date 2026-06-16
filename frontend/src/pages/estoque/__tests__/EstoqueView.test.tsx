@@ -8,6 +8,9 @@ vi.mock('@/components/shared/ProductDetailsModal', () => ({
 vi.mock('@/components/shared/SaidaRapidaModal', () => ({
   SaidaRapidaModal: () => <div data-testid="saida-modal" />,
 }))
+vi.mock('@/components/shared/EntradaRapidaModal', () => ({
+  EntradaRapidaModal: () => <div data-testid="entrada-modal" />,
+}))
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {

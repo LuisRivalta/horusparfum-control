@@ -42,7 +42,7 @@ export function VendaDetalheModal({ venda, onClose }: Props) {
       .select('id, tipo, ml, quantidade, preco_unitario, custo_unitario, custo_embalagem, taxa_rateada, frete_rateado, lucro, produtos(nome)')
       .eq('venda_id', venda.id)
       .then(({ data }) => {
-        setItens((data as ItemDetalhe[]) || [])
+        setItens((data as unknown as ItemDetalhe[]) || [])
         setLoading(false)
       })
   }, [venda])

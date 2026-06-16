@@ -62,7 +62,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
     ]).then(([c, p, f, e]) => {
       setCanais((c.data as Canal[]) || [])
       setProdutos((p.data as ProdutoOpt[]) || [])
-      setFrascos((f.data as FrascoOpt[]) || [])
+      setFrascos((f.data as unknown as FrascoOpt[]) || [])
       setEmbalagens((e.data as Embalagem[]) || [])
     })
   }, [open])

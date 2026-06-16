@@ -48,7 +48,7 @@ export function EstVendas() {
       .select('id, numero, status, data_venda, total_bruto, total_custo, lucro_bruto, canal_id, canais(nome), venda_itens(id)')
       .order('created_at', { ascending: false })
     if (error) console.error('Erro ao carregar vendas:', error)
-    setVendas((data as VendaRow[]) || [])
+    setVendas((data as unknown as VendaRow[]) || [])
     setLoading(false)
   }, [])
 

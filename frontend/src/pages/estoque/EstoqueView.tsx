@@ -17,6 +17,7 @@ interface Produto {
   estoque_atual: number
   estoque_minimo: number
   foto_url: string | null
+  preco_referencia: number | null
   created_at: string
   categorias?: { nome: string } | null
   fornecedores?: { nome: string } | null
