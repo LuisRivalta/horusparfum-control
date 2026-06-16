@@ -106,7 +106,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
   }
 
   const itensPreview = linhas
-    .filter(l => (l.tipo === 'produto' ? l.produto_id : l.frasco_id) && Number(l.preco) > 0)
+    .filter(l => (l.tipo === 'produto' ? l.produto_id : l.frasco_id) && l.preco !== '' && Number(l.preco) >= 0)
     .map(linhaParaItem)
   const resumo = resumoVenda(itensPreview, Number(taxa) || 0, Number(frete) || 0)
 
