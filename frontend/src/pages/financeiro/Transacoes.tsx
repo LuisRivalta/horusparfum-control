@@ -117,6 +117,11 @@ export function FinTransacoes() {
                         venda
                       </span>
                     )}
+                    {t.origem === 'decant' && (
+                      <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[0.6rem] font-medium bg-surface-2 text-text-2 border border-line align-middle">
+                        decant
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${t.tipo === 'entrada' ? 'bg-up/15 text-up' : 'bg-down/15 text-down'}`}>
