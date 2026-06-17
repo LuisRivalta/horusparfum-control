@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-17 (Sessão 12)
+> Última atualização: 2026-06-17 (Sessão 13)
 
 ## O que já foi feito
 
@@ -77,6 +77,17 @@
     - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
     - Saldo e lucro negativos destacados em vermelho
     - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
+21. **Página Cadastros — unificação Produtos/Categorias/Fornecedores (Sessão 13)**
+    - Rota-layout `Cadastros.tsx` em `/estoque/cadastros` com `<Outlet/>` hospedando três rotas aninhadas: `/estoque/cadastros/produtos`, `/cadastros/categorias`, `/cadastros/fornecedores`
+    - Barra de abas premium: indicador dourado deslizante (CSS `transform: translateX`) + contadores por aba (head-count via query Supabase) + divisor ornamental abaixo
+    - Botão de ação contextual via `createPortal` + `useOutletContext`: cada página-filha empurra seu próprio botão para o slot de ação do layout (`actionSlot`) sem quebrar encapsulamento
+    - Redirects das rotas antigas: `/estoque/produtos`, `/estoque/categorias`, `/estoque/fornecedores` → novas rotas via `<Navigate replace />`
+    - Sidebar enxugada de 10 → 8 itens: item único "Cadastros" substitui os três itens individuais (Produtos, Categorias, Fornecedores)
+    - Teste de componente (`Cadastros.test.tsx`): renderização das abas, navegação, contadores e portal do botão
+    - Frontend-only; sem migração de banco de dados
+    - Spec: `docs/superpowers/specs/2026-06-17-cadastros-page-design.md`
+    - Plano: `docs/superpowers/plans/2026-06-17-cadastros-page.md`
+
 20. **Decants não-faturáveis — consumo com classificação e custo (Sessão 12)**
     - Classificações suportadas: `perda`, `amostra`, `brinde`, `marketing`, `uso_interno`, `outro`
     - Custo gerencial = custo do perfume (`ml × custo_medio ÷ ml_total`) + custo de embalagem, exceto `perda` (sem embalagem)

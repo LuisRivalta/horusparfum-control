@@ -49,9 +49,10 @@ C:\Horus\
 │       │   ├── auth\           → Login.tsx
 │       │   ├── home\           → Home.tsx
 │       │   ├── financeiro\     → Dashboard, Transacoes, Contas, Relatorios, Metas
-│       │   └── estoque\        → EstoqueView (Estoque), Produtos, Vendas, Decants,
+│       │   └── estoque\        → EstoqueView (Estoque), Cadastros (layout), Produtos, Vendas, Decants,
 │       │       │               → Pedidos, Divergencias, Categorias, Fornecedores,
 │       │       │               → Alertas, Relatorios
+│       │       │               → Cadastros.tsx = rota-layout com <Outlet/>; abas Produtos/Categorias/Fornecedores
 │       │       ├── pedidos\    → NovoPedidoModal, ConferenciaModal
 │       │       ├── decants\    → FrascoViewer, AbrirFrascoModal, DecantModal
 │       │       ├── vendas\     → NovaVendaModal, VendaDetalheModal, VendasConfig
@@ -178,9 +179,9 @@ Browser (React SPA)
 | /estoque | Estoque (EstoqueView) |
 | /estoque/vendas · /estoque/vendas/config | Vendas · Config de canais/embalagens |
 | /estoque/decants | Decants |
-| /estoque/produtos | Produtos (catálogo) |
+| /estoque/cadastros (+ /produtos · /categorias · /fornecedores) | Cadastros (abas: Produtos, Categorias, Fornecedores) — as rotas antigas `/estoque/produtos`, `/estoque/categorias`, `/estoque/fornecedores` redirecionam para as novas |
 | /estoque/pedidos · /divergencias | Pedidos · Divergências |
-| /estoque/categorias · /fornecedores · /alertas · /relatorios | demais telas de estoque |
+| /estoque/alertas · /relatorios | demais telas de estoque |
 
 Tudo sob `/financeiro/*` e `/estoque/*` usa o `Layout` (sidebar + header). A nav lateral alterna entre os grupos Financeiro e Estoque.
 
