@@ -26,6 +26,7 @@ export function Cadastros() {
           if (error) { console.error('Erro ao contar', aba.tabela, error); return }
           setContagens((prev) => ({ ...prev, [aba.id]: count ?? 0 }))
         })
+        .catch((err) => console.error('Erro ao contar', aba.tabela, err))
     })
   }, [])
 
