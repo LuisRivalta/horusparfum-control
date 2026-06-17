@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Home } from '@/pages/home/Home'
 import { Login } from '@/pages/auth/Login'
 import { Layout } from '@/components/layout/Layout'
@@ -19,6 +19,7 @@ import { EstDivergencias } from '@/pages/estoque/Divergencias'
 import { EstDecants } from '@/pages/estoque/Decants'
 import { EstVendas } from '@/pages/estoque/Vendas'
 import { VendasConfig } from '@/pages/estoque/vendas/VendasConfig'
+import { Cadastros } from '@/pages/estoque/Cadastros'
 
 export function App() {
   return (
@@ -35,12 +36,18 @@ export function App() {
         <Route path="/estoque" element={<EstEstoque />} />
         <Route path="/estoque/vendas" element={<EstVendas />} />
         <Route path="/estoque/vendas/config" element={<VendasConfig />} />
-        <Route path="/estoque/produtos" element={<EstProdutos />} />
+        <Route path="/estoque/cadastros" element={<Cadastros />}>
+          <Route index element={<Navigate to="/estoque/cadastros/produtos" replace />} />
+          <Route path="produtos" element={<EstProdutos />} />
+          <Route path="categorias" element={<EstCategorias />} />
+          <Route path="fornecedores" element={<EstFornecedores />} />
+        </Route>
+        <Route path="/estoque/produtos" element={<Navigate to="/estoque/cadastros/produtos" replace />} />
+        <Route path="/estoque/categorias" element={<Navigate to="/estoque/cadastros/categorias" replace />} />
+        <Route path="/estoque/fornecedores" element={<Navigate to="/estoque/cadastros/fornecedores" replace />} />
         <Route path="/estoque/pedidos" element={<EstPedidos />} />
         <Route path="/estoque/divergencias" element={<EstDivergencias />} />
         <Route path="/estoque/decants" element={<EstDecants />} />
-        <Route path="/estoque/categorias" element={<EstCategorias />} />
-        <Route path="/estoque/fornecedores" element={<EstFornecedores />} />
         <Route path="/estoque/alertas" element={<EstAlertas />} />
         <Route path="/estoque/relatorios" element={<EstRelatorios />} />
       </Route>
