@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { useOutletContext } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Icon } from '@/components/shared/Icon'
 import { Modal } from '@/components/shared/Modal'
@@ -19,6 +21,9 @@ export function EstFornecedores() {
   const [loading, setLoading] = useState(true)
 
   const [form, setForm] = useState({ nome: '', contato: '', status: 'ativo' })
+
+  const ctx = useOutletContext<{ actionSlot: HTMLElement | null } | null>()
+  const actionSlot = ctx?.actionSlot ?? null
 
   async function fetchData() {
     setLoading(true)
@@ -48,17 +53,13 @@ export function EstFornecedores() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold">Estoque</p>
-          <h1 className="text-3xl font-medium tracking-tight mt-1">Fornecedores</h1>
-          <p className="text-muted text-sm mt-1">Parceiros e distribuidores</p>
-        </div>
+      {actionSlot && createPortal(
         <Button onClick={() => setModalOpen(true)}>
           <Icon name="plus" size={16} />
           Novo fornecedor
-        </Button>
-      </div>
+        </Button>,
+        actionSlot
+      )}
 
       <div className="border border-line rounded-xl overflow-hidden">
         <table className="w-full text-sm">
