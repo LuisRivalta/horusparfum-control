@@ -15,40 +15,49 @@ vi.mock('@/pages/estoque/decants/DecantModal', () => ({
   DecantModal: () => <div data-testid="decant-modal" />,
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { email: 'test@example.com' } }),
+}))
+
+const frascosMock = [
+  {
+    id: 'f1',
+    produto_id: 'p1',
+    ml_total: 100,
+    ml_restante: 70,
+    status: 'ativo',
+    aberto_em: '2026-06-15T10:00:00Z',
+    produtos: { nome: 'Asad', foto_url: null, volume_ml: 100, custo_medio: null },
+  },
+  {
+    id: 'f2',
+    produto_id: 'p2',
+    ml_total: 50,
+    ml_restante: 0,
+    status: 'esgotado',
+    aberto_em: '2026-06-14T10:00:00Z',
+    produtos: { nome: 'Lattafa 50ml', foto_url: null, volume_ml: 50, custo_medio: null },
+  },
+]
+
 vi.mock('@/lib/supabase', () => ({
   supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() =>
-          Promise.resolve({
-            data: [
-              {
-                id: 'f1',
-                produto_id: 'p1',
-                ml_total: 100,
-                ml_restante: 70,
-                status: 'ativo',
-                aberto_em: '2026-06-15T10:00:00Z',
-                produtos: { nome: 'Asad', foto_url: null, volume_ml: 100 },
-              },
-              {
-                id: 'f2',
-                produto_id: 'p2',
-                ml_total: 50,
-                ml_restante: 0,
-                status: 'esgotado',
-                aberto_em: '2026-06-14T10:00:00Z',
-                produtos: { nome: 'Lattafa 50ml', foto_url: null, volume_ml: 50 },
-              },
-            ],
-            error: null,
-          })
-        ),
-      })),
-      delete: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({ error: null })),
-      })),
-    })),
+    from: vi.fn((table: string) => {
+      if (table === 'frascos_abertos') {
+        return {
+          select: vi.fn(() => ({
+            order: vi.fn(() => Promise.resolve({ data: frascosMock, error: null })),
+          })),
+          delete: vi.fn(() => ({
+            eq: vi.fn(() => Promise.resolve({ error: null })),
+          })),
+        }
+      }
+      // decants table
+      return {
+        select: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      }
+    }),
   },
 }))
 
@@ -83,11 +92,16 @@ describe('EstDecants', () => {
 
   it('mostra estado vazio quando não há frascos', async () => {
     const { supabase } = await import('@/lib/supabase')
-    vi.mocked(supabase.from).mockReturnValueOnce({
-      select: vi.fn(() => ({
-        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-      })),
-    } as never)
+    vi.mocked(supabase.from)
+      .mockReturnValueOnce({
+        select: vi.fn(() => ({
+          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        })),
+        delete: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+      } as never)
+      .mockReturnValueOnce({
+        select: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      } as never)
     render(<EstDecants />)
     await waitFor(() =>
       expect(screen.getByText('Nenhum frasco aberto')).toBeInTheDocument()

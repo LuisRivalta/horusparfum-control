@@ -1,12 +1,14 @@
 // frontend/src/pages/estoque/Decants.tsx
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { cn } from '@/lib/utils'
+import { cn, formatBRL } from '@/lib/utils'
 import { Icon } from '@/components/shared/Icon'
 import { Button } from '@/components/shared/FormControls'
 import { FrascoViewer } from './decants/FrascoViewer'
 import { AbrirFrascoModal } from './decants/AbrirFrascoModal'
 import { DecantModal } from './decants/DecantModal'
+import { useAuth } from '@/contexts/AuthContext'
+import { resumoConsumo, type FatiaConsumo } from '@/lib/decants'
 
 interface FrascoComProduto {
   id: string
@@ -15,7 +17,7 @@ interface FrascoComProduto {
   ml_restante: number
   status: 'ativo' | 'esgotado'
   aberto_em: string
-  produtos: { nome: string; foto_url: string | null; volume_ml: number }
+  produtos: { nome: string; foto_url: string | null; volume_ml: number; custo_medio: number | null }
 }
 
 export function EstDecants() {
@@ -25,6 +27,9 @@ export function EstDecants() {
   const [abrindo, setAbrindo] = useState(false)
   const [decantando, setDecantando] = useState<FrascoComProduto | null>(null)
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null)
+  const { user } = useAuth()
+  const [resumo, setResumo] = useState<FatiaConsumo[]>([])
+  const [esgotando, setEsgotando] = useState<string | null>(null)
 
   useEffect(() => {
     carregar()
@@ -32,13 +37,33 @@ export function EstDecants() {
 
   async function carregar() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('frascos_abertos')
-      .select('*, produtos(nome, foto_url, volume_ml)')
-      .order('aberto_em', { ascending: false })
+    const [{ data, error }, { data: consumos }] = await Promise.all([
+      supabase
+        .from('frascos_abertos')
+        .select('*, produtos(nome, foto_url, volume_ml, custo_medio)')
+        .order('aberto_em', { ascending: false }),
+      supabase.from('decants').select('classificacao, custo, created_at'),
+    ])
     if (error) setErro(error.message)
     else setFrascos((data as FrascoComProduto[]) ?? [])
+    const agora = new Date()
+    const ini = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0)
+    const fim = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999)
+    setResumo(resumoConsumo(consumos ?? [], ini, fim).filter((f) => f.total > 0))
     setLoading(false)
+  }
+
+  async function esgotarFrasco(frasco: FrascoComProduto) {
+    setEsgotando(null)
+    const { error } = await supabase.rpc('registrar_consumo_decant', {
+      p_frasco_id: frasco.id,
+      p_ml: frasco.ml_restante,
+      p_classificacao: 'perda',
+      p_custo_embalagem: 0,
+      p_responsavel: user?.email ?? null,
+    })
+    if (error) { setErro(error.message); return }
+    carregar()
   }
 
   async function excluirFrasco(id: string) {
@@ -67,6 +92,17 @@ export function EstDecants() {
         {erro && (
           <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">
             Erro ao carregar: {erro}
+          </div>
+        )}
+
+        {resumo.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-3 rounded-xl border border-line bg-surface text-sm">
+            <span className="text-xs font-mono uppercase tracking-[.18em] text-muted">Consumo do mês</span>
+            {resumo.map((f) => (
+              <span key={f.classificacao} className="text-text-2">
+                {f.label} <span className="font-mono text-text">{formatBRL(f.total)}</span>
+              </span>
+            ))}
           </div>
         )}
 
@@ -108,36 +144,25 @@ export function EstDecants() {
                     )}
                     <span className="font-medium text-sm truncate">{frasco.produtos.nome}</span>
                   </div>
-                  {esgotado && (
+                  {esgotado ? (
                     confirmandoExclusao === frasco.id ? (
-                      <div
-                        className="flex items-center gap-1 shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <span className="text-[0.65rem] text-down/70 whitespace-nowrap">Excluir?</span>
-                        <button
-                          onClick={() => { excluirFrasco(frasco.id); setConfirmandoExclusao(null) }}
-                          className="w-6 h-6 flex items-center justify-center rounded text-down hover:bg-down/15 transition-colors cursor-pointer"
-                          aria-label="Confirmar exclusão"
-                        >
-                          <Icon name="check" size={12} />
-                        </button>
-                        <button
-                          onClick={() => setConfirmandoExclusao(null)}
-                          className="w-6 h-6 flex items-center justify-center rounded text-muted hover:bg-surface-3 transition-colors cursor-pointer"
-                          aria-label="Cancelar exclusão"
-                        >
-                          <Icon name="x" size={12} />
-                        </button>
+                        <button onClick={() => { excluirFrasco(frasco.id); setConfirmandoExclusao(null) }} className="w-6 h-6 flex items-center justify-center rounded text-down hover:bg-down/15 transition-colors cursor-pointer" aria-label="Confirmar exclusão"><Icon name="check" size={12} /></button>
+                        <button onClick={() => setConfirmandoExclusao(null)} className="w-6 h-6 flex items-center justify-center rounded text-muted hover:bg-surface-3 transition-colors cursor-pointer" aria-label="Cancelar exclusão"><Icon name="x" size={12} /></button>
                       </div>
                     ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setConfirmandoExclusao(frasco.id) }}
-                        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-down/60 hover:text-down hover:bg-down/10 transition-colors cursor-pointer"
-                        aria-label="Excluir frasco"
-                      >
-                        <Icon name="trash" size={14} />
-                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmandoExclusao(frasco.id) }} className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-down/60 hover:text-down hover:bg-down/10 transition-colors cursor-pointer" aria-label="Excluir frasco"><Icon name="trash" size={14} /></button>
+                    )
+                  ) : (
+                    esgotando === frasco.id ? (
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-[0.65rem] text-muted whitespace-nowrap">Esgotar (perda {frasco.ml_restante}ml)?</span>
+                        <button onClick={() => esgotarFrasco(frasco)} className="w-6 h-6 flex items-center justify-center rounded text-gold hover:bg-gold/15 transition-colors cursor-pointer" aria-label="Confirmar esgotar"><Icon name="check" size={12} /></button>
+                        <button onClick={() => setEsgotando(null)} className="w-6 h-6 flex items-center justify-center rounded text-muted hover:bg-surface-3 transition-colors cursor-pointer" aria-label="Cancelar esgotar"><Icon name="x" size={12} /></button>
+                      </div>
+                    ) : (
+                      <button onClick={(e) => { e.stopPropagation(); setEsgotando(frasco.id) }} className="shrink-0 text-[0.65rem] font-medium text-muted hover:text-gold border border-line hover:border-gold-line rounded px-2 py-1 transition-colors cursor-pointer whitespace-nowrap" aria-label="Esgotar frasco">Esgotar</button>
                     )
                   )}
                 </div>
