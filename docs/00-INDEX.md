@@ -11,6 +11,17 @@ Painel administrativo interno para gestão financeira e de estoque da Horus Parf
 | [[BANCO]] | Schema do banco de dados, tabelas, relações |
 | [[HANDOFF_IA]] | Estado atual do projeto e próximos passos |
 | [[LOGS]] | Histórico de sessões e alterações |
+| [[TESTING]] | Estratégia e convenções de testes (Vitest) |
+
+## Design e implementação por feature
+
+- `docs/superpowers/specs/` — specs de design (saída do brainstorming) por feature.
+- `docs/superpowers/plans/` — planos de implementação (tarefa-a-tarefa, TDD) por feature.
+
+## Banco e lógica de negócio
+
+- Schema e RPCs documentados em [[BANCO]]; visão arquitetural das RPCs em [[ARQUITETURA]].
+- SQL versionado em `supabase/migrations/` — aplicado manualmente no Supabase SQL Editor, em ordem de data.
 
 ## Para a IA
 

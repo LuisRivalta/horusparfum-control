@@ -233,9 +233,10 @@ pedidos ←── divergencias ──→ fornecedores
 produtos ←── frascos_abertos ←── decants ──→ produtos
 canais ←── vendas ←── venda_itens ──→ produtos
 vendas ←── transacoes (origem='venda')
+decants ──→ transacoes (origem='decant', consumo não-faturável)
 ```
 
-`contas` e `metas` são independentes (módulo financeiro puro). `transacoes` agora pode ser gerada automaticamente pelas RPCs de venda (campo `origem='venda'`) ou inserida manualmente (`origem='manual'`).
+`contas` e `metas` são independentes (módulo financeiro puro). `transacoes` pode ser: inserida **manualmente** (`origem='manual'`), gerada pela RPC de **venda** (`origem='venda'`) ou pela RPC de **consumo de decant** (`origem='decant'`, despesa de perda/brinde/amostra/marketing/uso interno).
 
 ## Row Level Security (RLS)
 
@@ -248,6 +249,19 @@ Como são apenas 3-4 usuários internos, o RLS é simples:
 Bucket `produtos` para fotos dos perfumes.
 - Leitura pública (SELECT sem restrição)
 - Upload e delete apenas para `authenticated`
+
+## Funções (RPCs)
+
+Lógica de negócio atômica em PL/pgSQL, chamada via `supabase.rpc(...)`. Cada uma roda numa transação única (rollback em falha). Ver `docs/ARQUITETURA.md` para o porquê.
+
+| Função | Resumo | Migração |
+|--------|--------|----------|
+| `confirmar_recebimento(p_pedido_id, p_itens, p_recebido_por)` | Confere o recebimento: entrada de estoque, custo médio ponderado, ledger e divergências | 20260610_pedidos |
+| `registrar_saida(p_produto_id, p_qtd, p_motivo, p_responsavel)` | Saída rápida de estoque + ledger | 20260610_pedidos |
+| `registrar_entrada(p_produto_id, p_qtd, p_motivo, p_responsavel)` | Entrada manual de estoque + ledger | 20260616_registrar_entrada |
+| `registrar_venda(p_canal_id, p_data_venda, p_forma_pagamento, p_cliente, p_taxa_total, p_frete, p_responsavel, p_observacao, p_itens)` | Baixa estoque (produto/decant), grava `vendas`/`venda_itens` com snapshot de custo e rateio de taxa/frete, lança receita/taxa/frete em `transacoes`. Retorna `{id, numero}` | 20260616_vendas |
+| `cancelar_venda(p_venda_id)` | Estorno completo: devolve estoque/ml, apaga decant, remove `transacoes` da venda, marca `status='cancelada'` | 20260616_vendas |
+| `registrar_consumo_decant(p_frasco_id, p_ml, p_classificacao, p_custo_embalagem, p_responsavel)` | Consumo não-faturável: baixa ml do frasco, grava decant com custo (perfume + embalagem, exceto perda), lança despesa em `transacoes` (`origem='decant'`). Retorna `{id, custo, esgotado}` | 20260617_consumo_decant |
 
 ## SQL de criação
 
