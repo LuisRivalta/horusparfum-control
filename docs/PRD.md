@@ -37,10 +37,11 @@ Sistema administrativo interno da **Horus Parfum**, empresa de perfumaria artesa
 ## Regras de negócio
 
 1. **Integração via Vendas** — o módulo de Vendas vincula Estoque e Financeiro: registrar uma venda baixa o estoque (frasco cheio ou ml de decant) e lança automaticamente no caixa (receita + taxa + frete). Lançamentos manuais no Financeiro (compra de insumos, infraestrutura) continuam independentes.
-2. **PDF obrigatório em relatórios** — relatórios financeiros e de giro devem poder ser exportados
-3. **Alertas automáticos** — quando estoque atual < estoque mínimo definido, o item aparece na tela de Alertas com sugestão de reposição
-4. **Multiusuário** — cada ação registra o responsável (nome do usuário logado)
-5. **Dados em Real (BRL)** — toda formatação monetária em R$ com 2 casas decimais
+2. **Consumo não-faturável via Decants** — a página de Decants registra consumo que **não gera receita**: perda, brinde, amostra, marketing/sorteio, uso interno ou outro. Cada consumo calcula um custo gerencial (custo do perfume proporcionalmente ao ml + custo de embalagem, exceto para `perda` que não inclui embalagem) e lança automaticamente uma **despesa** em `transacoes` (`origem='decant'`). Vender um decant é feito exclusivamente pela página de **Vendas**.
+3. **PDF obrigatório em relatórios** — relatórios financeiros e de giro devem poder ser exportados
+4. **Alertas automáticos** — quando estoque atual < estoque mínimo definido, o item aparece na tela de Alertas com sugestão de reposição
+5. **Multiusuário** — cada ação registra o responsável (nome do usuário logado)
+6. **Dados em Real (BRL)** — toda formatação monetária em R$ com 2 casas decimais
 
 ## Fora de escopo (por enquanto)
 

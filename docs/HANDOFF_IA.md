@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-16 (Sessão 11)
+> Última atualização: 2026-06-17 (Sessão 12)
 
 ## O que já foi feito
 
@@ -77,6 +77,16 @@
     - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
     - Saldo e lucro negativos destacados em vermelho
     - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
+20. **Decants não-faturáveis — consumo com classificação e custo (Sessão 12)**
+    - Classificações suportadas: `perda`, `amostra`, `brinde`, `marketing`, `uso_interno`, `outro`
+    - Custo gerencial = custo do perfume (`ml × custo_medio ÷ ml_total`) + custo de embalagem, exceto `perda` (sem embalagem)
+    - RPC atômica `registrar_consumo_decant` (atômica: debita ml do frasco, insere em `decants` com custo, lança despesa em `transacoes` com `origem='decant'`)
+    - Ação "Esgotar frasco" na página Decants: registra ml restante como `perda` (custo de perfume apenas) e marca frasco `esgotado`
+    - Card de resumo mensal por tipo na página Decants (via função pura `resumoConsumo` em `lib/decants.ts`, com testes TDD)
+    - Badge "decant" nas linhas de `transacoes` geradas por este fluxo
+    - Migração: `supabase/migrations/20260617_consumo_decant.sql` — **pendente de aplicação no Supabase SQL Editor**
+    - Spec: `docs/superpowers/specs/2026-06-16-decants-nao-faturaveis-design.md`
+
 19. **Módulo de Vendas — integração Estoque ↔ Financeiro (Sessão 11)**
     - Tabelas: `canais` (taxa_padrao %), `vendas` (header com total_bruto/total_custo/lucro_bruto), `venda_itens` (linhas com snapshot de custo + rateio proporcional de taxa/frete + lucro por item), `embalagens_decant` (custo por tamanho)
     - Colunas adicionadas: `produtos.preco_referencia` (preço sugerido), `transacoes.venda_id` + `transacoes.origem` ('manual'|'venda')
@@ -130,15 +140,16 @@
 
 ## Próximos passos imediatos
 
-1. **Aplicar migração `supabase/migrations/20260616_vendas.sql` no Supabase SQL Editor** (pendente — o módulo de Vendas não funciona sem isso)
-2. **Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor** (pendente — módulo de decants não funciona sem isso)
-3. **Aplicar migração `supabase/migrations/20260616_registrar_entrada.sql` no Supabase SQL Editor** (pendente — botão "Registrar entrada" não funciona sem isso)
-4. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
-5. Remover policies temporárias de `anon` (se foram criadas para testes)
-6. Copiar JWT Secret do Supabase para o `.env` do backend
-7. Dashboard estoque com dados reais (alertas de estoque baixo)
-8. Relatórios (PDF ou tela)
-9. Importação em massa de produtos (botão "Importar" na topbar)
+1. **Aplicar migração `supabase/migrations/20260617_consumo_decant.sql` no Supabase SQL Editor** (pendente — requer que `20260616_vendas.sql` já esteja aplicada; o consumo não-faturável de decants não funciona sem isso)
+2. **Aplicar migração `supabase/migrations/20260616_vendas.sql` no Supabase SQL Editor** (pendente — o módulo de Vendas não funciona sem isso)
+3. **Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor** (pendente — módulo de decants não funciona sem isso)
+4. **Aplicar migração `supabase/migrations/20260616_registrar_entrada.sql` no Supabase SQL Editor** (pendente — botão "Registrar entrada" não funciona sem isso)
+5. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
+6. Remover policies temporárias de `anon` (se foram criadas para testes)
+7. Copiar JWT Secret do Supabase para o `.env` do backend
+8. Dashboard estoque com dados reais (alertas de estoque baixo)
+9. Relatórios (PDF ou tela)
+10. Importação em massa de produtos (botão "Importar" na topbar)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)

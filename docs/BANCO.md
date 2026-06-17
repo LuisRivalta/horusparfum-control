@@ -119,6 +119,9 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | frasco_id | uuid (FK → frascos_abertos, cascade) | — |
 | produto_id | uuid (FK → produtos) | Desnormalizado para relatórios |
 | ml | int | Quantidade do decant (> 0) |
+| classificacao | text (nullable) | Tipo de consumo não-faturável: `perda`, `amostra`, `brinde`, `marketing`, `uso_interno` ou `outro`. Null para decants de venda (gerados via Vendas) |
+| custo | numeric(12,2) | Custo total do consumo (perfume + embalagem). Default 0 |
+| custo_embalagem | numeric(12,2) | Parcela de embalagem incluída no custo. Zero para `perda` (sem embalagem). Default 0 |
 | created_at | timestamptz | — |
 
 ### `canais`
@@ -191,7 +194,7 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | forma_pagamento | text | "Pix", "Cartão", "Boleto", "Transferência" |
 | responsavel | text | Nome do usuário |
 | venda_id | uuid (FK → vendas) | Venda de origem (nullable; preenchido por RPCs de venda) |
-| origem | text | "manual" (padrão) ou "venda" (gerado pela RPC registrar_venda) |
+| origem | text | `"manual"` (padrão), `"venda"` (gerado pela RPC `registrar_venda`) ou `"decant"` (gerado pela RPC `registrar_consumo_decant` para consumo não-faturável) |
 | created_at | timestamptz | — |
 
 ### `contas`
@@ -266,3 +269,5 @@ create policy "Acesso total autenticados" on <tabela> for all to authenticated u
 Migração de pedidos: `supabase/migrations/20260610_pedidos.sql` (tabelas + RLS + RPCs `confirmar_recebimento` e `registrar_saida`).
 
 Migração de vendas: `supabase/migrations/20260616_vendas.sql` (tabelas `canais`, `embalagens_decant`, `vendas`, `venda_itens`; colunas `preco_referencia` em `produtos` e `venda_id`/`origem` em `transacoes`; RLS; RPCs `registrar_venda` e `cancelar_venda`; seeds de canais e embalagens). Aplicar manualmente no Supabase SQL Editor.
+
+Migração de consumo de decant não-faturável: `supabase/migrations/20260617_consumo_decant.sql` (colunas `classificacao`, `custo`, `custo_embalagem` em `decants`; estende constraint `transacoes_origem_check` para incluir `'decant'`; RPC atômica `registrar_consumo_decant(p_frasco_id, p_ml, p_classificacao, p_custo_embalagem, p_responsavel)`). Pré-requisito: migração de vendas aplicada. Aplicar manualmente no Supabase SQL Editor.

@@ -1,5 +1,29 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-17 — Sessão 12: Decants não-faturáveis (perda/brinde/amostra/marketing)
+
+**Responsável:** Luis + Claude (subagent-driven development)
+
+### O que foi feito
+- **Migração SQL** (`supabase/migrations/20260617_consumo_decant.sql`): colunas `classificacao` (text, nullable, check constraint), `custo` e `custo_embalagem` (numeric(12,2)) em `decants`; estende constraint `transacoes_origem_check` para incluir `'decant'`; RPC atômica `registrar_consumo_decant(p_frasco_id, p_ml, p_classificacao, p_custo_embalagem, p_responsavel)`.
+- **Classificações suportadas:** `perda`, `amostra`, `brinde`, `marketing`, `uso_interno`, `outro`.
+- **Custo gerencial:** `custo_perfume = ml × custo_medio ÷ ml_total`; `custo_embalagem` incluído exceto para `perda` (sem embalagem). RPC soma os dois e lança despesa em `transacoes` com `origem='decant'` e `categoria` = label da classificação.
+- **"Esgotar frasco":** ação na página Decants que registra o ml restante como `perda` (custo de perfume apenas, sem embalagem) e marca o frasco como `esgotado` via a mesma RPC.
+- **Card de resumo mensal:** na página Decants, exibe breakdown do custo de consumo por classificação no mês corrente. Alimentado pela função pura `resumoConsumo` em `lib/decants.ts` (TDD — Vitest).
+- **Badge "decant"** nas linhas de `transacoes` (`Transacoes.tsx`) para consumos gerados via este fluxo.
+- **Documentação:** PRD, BANCO, HANDOFF e LOGS atualizados.
+
+### Decisões tomadas
+- **Contabilidade:** custo é gerencial, mas sempre lançado no caixa como despesa (`saida`) — o usuário concilia. Não há receita envolvida; o fluxo de receita de decants fica exclusivamente no módulo de Vendas.
+- `perda` não inclui custo de embalagem (perfume vaza/evapora; não foi usada embalagem).
+- Se `custo_total = 0` (produto sem custo médio e sem embalagem), a transação **não** é lançada (evita ruído no caixa).
+- A RPC usa `FOR UPDATE` nos dois selects (frasco e produto) para garantir atomicidade sob concorrência.
+
+### Pendências
+- **Aplicar `supabase/migrations/20260617_consumo_decant.sql` no Supabase SQL Editor** — pré-requisito: `20260616_vendas.sql` já aplicada.
+
+---
+
 ## 2026-06-16 — Sessão 11: Módulo de Vendas (integração Estoque ↔ Financeiro)
 
 **Responsável:** Luis + Claude (subagent-driven development)
