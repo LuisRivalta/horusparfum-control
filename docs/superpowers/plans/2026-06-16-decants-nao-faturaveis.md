@@ -207,11 +207,15 @@ Expected: FAIL — "resumoConsumo is not a function".
 
 - [ ] **Step 3: Implementar**
 
-Append ao final de `frontend/src/lib/decants.ts`:
+Primeiro, adicionar o import **no topo** de `frontend/src/lib/decants.ts` (o arquivo hoje não tem imports — esta vira a primeira linha):
 
 ```ts
 import Decimal from 'decimal.js'
+```
 
+Depois, append o restante ao **final** de `frontend/src/lib/decants.ts`:
+
+```ts
 export interface ConsumoDecant {
   classificacao: string | null
   custo: number
