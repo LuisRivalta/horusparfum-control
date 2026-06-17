@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { useOutletContext } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Icon } from '@/components/shared/Icon'
 import { Modal } from '@/components/shared/Modal'
@@ -137,6 +139,9 @@ export function EstProdutos() {
     return () => document.removeEventListener('paste', handlePaste)
   }, [modalOpen])
 
+  const ctx = useOutletContext<{ actionSlot: HTMLElement | null } | null>()
+  const actionSlot = ctx?.actionSlot ?? null
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (submitting) return
@@ -177,26 +182,8 @@ export function EstProdutos() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold">Estoque / Catálogo</p>
-          <h1 className="text-3xl font-medium tracking-tight mt-1">Produtos</h1>
-          <p className="text-muted text-sm mt-1">
-            {produtosFiltrados.length === produtos.length
-              ? `${produtos.length} produtos no catálogo`
-              : `${produtosFiltrados.length} de ${produtos.length} produtos`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {(search || filterCategoria || filterFornecedor) && (
-            <button
-              type="button"
-              onClick={() => { setSearch(''); setFilterCategoria(''); setFilterFornecedor('') }}
-              className="text-xs text-muted hover:text-text transition-colors cursor-pointer"
-            >
-              Limpar filtros
-            </button>
-          )}
+      {actionSlot && createPortal(
+        <>
           <Button variant="secondary">
             <Icon name="download" size={16} />
             Importar
@@ -205,8 +192,9 @@ export function EstProdutos() {
             <Icon name="plus" size={16} />
             Novo produto
           </Button>
-        </div>
-      </div>
+        </>,
+        actionSlot
+      )}
 
       {/* Barra de busca e filtros */}
       <div className="flex items-center gap-2.5">
@@ -232,6 +220,15 @@ export function EstProdutos() {
           value={filterFornecedor}
           onChange={(e) => setFilterFornecedor(e.target.value)}
         />
+        {(search || filterCategoria || filterFornecedor) && (
+          <button
+            type="button"
+            onClick={() => { setSearch(''); setFilterCategoria(''); setFilterFornecedor('') }}
+            className="text-xs text-muted hover:text-text transition-colors cursor-pointer whitespace-nowrap"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {/* Grid de cards */}
