@@ -9,13 +9,13 @@
 - **Rotas aninhadas:** `/estoque/cadastros` (index redireciona para `/produtos`) + `/estoque/cadastros/produtos`, `/estoque/cadastros/categorias`, `/estoque/cadastros/fornecedores`. Registradas no `App.tsx` como filhas do layout `Cadastros`.
 - **Botão de ação via portal:** cada página-filha usa `createPortal` + `useOutletContext` para injetar seu botão primário ("+ Novo Produto", "+ Nova Categoria", "+ Novo Fornecedor") no slot do layout pai — sem prop drilling nem re-renderização do layout.
 - **Redirects:** `<Navigate replace />` em `/estoque/produtos`, `/estoque/categorias` e `/estoque/fornecedores` apontando para as novas rotas — deep links e bookmarks antigos continuam funcionando.
-- **Sidebar 10 → 8 itens:** os três itens individuais (Produtos, Categorias, Fornecedores) foram removidos e substituídos por um único item "Cadastros" (ícone `layers`) que navega para `/estoque/cadastros`.
+- **Sidebar 10 → 8 itens:** os três itens individuais (Produtos, Categorias, Fornecedores) foram removidos e substituídos por um único item "Cadastros" (ícone `tag`) que navega para `/estoque/cadastros` (ativo via `startsWith` em qualquer sub-rota).
 - **Teste de componente** (`Cadastros.test.tsx`): cobre renderização das abas, active-tab highlight, contadores e portal do botão de ação.
 - Frontend-only — sem alteração de banco de dados ou migrações.
 
 ### Decisões tomadas
-- Indicador deslizante via CSS `transform: translateX(calc(tab-index * 100%))` (um único elemento absoluto que se move) — evita reflow e mantém a animação suave.
-- `useOutletContext` tipado (`CadastrosOutletContext`) para garantir type-safety no portal entre layout e filhas.
+- Indicador deslizante via CSS `transform: translateX(activeIndex × 160px)` num único elemento absoluto (abas de largura fixa 160px) — evita reflow e mantém a animação suave.
+- `useOutletContext<{ actionSlot }>` tipado para type-safety no portal entre layout e filhas; o `actionSlot` é guardado via callback ref + state (sem bug de timing).
 - Contadores carregados independentemente por aba (queries baratas de `count`) para não bloquear a renderização da aba ativa.
 - Redirects com `replace` para não poluir o histórico do browser.
 
