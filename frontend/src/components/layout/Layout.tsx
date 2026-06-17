@@ -21,11 +21,9 @@ const EST_NAV = [
   { id: 'estoque', label: 'Estoque', icon: 'box', path: '/estoque' },
   { id: 'vendas', label: 'Vendas', icon: 'cart', path: '/estoque/vendas' },
   { id: 'decants', label: 'Decants', icon: 'droplet', path: '/estoque/decants' },
-  { id: 'produtos', label: 'Produtos', icon: 'tag', path: '/estoque/produtos' },
+  { id: 'cadastros', label: 'Cadastros', icon: 'tag', path: '/estoque/cadastros' },
   { id: 'pedidos', label: 'Pedidos', icon: 'swap', path: '/estoque/pedidos' },
   { id: 'divergencias', label: 'Divergências', icon: 'warn', path: '/estoque/divergencias' },
-  { id: 'categorias', label: 'Categorias', icon: 'grid', path: '/estoque/categorias' },
-  { id: 'fornecedores', label: 'Fornecedores', icon: 'supplier', path: '/estoque/fornecedores' },
   { id: 'alertas', label: 'Alertas', icon: 'alert', path: '/estoque/alertas' },
   { id: 'relatorios', label: 'Relatório de giro', icon: 'report', path: '/estoque/relatorios' },
 ]
@@ -69,7 +67,9 @@ export function Layout() {
 
       <nav className="flex flex-col gap-0.5 flex-1 px-2">
         {nav.map((item) => {
-          const active = location.pathname === item.path
+          const active = item.path === '/estoque/cadastros'
+            ? location.pathname.startsWith('/estoque/cadastros')
+            : location.pathname === item.path
           return (
             <button
               key={item.id}
