@@ -13,27 +13,29 @@ beforeEach(() => {
   })
 })
 
+const { rpcMock } = vi.hoisted(() => ({
+  rpcMock: vi.fn(),
+}))
+
 vi.mock('@/pages/estoque/decants/FrascoViewer', () => ({
   FrascoViewer: ({ percentual }: { percentual: number }) => (
     <div data-testid="frasco-viewer" data-pct={percentual} />
   ),
 }))
 
-const updateMock = vi.fn()
-const insertMock = vi.fn()
-
 vi.mock('@/lib/supabase', () => ({
   supabase: {
-    from: vi.fn((table: string) => {
-      if (table === 'frascos_abertos') {
-        return {
-          update: () => ({ eq: updateMock }),
-        }
-      }
-      // decants
-      return { insert: insertMock }
-    }),
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ data: [] }),
+      })),
+    })),
+    rpc: rpcMock,
   },
+}))
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { email: 'test@example.com' } }),
 }))
 
 const mockFrasco = {
@@ -43,7 +45,7 @@ const mockFrasco = {
   ml_restante: 70,
   status: 'ativo' as const,
   aberto_em: '2026-06-15T10:00:00Z',
-  produtos: { nome: 'Asad', foto_url: null, volume_ml: 100 },
+  produtos: { nome: 'Asad', foto_url: null, volume_ml: 100, custo_medio: 5.0 },
 }
 
 describe('DecantModal', () => {
@@ -52,13 +54,12 @@ describe('DecantModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    updateMock.mockResolvedValue({ error: null })
-    insertMock.mockResolvedValue({ error: null })
+    rpcMock.mockResolvedValue({ error: null })
   })
 
   it('mostra nome do perfume e ml disponível', () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
-    expect(screen.getByText('Asad')).toBeInTheDocument()
+    expect(screen.getByText(/Consumo — Asad/)).toBeInTheDocument()
     expect(screen.getByText(/70/)).toBeInTheDocument()
   })
 
@@ -68,19 +69,19 @@ describe('DecantModal', () => {
     expect(screen.getByText(/60ml/)).toBeInTheDocument()
   })
 
-  it('mostra erro quando ml informado excede disponível', () => {
+  it('renderiza select de classificação', () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
-    fireEvent.change(screen.getByPlaceholderText('ex: 7'), { target: { value: '80' } })
-    fireEvent.click(screen.getByText('Registrar decant'))
-    expect(screen.getByText(/maior que o disponível/)).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Selecione...')).toBeInTheDocument()
   })
 
-  it('chama onSaved após registrar decant com sucesso', async () => {
+  it('chama onSaved após registrar consumo com sucesso', async () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
     fireEvent.click(screen.getByText('10ml'))
-    fireEvent.click(screen.getByText('Registrar decant'))
-    await waitFor(() => expect(updateMock).toHaveBeenCalled())
-    await waitFor(() => expect(insertMock).toHaveBeenCalled())
+    // Select classification
+    const selects = screen.getAllByRole('combobox')
+    fireEvent.change(selects[0], { target: { value: 'amostra' } })
+    fireEvent.click(screen.getByText('Registrar consumo'))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
     await waitFor(() => expect(mockOnSaved).toHaveBeenCalled(), { timeout: 2000 })
   })
 })
