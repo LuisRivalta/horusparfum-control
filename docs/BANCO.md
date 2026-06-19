@@ -236,7 +236,7 @@ vendas ←── transacoes (origem='venda')
 decants ──→ transacoes (origem='decant', consumo não-faturável)
 ```
 
-`contas` e `metas` são independentes (módulo financeiro puro). `transacoes` pode ser: inserida **manualmente** (`origem='manual'`), gerada pela RPC de **venda** (`origem='venda'`) ou pela RPC de **consumo de decant** (`origem='decant'`, despesa de perda/brinde/amostra/marketing/uso interno).
+`contas` é independente (módulo financeiro puro). `metas` armazena o cadastro da meta, mas metas em R$ têm progresso calculado pelo backend a partir de `transacoes.tipo='entrada'` no período informado. `transacoes` pode ser: inserida **manualmente** (`origem='manual'`), gerada pela RPC de **venda** (`origem='venda'`) ou pela RPC de **consumo de decant** (`origem='decant'`, despesa de perda/brinde/amostra/marketing/uso interno).
 
 ## Row Level Security (RLS)
 

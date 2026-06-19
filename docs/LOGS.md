@@ -1,5 +1,32 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-19 — Sessão 19: Metas financeiras calculadas pelo financeiro
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Corrigida a página `/financeiro/metas`: antes ela usava apenas `metas.valor_atual` manual, por isso uma meta de R$ 10k ficava 0% mesmo com vendas faturadas.
+- Criado `backend/app/services/financeiro_metas.py` para calcular metas em R$ pela soma de entradas financeiras (`transacoes.tipo='entrada'`).
+- Atualizada a rota `GET /api/financeiro/metas` para retornar metas com `valor_atual`, `progresso`, `fonte` e `valor_manual`.
+- Atualizada a tela `Metas.tsx` para consumir o backend e exibir badge "Receita" quando a meta for calculada automaticamente.
+- Metas em `%` continuam manuais.
+
+### Regras
+- `periodo = YYYY-MM` calcula o mês.
+- `periodo = YYYY-Qn` calcula o trimestre.
+- `periodo = YYYY` calcula o ano.
+- Sem período, usa o mês atual.
+
+### Validação
+- Frontend: `npm run test:run` — **134 testes passando**.
+- Frontend: `npm run build` — build de produção passando.
+- Backend: `python -m unittest discover -s tests` — **3 testes passando**.
+
+### Pendências
+- Fazer deploy/configuração do FastAPI em produção continua necessário, pois Metas e Relatórios financeiros agora dependem de `VITE_API_URL`.
+
+---
+
 ## 2026-06-19 — Sessão 18: Relatório financeiro calculado no backend
 
 **Responsável:** Luis + Codex

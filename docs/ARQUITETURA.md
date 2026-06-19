@@ -106,6 +106,7 @@ Cálculo testável em TypeScript com `decimal.js`, separado da UI. Muitas funç�
 | Endpoint | Faz | Observação |
 |----------|-----|------------|
 | `GET /api/financeiro/relatorios?inicio=<iso>&fim=<iso>` | Calcula receita, despesa, lucro, saldo histórico até o fim do período, categorias, origens, maiores lançamentos e lançamentos do período | Requer `Authorization: Bearer <Supabase JWT>`; consulta Supabase via service role no servidor e usa `Decimal` para valores monetários |
+| `GET /api/financeiro/metas` | Retorna metas com progresso calculado; metas em R$ usam entradas financeiras (`transacoes.tipo='entrada'`) no período da meta | Períodos aceitos: `YYYY-MM`, `YYYY-Qn`, `YYYY`; sem período usa mês atual; metas em `%` permanecem manuais |
 
 ## Como rodar
 

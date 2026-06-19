@@ -6,6 +6,7 @@ from app.services.financeiro_relatorios import (
     montar_relatorio_financeiro,
     parse_iso_datetime,
 )
+from app.services.financeiro_metas import montar_metas_financeiras
 
 router = APIRouter()
 
@@ -60,5 +61,27 @@ def relatorios(
 
 
 @router.get("/metas")
-def listar_metas():
-    return {"metas": []}
+def listar_metas(_user: dict = Depends(get_current_user)):
+    try:
+        supabase = get_supabase()
+        metas = (
+            supabase
+            .table("metas")
+            .select("*")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        transacoes = (
+            supabase
+            .table("transacoes")
+            .select("tipo, valor, created_at")
+            .eq("tipo", "entrada")
+            .execute()
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erro ao consultar metas: {exc}",
+        )
+
+    return {"metas": montar_metas_financeiras(metas.data or [], transacoes.data or [])}

@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-19 (Sessão 18)
+> Última atualização: 2026-06-19 (Sessão 19)
 
 ## O que já foi feito
 
@@ -97,6 +97,12 @@
     - Frontend consome o endpoint com `Authorization: Bearer <Supabase JWT>` e fica responsável só por renderização/exportação
     - Teste `financeiro/__tests__/Relatorios.test.tsx`; suite completa com 134 testes passando
     - Teste backend `backend/tests/test_financeiro_relatorios.py`; sem migração de banco
+26. **Metas financeiras com progresso automático (Sessão 19)**
+    - `/financeiro/metas` passou a consumir `GET /api/financeiro/metas`
+    - Metas em R$ calculam `valor_atual` automaticamente pela soma das entradas financeiras (`transacoes.tipo='entrada'`) no período da meta
+    - Período aceito: `YYYY-MM`, `YYYY-Qn`, `YYYY`; sem período usa mês atual
+    - Metas em `%` continuam usando `valor_atual` manual
+    - Teste backend `backend/tests/test_financeiro_metas.py`; sem migração de banco
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -178,7 +184,7 @@
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, transações, contas, metas
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
-- 134 testes frontend + 1 teste backend passando
+- 134 testes frontend + 3 testes backend passando
 
 ## Próximos passos imediatos
 
