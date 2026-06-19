@@ -20,6 +20,7 @@ import { EstDecants } from '@/pages/estoque/Decants'
 import { EstVendas } from '@/pages/estoque/Vendas'
 import { VendasConfig } from '@/pages/estoque/vendas/VendasConfig'
 import { Cadastros } from '@/pages/estoque/Cadastros'
+import { PedidosLayout } from '@/pages/estoque/PedidosLayout'
 
 export function App() {
   return (
@@ -45,8 +46,11 @@ export function App() {
         <Route path="/estoque/produtos" element={<Navigate to="/estoque/cadastros/produtos" replace />} />
         <Route path="/estoque/categorias" element={<Navigate to="/estoque/cadastros/categorias" replace />} />
         <Route path="/estoque/fornecedores" element={<Navigate to="/estoque/cadastros/fornecedores" replace />} />
-        <Route path="/estoque/pedidos" element={<EstPedidos />} />
-        <Route path="/estoque/divergencias" element={<EstDivergencias />} />
+        <Route path="/estoque/pedidos" element={<PedidosLayout />}>
+          <Route index element={<EstPedidos />} />
+          <Route path="divergencias" element={<EstDivergencias />} />
+        </Route>
+        <Route path="/estoque/divergencias" element={<Navigate to="/estoque/pedidos/divergencias" replace />} />
         <Route path="/estoque/decants" element={<EstDecants />} />
         <Route path="/estoque/alertas" element={<EstAlertas />} />
         <Route path="/estoque/relatorios" element={<EstRelatorios />} />
