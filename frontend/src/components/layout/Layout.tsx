@@ -23,7 +23,6 @@ const EST_NAV = [
   { id: 'decants', label: 'Decants', icon: 'droplet', path: '/estoque/decants' },
   { id: 'cadastros', label: 'Cadastros', icon: 'tag', path: '/estoque/cadastros' },
   { id: 'pedidos', label: 'Pedidos', icon: 'swap', path: '/estoque/pedidos' },
-  { id: 'divergencias', label: 'Divergências', icon: 'warn', path: '/estoque/divergencias' },
   { id: 'alertas', label: 'Alertas', icon: 'alert', path: '/estoque/alertas' },
   { id: 'relatorios', label: 'Relatório de giro', icon: 'report', path: '/estoque/relatorios' },
 ]
