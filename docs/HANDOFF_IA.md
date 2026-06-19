@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-19 (Sessão 14)
+> Última atualização: 2026-06-19 (Sessão 15)
 
 ## O que já foi feito
 
@@ -77,6 +77,14 @@
     - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
     - Saldo e lucro negativos destacados em vermelho
     - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
+23. **Relatório de giro de estoque funcional (Sessão 15)**
+    - `lib/giro.ts`: lógica pura TDD para giro/cobertura/parado por produto, cobertura/parado de decants, resumo (giro médio, cobertura média, valor encalhado) e ordenação
+    - `/estoque/relatorios`: painel frontend-only com presets 30/60/90/180 dias + período customizado, 4 cards de resumo, tabela de frascos cheios ordenável, filtro "Só parados" e seção de decants
+    - Cálculo reconstrói estoque inicial pelo ledger: `estoque_inicio = estoque_atual - entradas + saidas`; giro usa estoque médio do período
+    - Testes: `giro.test.ts` e `Relatorios.test.tsx`; suite completa com 132 testes passando
+    - Sem migração de banco
+    - Spec: `docs/superpowers/specs/2026-06-19-relatorio-giro-design.md`
+    - Plano: `docs/superpowers/plans/2026-06-19-relatorio-giro.md`
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -158,7 +166,7 @@
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, alertas, transações, contas, metas
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
-- 84 testes automatizados passando
+- 132 testes automatizados passando
 
 ## Próximos passos imediatos
 
@@ -170,7 +178,7 @@
 6. Remover policies temporárias de `anon` (se foram criadas para testes)
 7. Copiar JWT Secret do Supabase para o `.env` do backend
 8. Dashboard estoque com dados reais (alertas de estoque baixo)
-9. Relatórios (PDF ou tela)
+9. Exportação PDF dos relatórios (financeiro e giro)
 10. Importação em massa de produtos (botão "Importar" na topbar)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)

@@ -1,5 +1,31 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-19 — Sessão 15: Relatório de giro de estoque funcional
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- **`lib/giro.ts`** — lógica pura para calcular giro/cobertura/parado por produto, cobertura/parado de decants, resumo do painel e ordenação. Usa `decimal.js` no valor encalhado.
+- **`Relatorios.tsx`** — substituído o stub de `/estoque/relatorios` por um painel frontend-only com período selecionável (30/60/90/180 dias + custom), 4 cards de resumo, tabela de frascos cheios ordenável, filtro "Só parados" e seção de decants.
+- **Testes:** novo `giro.test.ts` cobrindo cálculos e ordenação; novo `Relatorios.test.tsx` com Supabase mockado cobrindo renderização, badge "Parado", preset padrão 90 dias e seção Decants.
+- **Validação:** `npm run test:run` com **132 testes passando**; `npm run build` passando.
+- Frontend-only — sem alteração de banco ou migrações.
+
+### Decisões tomadas
+- O giro usa estoque médio aproximado do período, reconstruindo o estoque inicial a partir do estoque atual e das movimentações: `estoque_inicio = estoque_atual - entradas + saidas`.
+- Decants ficam em seção separada por eixo de ml; não entram no giro de unidades de frasco cheio.
+- Exportação PDF ficou fora desta entrega e permanece como próximo passo para relatórios.
+
+### Pendências
+- Exportação PDF dos relatórios.
+- Limitação conhecida: queries de `movimentacoes` e `decants` não paginam; se o volume do período passar de 1.000 linhas, migrar para agregação SQL/RPC.
+
+### Specs e planos
+- Spec: `docs/superpowers/specs/2026-06-19-relatorio-giro-design.md`
+- Plano: `docs/superpowers/plans/2026-06-19-relatorio-giro.md`
+
+---
+
 ## 2026-06-19 — Sessão 14: Divergências como aba dentro de Pedidos
 
 **Responsável:** Luis + Claude (subagent-driven development)
