@@ -1,5 +1,31 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-19 — Sessão 14: Divergências como aba dentro de Pedidos
+
+**Responsável:** Luis + Claude (subagent-driven development)
+
+### O que foi feito
+- **`PedidosLayout.tsx`** — nova rota-layout com `<Outlet/>`, espelhando o padrão do `Cadastros.tsx`: barra de abas com indicador dourado deslizante, contadores por aba (head-count ao Supabase nas tabelas `pedidos` e `divergencias`), divisor ornamental e slot de ação (`actionSlot`).
+- **Duas abas:** **Pedidos** (ícone `swap`, rota index `/estoque/pedidos`) e **Divergências** (ícone `warn`, `/estoque/pedidos/divergencias`).
+- **Rotas aninhadas** no `App.tsx`: `EstPedidos` vira a rota index e `EstDivergencias` a filha `divergencias`, ambas sob o layout. A rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />` para a nova — bookmarks e deep links continuam funcionando.
+- **Páginas-filhas sem cabeçalho próprio:** `Pedidos.tsx` e `Divergencias.tsx` perderam seus blocos de header (o layout é o dono do título). O botão "Novo pedido" agora é injetado no `actionSlot` do layout via `createPortal` + `useOutletContext` (aparece só na aba Pedidos).
+- **Sidebar 8 → 7 itens (grupo Estoque):** item "Divergências" removido; sobra "Pedidos", que abre o layout com as duas abas.
+- **Testes:** novo `PedidosLayout.test.tsx` (abas, active-tab por rota index/filha com prefixo compartilhado, contadores). `Pedidos.test.tsx` ajustado para renderizar o botão "Novo pedido" via slot do layout-pai. Suite: **114 testes passando**.
+- Frontend-only — sem alteração de banco ou migrações (tabelas `pedidos`/`divergencias` e RPCs já existiam).
+
+### Decisões tomadas
+- A aba index ("Pedidos") usa `NavLink end` + lógica explícita `isDiv`/`activeIndex` em vez do `startsWith` genérico do Cadastros, porque `/estoque/pedidos` é prefixo de `/estoque/pedidos/divergencias` — sem isso a pílula ficaria sempre na primeira aba.
+- Título do layout mantido como "Pedidos" (combina com a sidebar e o pedido do usuário), apesar da leve redundância com a primeira aba.
+
+### Pendências
+- Nenhuma pendência nova. Smoke no browser ficou gated pelo login do Supabase (sem credenciais no ambiente da sessão); cobertura garantida pelos testes automatizados.
+
+### Specs e planos
+- Spec: `docs/superpowers/specs/2026-06-19-pedidos-divergencias-abas-design.md`
+- Plano: `docs/superpowers/plans/2026-06-19-pedidos-divergencias-abas.md`
+
+---
+
 ## 2026-06-17 — Sessão 13: Página Cadastros (unificação Produtos/Categorias/Fornecedores)
 
 **Responsável:** Luis + Claude (subagent-driven development)

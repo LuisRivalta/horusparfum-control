@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-17 (Sessão 13)
+> Última atualização: 2026-06-19 (Sessão 14)
 
 ## O que já foi feito
 
@@ -77,6 +77,17 @@
     - Seletor de período flexível, 4 cards (saldo histórico/receita/despesa/lucro), gráfico de evolução (6 meses) e de categorias (toggle despesas/receitas), via recharts
     - Saldo e lucro negativos destacados em vermelho
     - Spec: docs/superpowers/specs/2026-06-12-dashboard-financeiro-design.md
+22. **Divergências como aba dentro de Pedidos (Sessão 14)**
+    - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
+    - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
+    - Páginas-filhas sem cabeçalho próprio (o layout é dono do título); botão "Novo pedido" no `actionSlot` via `createPortal` + `useOutletContext`
+    - Aba index usa `NavLink end` + `isDiv`/`activeIndex` explícito (o path index é prefixo do path da filha)
+    - Sidebar do grupo Estoque: 8 → 7 itens (item "Divergências" removido)
+    - Teste `PedidosLayout.test.tsx`; `Pedidos.test.tsx` ajustado para o botão via slot. 114 testes passando
+    - Frontend-only; sem migração de banco
+    - Spec: `docs/superpowers/specs/2026-06-19-pedidos-divergencias-abas-design.md`
+    - Plano: `docs/superpowers/plans/2026-06-19-pedidos-divergencias-abas.md`
+
 21. **Página Cadastros — unificação Produtos/Categorias/Fornecedores (Sessão 13)**
     - Rota-layout `Cadastros.tsx` em `/estoque/cadastros` com `<Outlet/>` hospedando três rotas aninhadas: `/estoque/cadastros/produtos`, `/cadastros/categorias`, `/cadastros/fornecedores`
     - Barra de abas premium: indicador dourado deslizante (CSS `transform: translateX`) + contadores por aba (head-count via query Supabase) + divisor ornamental abaixo
