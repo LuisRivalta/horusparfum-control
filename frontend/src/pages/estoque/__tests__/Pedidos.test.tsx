@@ -1,7 +1,32 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MemoryRouter } from 'react-router-dom'
+import { useState } from 'react'
+import { MemoryRouter, Routes, Route, Outlet } from 'react-router-dom'
 import { EstPedidos, type PedidoRow } from '../Pedidos'
+
+// Stub do layout-pai (PedidosLayout): expõe um actionSlot via Outlet context,
+// como o layout real faz. O botão "Novo pedido" é portado para esse slot.
+function LayoutStub() {
+  const [slot, setSlot] = useState<HTMLDivElement | null>(null)
+  return (
+    <>
+      <div ref={setSlot} />
+      <Outlet context={{ actionSlot: slot }} />
+    </>
+  )
+}
+
+function renderComLayout() {
+  return render(
+    <MemoryRouter initialEntries={['/estoque/pedidos']}>
+      <Routes>
+        <Route path="/estoque/pedidos" element={<LayoutStub />}>
+          <Route index element={<EstPedidos />} />
+        </Route>
+      </Routes>
+    </MemoryRouter>
+  )
+}
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: { email: 'teste@horus.com' }, signOut: vi.fn() }),
@@ -68,9 +93,11 @@ describe('EstPedidos (lista)', () => {
     expect(screen.getByText('Recebido')).toBeInTheDocument()
   })
 
-  it('renderiza o botão "Novo pedido"', () => {
-    render(<MemoryRouter><EstPedidos /></MemoryRouter>)
-    expect(screen.getByRole('button', { name: /novo pedido/i })).toBeInTheDocument()
+  it('renderiza o botão "Novo pedido" no slot de ação do layout', async () => {
+    renderComLayout()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /novo pedido/i })).toBeInTheDocument()
+    )
   })
 
   it('exibe modal de confirmação ao clicar em Cancelar e chama update ao confirmar', async () => {
