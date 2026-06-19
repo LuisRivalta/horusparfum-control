@@ -1,23 +1,50 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Icon } from '@/components/shared/Icon'
 import { Button } from '@/components/shared/FormControls'
 import { cn, formatBRL } from '@/lib/utils'
-import {
-  calcularSaldoHistorico,
-  resumoPeriodo,
-  agruparPorCategoria,
-  periodoMes,
-  type FatiaCategoria,
-  type Periodo,
-  type Transacao,
-} from '@/lib/financeiro'
+import { periodoMes, type Periodo } from '@/lib/financeiro'
 import { PeriodSelector } from './dashboard/PeriodSelector'
 
-interface TransacaoRelatorio extends Transacao {
+interface CategoriaResumo {
+  categoria: string
+  total: number
+}
+
+interface TransacaoRelatorio {
+  id: string
+  descricao: string
+  tipo: 'entrada' | 'saida'
+  valor: number
+  categoria: string | null
   forma_pagamento: string | null
   responsavel: string | null
   origem?: string | null
+  created_at: string
+}
+
+interface RelatorioFinanceiro {
+  periodo: {
+    inicio: string
+    fim: string
+  }
+  resumo: {
+    receita: number
+    despesa: number
+    lucro: number
+    saldo_historico: number
+  }
+  categorias: {
+    receitas: CategoriaResumo[]
+    despesas: CategoriaResumo[]
+  }
+  origens: { origem: string; qtd: number }[]
+  maiores: {
+    receitas: TransacaoRelatorio[]
+    despesas: TransacaoRelatorio[]
+  }
+  transacoes: TransacaoRelatorio[]
+  total_lancamentos: number
 }
 
 interface StatCardProps {
@@ -26,6 +53,8 @@ interface StatCardProps {
   valor: string
   negativo?: boolean
 }
+
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
 
 function trackMouse(e: React.MouseEvent<HTMLElement>) {
   const el = e.currentTarget
@@ -54,11 +83,6 @@ function StatCard({ label, icon, valor, negativo }: StatCardProps) {
   )
 }
 
-function dentroDoPeriodo(t: Transacao, periodo: Periodo) {
-  const data = new Date(t.created_at)
-  return data >= periodo.inicio && data <= periodo.fim
-}
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -75,7 +99,7 @@ function percentual(valor: number, total: number) {
 function origemLabel(origem?: string | null) {
   if (origem === 'venda') return 'Venda'
   if (origem === 'decant') return 'Decant'
-  return 'Manual'
+  return origem || 'Manual'
 }
 
 function escapeHtml(value: string | number | null | undefined) {
@@ -87,6 +111,32 @@ function escapeHtml(value: string | number | null | undefined) {
     .replace(/'/g, '&#039;')
 }
 
+async function carregarRelatorio(periodo: Periodo, signal: AbortSignal): Promise<RelatorioFinanceiro> {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) {
+    throw new Error('Sessão expirada. Entre novamente para carregar o relatório.')
+  }
+
+  const params = new URLSearchParams({
+    inicio: periodo.inicio.toISOString(),
+    fim: periodo.fim.toISOString(),
+  })
+  const response = await fetch(`${API_URL}/api/financeiro/relatorios?${params.toString()}`, {
+    signal,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.detail || 'Erro ao carregar relatório financeiro no backend.')
+  }
+
+  return response.json()
+}
+
 function CategoriaTable({
   titulo,
   total,
@@ -94,7 +144,7 @@ function CategoriaTable({
 }: {
   titulo: string
   total: number
-  itens: FatiaCategoria[]
+  itens: CategoriaResumo[]
 }) {
   return (
     <div className="border border-line rounded-xl overflow-hidden bg-surface/40">
@@ -130,25 +180,18 @@ function CategoriaTable({
   )
 }
 
-function criarHtmlRelatorio(
-  periodo: Periodo,
-  resumo: { receita: number; despesa: number; lucro: number },
-  saldo: number,
-  receitas: FatiaCategoria[],
-  despesas: FatiaCategoria[],
-  transacoes: TransacaoRelatorio[],
-) {
-  const linhas = transacoes.map((t) => `
+function criarHtmlRelatorio(periodo: Periodo, relatorio: RelatorioFinanceiro) {
+  const linhas = relatorio.transacoes.map((t) => `
     <tr>
       <td>${formatDate(t.created_at)}</td>
       <td>${escapeHtml(t.descricao)}</td>
       <td>${t.tipo === 'entrada' ? 'Entrada' : 'Saída'}</td>
       <td>${escapeHtml(t.categoria || '-')}</td>
-      <td>${origemLabel(t.origem)}</td>
+      <td>${escapeHtml(origemLabel(t.origem))}</td>
       <td class="num">${t.tipo === 'saida' ? '-' : ''}${formatBRL(t.valor)}</td>
     </tr>
   `).join('')
-  const cats = (titulo: string, itens: FatiaCategoria[]) => `
+  const cats = (titulo: string, itens: CategoriaResumo[]) => `
     <h2>${escapeHtml(titulo)}</h2>
     <table>
       <thead><tr><th>Categoria</th><th class="num">Total</th></tr></thead>
@@ -182,13 +225,13 @@ function criarHtmlRelatorio(
   <h1>Relatório financeiro</h1>
   <div class="muted">${escapeHtml(periodo.label)}</div>
   <div class="cards">
-    <div class="card"><div class="label">Receita</div><div class="value">${formatBRL(resumo.receita)}</div></div>
-    <div class="card"><div class="label">Despesas</div><div class="value">${formatBRL(resumo.despesa)}</div></div>
-    <div class="card"><div class="label">Lucro</div><div class="value">${formatBRL(resumo.lucro)}</div></div>
-    <div class="card"><div class="label">Saldo histórico</div><div class="value">${formatBRL(saldo)}</div></div>
+    <div class="card"><div class="label">Receita</div><div class="value">${formatBRL(relatorio.resumo.receita)}</div></div>
+    <div class="card"><div class="label">Despesas</div><div class="value">${formatBRL(relatorio.resumo.despesa)}</div></div>
+    <div class="card"><div class="label">Lucro</div><div class="value">${formatBRL(relatorio.resumo.lucro)}</div></div>
+    <div class="card"><div class="label">Saldo histórico</div><div class="value">${formatBRL(relatorio.resumo.saldo_historico)}</div></div>
   </div>
-  ${cats('Receitas por categoria', receitas)}
-  ${cats('Despesas por categoria', despesas)}
+  ${cats('Receitas por categoria', relatorio.categorias.receitas)}
+  ${cats('Despesas por categoria', relatorio.categorias.despesas)}
   <h2>Lançamentos do período</h2>
   <table>
     <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Categoria</th><th>Origem</th><th class="num">Valor</th></tr></thead>
@@ -201,48 +244,41 @@ function criarHtmlRelatorio(
 export function FinRelatorios() {
   const hoje = new Date()
   const [periodo, setPeriodo] = useState<Periodo>(periodoMes(hoje.getFullYear(), hoje.getMonth()))
-  const [transacoes, setTransacoes] = useState<TransacaoRelatorio[]>([])
+  const [relatorio, setRelatorio] = useState<RelatorioFinanceiro | null>(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase
-      .from('transacoes')
-      .select('id, descricao, tipo, valor, categoria, forma_pagamento, responsavel, origem, created_at')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) setErro(error.message)
-        else setTransacoes((data as TransacaoRelatorio[]) || [])
-        setLoading(false)
-      })
-  }, [])
+    const controller = new AbortController()
+    setLoading(true)
+    setErro(null)
 
-  const saldo = calcularSaldoHistorico(transacoes)
-  const resumo = resumoPeriodo(transacoes, periodo)
-  const receitas = agruparPorCategoria(transacoes, periodo, 'entrada')
-  const despesas = agruparPorCategoria(transacoes, periodo, 'saida')
-  const noPeriodo = useMemo(
-    () => transacoes.filter((t) => dentroDoPeriodo(t, periodo)),
-    [periodo, transacoes],
-  )
-  const maioresReceitas = noPeriodo
-    .filter((t) => t.tipo === 'entrada')
-    .sort((a, b) => b.valor - a.valor)
-    .slice(0, 5)
-  const maioresDespesas = noPeriodo
-    .filter((t) => t.tipo === 'saida')
-    .sort((a, b) => b.valor - a.valor)
-    .slice(0, 5)
-  const origens = noPeriodo.reduce<Record<string, number>>((acc, t) => {
-    const key = origemLabel(t.origem)
-    acc[key] = (acc[key] ?? 0) + 1
-    return acc
-  }, {})
+    carregarRelatorio(periodo, controller.signal)
+      .then(setRelatorio)
+      .catch((error) => {
+        if (error.name !== 'AbortError') setErro(error.message)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [periodo])
+
+  const resumo = relatorio?.resumo ?? { receita: 0, despesa: 0, lucro: 0, saldo_historico: 0 }
+  const receitas = relatorio?.categorias.receitas ?? []
+  const despesas = relatorio?.categorias.despesas ?? []
+  const origens = relatorio?.origens ?? []
+  const maioresReceitas = relatorio?.maiores.receitas ?? []
+  const maioresDespesas = relatorio?.maiores.despesas ?? []
+  const transacoes = relatorio?.transacoes ?? []
+  const totalLancamentos = relatorio?.total_lancamentos ?? 0
 
   function imprimirPdf() {
+    if (!relatorio) return
     const janela = window.open('', '_blank')
     if (!janela) return
-    janela.document.write(criarHtmlRelatorio(periodo, resumo, saldo, receitas, despesas, noPeriodo))
+    janela.document.write(criarHtmlRelatorio(periodo, relatorio))
     janela.document.close()
     janela.focus()
     janela.print()
@@ -261,7 +297,7 @@ export function FinRelatorios() {
           <h1 className="text-4xl tracking-tight mt-1.5">Relatórios financeiros</h1>
           <p className="text-muted text-sm mt-1">Análise por período, categorias e origem dos lançamentos</p>
         </div>
-        <Button variant="secondary" onClick={imprimirPdf} disabled={loading}>
+        <Button variant="secondary" onClick={imprimirPdf} disabled={loading || !relatorio}>
           <Icon name="download" size={16} />
           Exportar PDF
         </Button>
@@ -269,7 +305,7 @@ export function FinRelatorios() {
 
       {erro && (
         <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">
-          Erro ao carregar transações: {erro}
+          Erro ao carregar relatório no backend: {erro}
         </div>
       )}
 
@@ -279,7 +315,7 @@ export function FinRelatorios() {
         <StatCard label="Receita" icon="up" valor={cardValor(formatBRL(resumo.receita))} />
         <StatCard label="Despesas" icon="down" valor={cardValor(formatBRL(resumo.despesa))} />
         <StatCard label="Lucro" icon="goal" valor={cardValor(formatBRL(resumo.lucro))} negativo={!loading && resumo.lucro < 0} />
-        <StatCard label="Saldo histórico" icon="dashboard" valor={cardValor(formatBRL(saldo))} negativo={!loading && saldo < 0} />
+        <StatCard label="Saldo histórico" icon="dashboard" valor={cardValor(formatBRL(resumo.saldo_historico))} negativo={!loading && resumo.saldo_historico < 0} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
@@ -290,14 +326,14 @@ export function FinRelatorios() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         <div className="border border-line rounded-xl bg-surface/40 p-4">
           <p className="font-mono text-[0.62rem] uppercase tracking-[.14em] text-faint mb-3">Origem dos lançamentos</p>
-          {Object.keys(origens).length === 0 ? (
+          {origens.length === 0 ? (
             <p className="text-sm text-muted">Sem lançamentos no período</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {Object.entries(origens).map(([origem, qtd]) => (
-                <div key={origem} className="flex items-center justify-between text-sm">
-                  <span className="text-text-2">{origem}</span>
-                  <span className="font-mono">{qtd}</span>
+              {origens.map((item) => (
+                <div key={item.origem} className="flex items-center justify-between text-sm">
+                  <span className="text-text-2">{item.origem}</span>
+                  <span className="font-mono">{item.qtd}</span>
                 </div>
               ))}
             </div>
@@ -307,7 +343,7 @@ export function FinRelatorios() {
         <div className="lg:col-span-2 border border-line rounded-xl overflow-hidden bg-surface/40">
           <div className="px-4 py-3 border-b border-line bg-surface flex items-center justify-between gap-3">
             <h2 className="text-sm font-medium">Maiores lançamentos</h2>
-            <span className="font-mono text-xs text-muted">{noPeriodo.length} no período</span>
+            <span className="font-mono text-xs text-muted">{totalLancamentos} no período</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2">
             <Ranking titulo="Receitas" transacoes={maioresReceitas} />
@@ -322,39 +358,39 @@ export function FinRelatorios() {
           <span className="font-mono text-xs text-muted">{periodo.label}</span>
         </div>
         <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead>
-            <tr className="border-b border-line">
-              <th className="text-left px-4 py-3 font-medium text-text-2">Data</th>
-              <th className="text-left px-4 py-3 font-medium text-text-2">Descrição</th>
-              <th className="text-left px-4 py-3 font-medium text-text-2">Categoria</th>
-              <th className="text-left px-4 py-3 font-medium text-text-2">Origem</th>
-              <th className="text-right px-4 py-3 font-medium text-text-2">Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted">Carregando...</td></tr>
-            ) : noPeriodo.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted">Nenhum lançamento no período</td></tr>
-            ) : (
-              noPeriodo.map((t) => (
-                <tr key={t.id} className="border-b border-line last:border-0 hover:bg-surface-2/50">
-                  <td className="px-4 py-3 text-text-2 text-xs">{formatDate(t.created_at)}</td>
-                  <td className="px-4 py-3 font-medium">{t.descricao}</td>
-                  <td className="px-4 py-3 text-text-2">{t.categoria || 'Sem categoria'}</td>
-                  <td className="px-4 py-3 text-text-2">{origemLabel(t.origem)}</td>
-                  <td className={cn(
-                    'px-4 py-3 text-right font-mono',
-                    t.tipo === 'entrada' ? 'text-up' : 'text-down'
-                  )}>
-                    {t.tipo === 'saida' ? '- ' : ''}{formatBRL(t.valor)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+          <table className="w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="border-b border-line">
+                <th className="text-left px-4 py-3 font-medium text-text-2">Data</th>
+                <th className="text-left px-4 py-3 font-medium text-text-2">Descrição</th>
+                <th className="text-left px-4 py-3 font-medium text-text-2">Categoria</th>
+                <th className="text-left px-4 py-3 font-medium text-text-2">Origem</th>
+                <th className="text-right px-4 py-3 font-medium text-text-2">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted">Carregando...</td></tr>
+              ) : transacoes.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted">Nenhum lançamento no período</td></tr>
+              ) : (
+                transacoes.map((t) => (
+                  <tr key={t.id} className="border-b border-line last:border-0 hover:bg-surface-2/50">
+                    <td className="px-4 py-3 text-text-2 text-xs">{formatDate(t.created_at)}</td>
+                    <td className="px-4 py-3 font-medium">{t.descricao}</td>
+                    <td className="px-4 py-3 text-text-2">{t.categoria || 'Sem categoria'}</td>
+                    <td className="px-4 py-3 text-text-2">{origemLabel(t.origem)}</td>
+                    <td className={cn(
+                      'px-4 py-3 text-right font-mono',
+                      t.tipo === 'entrada' ? 'text-up' : 'text-down'
+                    )}>
+                      {t.tipo === 'saida' ? '- ' : ''}{formatBRL(t.valor)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

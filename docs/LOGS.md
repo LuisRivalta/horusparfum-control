@@ -1,5 +1,34 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-19 — Sessão 18: Relatório financeiro calculado no backend
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Migrado o cálculo de `/financeiro/relatorios` para o FastAPI.
+- Criado `backend/app/services/financeiro_relatorios.py` com agregação usando `Decimal`: receita, despesa, lucro, saldo histórico até o fim do período, categorias, origens, maiores lançamentos e lançamentos do período.
+- Atualizada a rota `GET /api/financeiro/relatorios?inicio=<iso>&fim=<iso>` para consultar `transacoes` no Supabase via service role e exigir JWT do Supabase no header `Authorization`.
+- Atualizada a tela React para consumir o endpoint backend e renderizar o payload pronto, mantendo exportação PDF por impressão do navegador.
+- Adicionado teste backend `backend/tests/test_financeiro_relatorios.py` e ajustado o teste frontend para mockar `fetch` + sessão Supabase.
+- Atualizada a arquitetura para remover o status de backend dormente no fluxo de relatórios.
+
+### Validação
+- Frontend: `npm run test:run` — **134 testes passando**.
+- Frontend: `npm run build` — build de produção passando.
+- Backend: `python -m unittest discover -s tests` — **1 teste passando**.
+- Backend: import do FastAPI (`from app.main import app`) passando.
+
+### Decisões tomadas
+- O frontend não recalcula o relatório; ele envia período + JWT e renderiza o agregado do backend.
+- O saldo histórico do relatório é calculado até o fim do período selecionado.
+- A página agora depende de backend disponível em `VITE_API_URL`.
+
+### Pendências
+- Fazer deploy do FastAPI e configurar `VITE_API_URL` em produção.
+- Configurar `JWT_SECRET` do Supabase nas variáveis do backend.
+
+---
+
 ## 2026-06-19 — Sessão 17: Relatórios financeiros funcionais
 
 **Responsável:** Luis + Codex

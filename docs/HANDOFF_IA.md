@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-19 (Sessão 17)
+> Última atualização: 2026-06-19 (Sessão 18)
 
 ## O que já foi feito
 
@@ -93,9 +93,10 @@
 25. **Relatórios financeiros funcionais (Sessão 17)**
     - `/financeiro/relatorios`: substituído stub por painel com seletor de período, 4 cards de resumo, análise por categoria, origem dos lançamentos, ranking de maiores receitas/despesas e tabela detalhada
     - Exportação PDF via janela de impressão do navegador, usando os dados filtrados do período atual
-    - Reuso de `lib/financeiro.ts` para saldo histórico, resumo do período e agrupamento por categoria
+    - Cálculo migrado para o backend FastAPI: `GET /api/financeiro/relatorios?inicio=<iso>&fim=<iso>` calcula saldo histórico, resumo do período, categorias, origens e rankings com `Decimal`
+    - Frontend consome o endpoint com `Authorization: Bearer <Supabase JWT>` e fica responsável só por renderização/exportação
     - Teste `financeiro/__tests__/Relatorios.test.tsx`; suite completa com 134 testes passando
-    - Frontend-only; sem migração de banco
+    - Teste backend `backend/tests/test_financeiro_relatorios.py`; sem migração de banco
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -171,22 +172,23 @@
 
 - **Deploy em produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
 - Frontend compila e roda (`npm run dev`) — http://localhost:5173
-- Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000
+- Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000; relatório financeiro depende dele
 - Banco de dados configurado no Supabase com todas as tabelas/RPCs atuais verificadas no projeto (`decants`, entrada manual, vendas e consumo de decants aplicados)
 - Autenticação funcional (login/logout via Supabase Auth)
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, transações, contas, metas
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
-- 134 testes automatizados passando
+- 134 testes frontend + 1 teste backend passando
 
 ## Próximos passos imediatos
 
-1. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
-2. Remover policies temporárias de `anon` (se foram criadas para testes)
-3. Copiar JWT Secret do Supabase para o `.env` do backend
-4. Dashboard estoque com dados reais (estoque baixo e reposição)
-5. Exportação PDF do relatório de giro de estoque
-6. Importação em massa de produtos (botão "Importar" na topbar)
+1. Fazer deploy do backend FastAPI e configurar `VITE_API_URL` de produção para o relatório financeiro funcionar fora do ambiente local
+2. Copiar JWT Secret do Supabase para o `.env`/variáveis do backend
+3. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
+4. Remover policies temporárias de `anon` (se foram criadas para testes)
+5. Dashboard estoque com dados reais (estoque baixo e reposição)
+6. Exportação PDF do relatório de giro de estoque
+7. Importação em massa de produtos (botão "Importar" na topbar)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
