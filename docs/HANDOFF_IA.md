@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-19 (Sessão 16)
+> Última atualização: 2026-06-19 (Sessão 17)
 
 ## O que já foi feito
 
@@ -90,6 +90,12 @@
     - Rota `/estoque/alertas` e página placeholder `Alertas.tsx` removidas
     - Copy da Home e documentação viva ajustadas para não listar Alertas como tela atual
     - Frontend-only; sem migração de banco
+25. **Relatórios financeiros funcionais (Sessão 17)**
+    - `/financeiro/relatorios`: substituído stub por painel com seletor de período, 4 cards de resumo, análise por categoria, origem dos lançamentos, ranking de maiores receitas/despesas e tabela detalhada
+    - Exportação PDF via janela de impressão do navegador, usando os dados filtrados do período atual
+    - Reuso de `lib/financeiro.ts` para saldo histórico, resumo do período e agrupamento por categoria
+    - Teste `financeiro/__tests__/Relatorios.test.tsx`; suite completa com 134 testes passando
+    - Frontend-only; sem migração de banco
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -166,25 +172,21 @@
 - **Deploy em produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
 - Frontend compila e roda (`npm run dev`) — http://localhost:5173
 - Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000
-- Banco de dados configurado no Supabase com todas as tabelas (migrações de decants, entrada manual e vendas pendentes de aplicação manual)
+- Banco de dados configurado no Supabase com todas as tabelas/RPCs atuais verificadas no projeto (`decants`, entrada manual, vendas e consumo de decants aplicados)
 - Autenticação funcional (login/logout via Supabase Auth)
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, transações, contas, metas
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
-- 132 testes automatizados passando
+- 134 testes automatizados passando
 
 ## Próximos passos imediatos
 
-1. **Aplicar migração `supabase/migrations/20260617_consumo_decant.sql` no Supabase SQL Editor** (pendente — requer que `20260616_vendas.sql` já esteja aplicada; o consumo não-faturável de decants não funciona sem isso)
-2. **Aplicar migração `supabase/migrations/20260616_vendas.sql` no Supabase SQL Editor** (pendente — o módulo de Vendas não funciona sem isso)
-3. **Aplicar migração `supabase/migrations/20260615_decants.sql` no Supabase SQL Editor** (pendente — módulo de decants não funciona sem isso)
-4. **Aplicar migração `supabase/migrations/20260616_registrar_entrada.sql` no Supabase SQL Editor** (pendente — botão "Registrar entrada" não funciona sem isso)
-5. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
-6. Remover policies temporárias de `anon` (se foram criadas para testes)
-7. Copiar JWT Secret do Supabase para o `.env` do backend
-8. Dashboard estoque com dados reais (estoque baixo e reposição)
-9. Exportação PDF dos relatórios (financeiro e giro)
-10. Importação em massa de produtos (botão "Importar" na topbar)
+1. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
+2. Remover policies temporárias de `anon` (se foram criadas para testes)
+3. Copiar JWT Secret do Supabase para o `.env` do backend
+4. Dashboard estoque com dados reais (estoque baixo e reposição)
+5. Exportação PDF do relatório de giro de estoque
+6. Importação em massa de produtos (botão "Importar" na topbar)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
@@ -193,7 +195,7 @@
 
 ## Decisões pendentes
 
-- Definir se relatórios PDF serão gerados no backend (reportlab/weasyprint) ou no frontend (jspdf)
+- Definir se o relatório de giro terá PDF simples via impressão do navegador (como financeiro) ou geração dedicada no backend/frontend
 
 ## Para a IA
 

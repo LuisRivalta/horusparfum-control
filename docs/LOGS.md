@@ -1,5 +1,30 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-19 — Sessão 17: Relatórios financeiros funcionais
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Substituído o stub de `/financeiro/relatorios` por um painel real com seletor de período, cards de Receita/Despesas/Lucro/Saldo histórico, tabelas por categoria, origem dos lançamentos, ranking de maiores receitas/despesas e tabela detalhada.
+- Adicionada exportação PDF via impressão do navegador, respeitando o período selecionado.
+- Reutilizada a lógica pura de `lib/financeiro.ts` para saldo histórico, resumo por período e agrupamento por categoria.
+- Adicionado teste `frontend/src/pages/financeiro/__tests__/Relatorios.test.tsx` cobrindo renderização do resumo/categorias e fluxo de exportação.
+- Atualizado o handoff para refletir que as migrações atuais do Supabase foram verificadas como aplicadas.
+
+### Validação
+- `npm run test:run` — **134 testes passando**.
+- `npm run build` — build de produção passando.
+
+### Decisões tomadas
+- PDF financeiro usa a janela de impressão do navegador por enquanto, sem adicionar dependência nova.
+- O relatório financeiro calcula em memória com os dados de `transacoes`, seguindo o padrão atual do dashboard financeiro.
+
+### Pendências
+- Avaliar exportação PDF do relatório de giro de estoque.
+- Dashboards de ROI/análise de vendas continuam como próximo passo relevante.
+
+---
+
 ## 2026-06-19 — Sessão 16: Remoção da tela Alertas
 
 **Responsável:** Luis + Codex
