@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-19 (Sessão 15)
+> Última atualização: 2026-06-19 (Sessão 16)
 
 ## O que já foi feito
 
@@ -85,6 +85,11 @@
     - Sem migração de banco
     - Spec: `docs/superpowers/specs/2026-06-19-relatorio-giro-design.md`
     - Plano: `docs/superpowers/plans/2026-06-19-relatorio-giro.md`
+24. **Remoção da tela Alertas (Sessão 16)**
+    - Item "Alertas" removido da sidebar do grupo Estoque
+    - Rota `/estoque/alertas` e página placeholder `Alertas.tsx` removidas
+    - Copy da Home e documentação viva ajustadas para não listar Alertas como tela atual
+    - Frontend-only; sem migração de banco
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -163,7 +168,7 @@
 - Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000
 - Banco de dados configurado no Supabase com todas as tabelas (migrações de decants, entrada manual e vendas pendentes de aplicação manual)
 - Autenticação funcional (login/logout via Supabase Auth)
-- CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, alertas, transações, contas, metas
+- CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, transações, contas, metas
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - 132 testes automatizados passando
@@ -177,7 +182,7 @@
 5. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
 6. Remover policies temporárias de `anon` (se foram criadas para testes)
 7. Copiar JWT Secret do Supabase para o `.env` do backend
-8. Dashboard estoque com dados reais (alertas de estoque baixo)
+8. Dashboard estoque com dados reais (estoque baixo e reposição)
 9. Exportação PDF dos relatórios (financeiro e giro)
 10. Importação em massa de produtos (botão "Importar" na topbar)
 

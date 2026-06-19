@@ -1,5 +1,24 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-19 — Sessão 16: Remoção da tela Alertas
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Removido o item **Alertas** da sidebar do grupo Estoque.
+- Removida a rota `/estoque/alertas` do `App.tsx`.
+- Removida a página placeholder `frontend/src/pages/estoque/Alertas.tsx`.
+- Atualizada a copy da Home e a documentação viva (`PRD`, `ARQUITETURA`, `HANDOFF`, `LOGS`) para não listar Alertas como tela atual.
+
+### Decisões tomadas
+- A remoção foi frontend-only; `estoque_minimo` permanece no modelo de produtos para uso em relatórios ou reposição futura.
+- Specs e planos históricos não foram alterados.
+
+### Pendências
+- Nenhuma pendência nova.
+
+---
+
 ## 2026-06-19 — Sessão 15: Relatório de giro de estoque funcional
 
 **Responsável:** Luis + Codex

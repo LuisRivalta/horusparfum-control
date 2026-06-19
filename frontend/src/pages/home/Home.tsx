@@ -21,7 +21,7 @@ const AREAS = [
     path: '/estoque',
     icon: 'box',
     title: 'Estoque',
-    desc: 'Produtos, movimentações, categorias, fornecedores e alertas.',
+    desc: 'Produtos, pedidos, vendas, decants, categorias e fornecedores.',
   },
 ] as const
 

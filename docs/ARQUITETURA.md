@@ -51,7 +51,7 @@ C:\Horus\
 │       │   ├── financeiro\     → Dashboard, Transacoes, Contas, Relatorios, Metas
 │       │   └── estoque\        → EstoqueView (Estoque), Cadastros (layout), Produtos, Vendas, Decants,
 │       │       │               → Pedidos, Divergencias, Categorias, Fornecedores,
-│       │       │               → Alertas, Relatorios
+│       │       │               → Relatorios
 │       │       │               → Cadastros.tsx = rota-layout com <Outlet/>; abas Produtos/Categorias/Fornecedores
 │       │       ├── pedidos\    → NovoPedidoModal, ConferenciaModal
 │       │       ├── decants\    → FrascoViewer, AbrirFrascoModal, DecantModal
@@ -181,7 +181,7 @@ Browser (React SPA)
 | /estoque/decants | Decants |
 | /estoque/cadastros (+ /produtos · /categorias · /fornecedores) | Cadastros (abas: Produtos, Categorias, Fornecedores) — as rotas antigas `/estoque/produtos`, `/estoque/categorias`, `/estoque/fornecedores` redirecionam para as novas |
 | /estoque/pedidos · /divergencias | Pedidos · Divergências |
-| /estoque/alertas · /relatorios | demais telas de estoque |
+| /estoque/relatorios | Relatório de giro |
 
 Tudo sob `/financeiro/*` e `/estoque/*` usa o `Layout` (sidebar + header). A nav lateral alterna entre os grupos Financeiro e Estoque.
 
