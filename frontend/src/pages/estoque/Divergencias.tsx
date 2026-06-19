@@ -53,12 +53,6 @@ export function EstDivergencias() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold">Estoque / Qualidade</p>
-        <h1 className="text-3xl font-medium tracking-tight mt-1">Divergências</h1>
-        <p className="text-muted text-sm mt-1">Histórico de diferenças entre pedido e recebimento</p>
-      </div>
-
       {resumo.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="font-mono text-[0.62rem] uppercase tracking-[.14em] text-faint">Resumo geral por fornecedor</p>
