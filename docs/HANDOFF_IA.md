@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-19 (Sessão 19)
+> Última atualização: 2026-06-19 (Sessão 20)
 
 ## O que já foi feito
 
@@ -103,6 +103,12 @@
     - Período aceito: `YYYY-MM`, `YYYY-Qn`, `YYYY`; sem período usa mês atual
     - Metas em `%` continuam usando `valor_atual` manual
     - Teste backend `backend/tests/test_financeiro_metas.py`; sem migração de banco
+27. **Scroll fluido com Lenis (Sessão 20)**
+    - Dependência `lenis@1.3.23` adicionada ao frontend
+    - Novo `SmoothScrollArea.tsx` aplica Lenis ao container scrollável principal do `Layout`
+    - Respeita `prefers-reduced-motion`; nesse caso usa scroll nativo
+    - Ao trocar de rota, o scroll volta ao topo imediatamente
+    - Frontend-only; sem migração de banco
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`

@@ -1,5 +1,26 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-19 — Sessão 20: Scroll fluido com Lenis
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Adicionado `lenis@1.3.23` ao frontend.
+- Criado `frontend/src/components/layout/SmoothScrollArea.tsx`.
+- Aplicado Lenis no container scrollável principal do `Layout`, porque o app usa `h-screen` com conteúdo interno `overflow-auto` em vez de scroll direto no `window`.
+- Mantido respeito a `prefers-reduced-motion`: usuários com redução de movimento seguem com scroll nativo.
+- Scroll volta ao topo ao trocar de rota.
+
+### Validação
+- `npm run build` — build de produção passando.
+- `npm run test:run` — **134 testes passando**.
+- Dev server local iniciado em `http://127.0.0.1:5173`.
+
+### Observação
+- `npm install lenis` reportou 1 vulnerabilidade alta no audit, mas não foi aplicado `npm audit fix` automaticamente para evitar mudanças fora de escopo.
+
+---
+
 ## 2026-06-19 — Sessão 19: Metas financeiras calculadas pelo financeiro
 
 **Responsável:** Luis + Codex

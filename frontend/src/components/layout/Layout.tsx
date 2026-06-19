@@ -7,6 +7,7 @@ import { DayNightSwitch } from '@/components/shared/DayNightSwitch'
 import { UserMenu } from '@/components/shared/UserMenu'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { SmoothScrollArea } from './SmoothScrollArea'
 
 const FIN_NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/financeiro' },
@@ -191,11 +192,11 @@ export function Layout() {
           <UserMenu initials={initials} userEmail={user?.email} onSignOut={signOut} />
         </header>
 
-        <div className="flex-1 overflow-auto p-4 sm:p-7 relative">
+        <SmoothScrollArea resetKey={location.pathname} className="flex-1 overflow-auto p-4 sm:p-7 relative">
           <div key={location.pathname} className="max-w-[1200px] mx-auto page-enter">
             <Outlet />
           </div>
-        </div>
+        </SmoothScrollArea>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@
 | Frontend | React + Vite + TypeScript | React 19, Vite 8 |
 | Estilo | Tailwind CSS 4 | @tailwindcss/vite |
 | 3D/Visual | Three.js | 0.184 |
+| Scroll | Lenis | 1.3 |
 | Gráficos | Recharts | — |
 | Roteamento | React Router | v7 |
 | Data fetching | TanStack Query + Supabase JS | — |
@@ -44,6 +45,7 @@ C:\Horus\
 │       │                       → DayNightSwitch, UserMenu, ImageCropper, ProtectedRoute,
 │       │                       → ProductDetailsModal, SaidaRapidaModal, EntradaRapidaModal,
 │       │                       → ColorBends, ModelViewer
+│       ├── components\layout\SmoothScrollArea.tsx → Lenis aplicado ao container scrollável principal
 │       ├── contexts\           → AuthContext.tsx, ThemeContext.tsx
 │       ├── pages\
 │       │   ├── auth\           → Login.tsx
