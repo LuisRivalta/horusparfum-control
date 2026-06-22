@@ -18,6 +18,7 @@
 | Auth | Supabase Auth | JWT |
 | Backend | FastAPI (Python) | Python 3.14 |
 | Deploy frontend | Vercel | produção |
+| Deploy backend | Vercel Python Runtime | produção |
 
 > **Onde mora a lógica de negócio:** CRUDs simples ainda rodam direto contra o Supabase (frontend → Supabase JS com anon key + RLS). Operações atômicas continuam em **funções PL/pgSQL no Postgres** (RPCs). Relatórios agregados que não devem depender de carregar todo o histórico no navegador passam pelo **FastAPI**; hoje `/financeiro/relatorios` consome `GET /api/financeiro/relatorios`.
 
@@ -131,7 +132,7 @@ pip install supabase --no-deps
 pip install postgrest storage3 gotrue --no-deps
 uvicorn app.main:app --reload   # → http://localhost:8000
 ```
-> Nota: o relatório financeiro depende do backend. Para produção, é necessário fazer deploy do FastAPI e configurar `VITE_API_URL` no frontend apontando para a URL pública da API.
+> Nota: o relatório financeiro e as metas dependem do backend publicado em `https://horusparfum-control-api.vercel.app`. Em desenvolvimento, mantenha `VITE_API_URL=http://localhost:8000`.
 
 ### Migrações
 Os SQLs em `supabase/migrations/` são aplicados **manualmente** no Supabase SQL Editor (project `wyobbztexoofhqdttxzq`), em ordem de data. Cada um é idempotente onde possível (`if not exists`).
@@ -199,10 +200,12 @@ Tudo sob `/financeiro/*` e `/estoque/*` usa o `Layout` (sidebar + header). A nav
 
 ## Deploy
 
-- **Produção:** https://horusparfum-control.vercel.app — frontend na **Vercel**, auto-deploy a cada push na `main`.
+- **Frontend produção:** https://horusparfum-control.vercel.app — Vercel, auto-deploy a cada push na `main`.
+- **Backend produção:** https://horusparfum-control-api.vercel.app — Vercel Python Runtime, projeto `horusparfum-control-api`.
 - `frontend/vercel.json` faz o rewrite SPA (`/(.*) → /index.html`). Root directory do projeto Vercel aponta para `frontend/`.
+- `backend/vercel.json` roteia todas as requisições para `backend/main.py`, que exporta `app` de `app.main`.
 - **Banco:** Supabase (cloud). Migrações aplicadas manualmente no SQL Editor — **aplicar antes do deploy**, senão páginas que dependem de tabelas/RPCs novas quebram em produção.
-- **Backend:** não está em deploy (dormente).
+- **Variáveis do backend em produção:** `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `FRONTEND_URL=https://horusparfum-control.vercel.app`.
 
 ## Temas (dark + light)
 

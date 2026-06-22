@@ -1,5 +1,31 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-22 — Sessão 21: Deploy do backend FastAPI
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Criado projeto Vercel `horusparfum-control-api`.
+- Publicado backend FastAPI em `https://horusparfum-control-api.vercel.app`.
+- Adicionado `backend/main.py` como entrypoint para a Vercel (`from app.main import app`).
+- Adicionado `backend/vercel.json` para empacotar `main.py` com `@vercel/python` e rotear `/(.*)` para a API.
+- Adicionado `backend/.vercelignore` para excluir `.env`, `.venv`, caches e testes do bundle.
+- Configuradas variáveis de produção do backend: `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `FRONTEND_URL`.
+- Linkado o projeto frontend `horusparfum-control` e atualizado `VITE_API_URL` de produção para `https://horusparfum-control-api.vercel.app`.
+- Redeployado o frontend em produção para incorporar o novo `VITE_API_URL`.
+
+### Validação
+- `backend`: `python -m unittest discover -s tests` — **3 testes passando**.
+- `backend`: import do entrypoint `from main import app` passando.
+- Produção API: `GET /api/health` retornou `{"status":"ok"}`.
+- CORS: preflight com origem `https://horusparfum-control.vercel.app` e header `authorization` retornou 200.
+- Produção frontend: bundle publicado contém `https://horusparfum-control-api.vercel.app`.
+
+### Pendências
+- Fazer smoke test operacional completo em produção.
+
+---
+
 ## 2026-06-19 — Sessão 20: Scroll fluido com Lenis
 
 **Responsável:** Luis + Codex

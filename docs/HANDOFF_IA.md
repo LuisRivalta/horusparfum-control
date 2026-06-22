@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-19 (Sessão 20)
+> Última atualização: 2026-06-22 (Sessão 21)
 
 ## O que já foi feito
 
@@ -109,6 +109,14 @@
     - Respeita `prefers-reduced-motion`; nesse caso usa scroll nativo
     - Ao trocar de rota, o scroll volta ao topo imediatamente
     - Frontend-only; sem migração de banco
+28. **Deploy do backend FastAPI (Sessão 21)**
+    - Projeto Vercel criado: `horusparfum-control-api`
+    - Backend publicado em produção: `https://horusparfum-control-api.vercel.app`
+    - `backend/main.py` adicionado como entrypoint detectável pela Vercel
+    - `backend/vercel.json` roteia todas as requisições para `main.py`
+    - Variáveis de produção configuradas: `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `FRONTEND_URL`
+    - Frontend Vercel atualizado com `VITE_API_URL=https://horusparfum-control-api.vercel.app` e redeployado
+    - Verificado: `/api/health` 200, CORS para `https://horusparfum-control.vercel.app` e bundle frontend com URL da API
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -182,7 +190,8 @@
 
 ## Estado atual
 
-- **Deploy em produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
+- **Deploy frontend produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
+- **Deploy backend produção:** https://horusparfum-control-api.vercel.app (Vercel Python Runtime)
 - Frontend compila e roda (`npm run dev`) — http://localhost:5173
 - Backend importa e roda (`uvicorn app.main:app --reload`) — http://localhost:8000; relatório financeiro depende dele
 - Banco de dados configurado no Supabase com todas as tabelas/RPCs atuais verificadas no projeto (`decants`, entrada manual, vendas e consumo de decants aplicados)
@@ -194,13 +203,12 @@
 
 ## Próximos passos imediatos
 
-1. Fazer deploy do backend FastAPI e configurar `VITE_API_URL` de produção para o relatório financeiro funcionar fora do ambiente local
-2. Copiar JWT Secret do Supabase para o `.env`/variáveis do backend
-3. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
-4. Remover policies temporárias de `anon` (se foram criadas para testes)
-5. Dashboard estoque com dados reais (estoque baixo e reposição)
-6. Exportação PDF do relatório de giro de estoque
-7. Importação em massa de produtos (botão "Importar" na topbar)
+1. Smoke test operacional completo em produção (cadastro, entrada, pedido, recebimento, venda, decant, cancelamento, estoque, financeiro, metas e relatórios)
+2. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
+3. Remover policies temporárias de `anon` (se foram criadas para testes)
+4. Dashboard estoque com dados reais (estoque baixo e reposição)
+5. Exportação PDF do relatório de giro de estoque
+6. Importação em massa de produtos (botão "Importar" na topbar)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
