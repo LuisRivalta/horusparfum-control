@@ -25,3 +25,4 @@ Thumbs.db
 *.pyc
 *.pyo
 .vercel
+supabase/.temp/

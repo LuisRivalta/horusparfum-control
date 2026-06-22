@@ -1,5 +1,51 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-22 — Sessão 23: Smoke test completo e auth do backend
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Repetido smoke test após aplicação da migração `20260622142718_fix_cancelar_venda_decant_fk.sql` no Supabase.
+- Validado que `cancelar_venda` agora cancela venda de decant sem violação de FK, restaura `ml_restante` do frasco e limpa `venda_itens.decant_id`.
+- Corrigida autenticação do backend: `get_current_user` passou a validar o JWT pelo Supabase Auth (`auth.get_user(token)`) em vez de validar localmente por `JWT_SECRET`.
+- Removido uso de `JWT_SECRET` da configuração/documentação e removida dependência `python-jose`.
+- Backend redeployado em produção na Vercel.
+
+### Validação
+- Smoke de estoque/vendas passou até o fim dos fluxos: cadastro, entrada, saída, pedido + recebimento, venda de produto + cancelamento, abertura de frasco, consumo de decant e venda de decant + cancelamento.
+- Smoke dos endpoints protegidos passou em produção:
+  - `GET /api/financeiro/relatorios` com JWT temporário retornou receita esperada.
+  - `GET /api/financeiro/metas` calculou meta em R$ a partir de receitas.
+- Cleanup verificado com contagem zero para registros temporários (`categorias`, `fornecedores`, `produtos`, `vendas`, `transacoes`, `metas`) e usuário temporário removido.
+- Backend: `python -m unittest discover -s tests` — **5 testes passando**.
+
+### Pendências
+- Próximo passo de produto: dashboards de ROI/análise de vendas.
+
+---
+
+## 2026-06-22 — Sessão 22: Smoke test operacional e correção pendente de cancelamento de decant
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Iniciado smoke test operacional em produção usando registros temporários com prefixo `SMOKE-CODEX-20260622142403`.
+- Validados com sucesso antes da falha: cadastro de categoria/fornecedor/produto, entrada manual, saída manual, pedido + recebimento, venda de produto + cancelamento, abertura de frasco, consumo de decant e venda de decant.
+- Encontrado bug no cancelamento de venda com decant: a RPC `cancelar_venda` tentava apagar o registro em `decants` enquanto `venda_itens.decant_id` ainda tinha FK apontando para ele.
+- Criada a migração `supabase/migrations/20260622142718_fix_cancelar_venda_decant_fk.sql`, que zera `venda_itens.decant_id` antes de apagar o registro de `decants`.
+- Artefatos temporários do smoke test foram removidos da produção em ordem segura de FK.
+
+### Validação
+- Smoke test falhou no passo `cancelar_venda` de decant com erro de FK `venda_itens_decant_id_fkey`.
+- Cleanup verificado por contagem zero para `categorias`, `fornecedores`, `produtos`, `vendas` e `transacoes` com prefixo `SMOKE-CODEX-20260622142403`.
+- `npx supabase db query --linked` e `npx supabase db push --linked --dry-run` travaram até timeout; `Test-NetConnection` para host direto/pooler Postgres retornou falha, então a migração não foi aplicada remotamente nesta sessão.
+
+### Pendências
+- Aplicar `supabase/migrations/20260622142718_fix_cancelar_venda_decant_fk.sql` no Supabase SQL Editor.
+- Repetir o smoke test operacional completo após aplicar a migração.
+
+---
+
 ## 2026-06-22 — Sessão 21: Deploy do backend FastAPI
 
 **Responsável:** Luis + Codex

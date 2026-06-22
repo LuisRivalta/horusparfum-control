@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-22 (Sessão 21)
+> Última atualização: 2026-06-22 (Sessão 23)
 
 ## O que já foi feito
 
@@ -114,9 +114,15 @@
     - Backend publicado em produção: `https://horusparfum-control-api.vercel.app`
     - `backend/main.py` adicionado como entrypoint detectável pela Vercel
     - `backend/vercel.json` roteia todas as requisições para `main.py`
-    - Variáveis de produção configuradas: `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `FRONTEND_URL`
+    - Variáveis de produção configuradas: `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `FRONTEND_URL`
     - Frontend Vercel atualizado com `VITE_API_URL=https://horusparfum-control-api.vercel.app` e redeployado
     - Verificado: `/api/health` 200, CORS para `https://horusparfum-control.vercel.app` e bundle frontend com URL da API
+29. **Smoke test operacional completo em producao (Sessao 23)**
+    - Migração corretiva aplicada no Supabase SQL Editor: `supabase/migrations/20260622142718_fix_cancelar_venda_decant_fk.sql`
+    - Fluxos validados: cadastro de categoria/fornecedor/produto, entrada manual, saida manual, pedido + recebimento, venda de produto + cancelamento, abertura de frasco, consumo de decant, venda de decant + cancelamento, financeiro, metas e relatorios
+    - Corrigido backend auth: endpoints protegidos agora validam JWT chamando Supabase Auth (`auth.get_user(token)`) em vez de depender de `JWT_SECRET`
+    - Backend redeployado em producao na Vercel
+    - Artefatos temporarios dos smoke tests removidos da producao
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -199,16 +205,16 @@
 - CRUDs funcionais para todas as entidades: produtos, pedidos, divergências, categorias, fornecedores, transações, contas, metas
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
-- 134 testes frontend + 3 testes backend passando
+- Smoke test operacional de producao passou em 2026-06-22
+- 134 testes frontend + 5 testes backend passando
 
 ## Próximos passos imediatos
 
-1. Smoke test operacional completo em produção (cadastro, entrada, pedido, recebimento, venda, decant, cancelamento, estoque, financeiro, metas e relatórios)
-2. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
-3. Remover policies temporárias de `anon` (se foram criadas para testes)
-4. Dashboard estoque com dados reais (estoque baixo e reposição)
-5. Exportação PDF do relatório de giro de estoque
-6. Importação em massa de produtos (botão "Importar" na topbar)
+1. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
+2. Remover policies temporárias de `anon` (se foram criadas para testes)
+3. Dashboard estoque com dados reais (estoque baixo e reposição)
+4. Exportação PDF do relatório de giro de estoque
+5. Importação em massa de produtos (botão "Importar" na topbar)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)

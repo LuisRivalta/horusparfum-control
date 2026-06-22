@@ -284,4 +284,6 @@ Migração de pedidos: `supabase/migrations/20260610_pedidos.sql` (tabelas + RLS
 
 Migração de vendas: `supabase/migrations/20260616_vendas.sql` (tabelas `canais`, `embalagens_decant`, `vendas`, `venda_itens`; colunas `preco_referencia` em `produtos` e `venda_id`/`origem` em `transacoes`; RLS; RPCs `registrar_venda` e `cancelar_venda`; seeds de canais e embalagens). Aplicar manualmente no Supabase SQL Editor.
 
+Correção de cancelamento de decant: `supabase/migrations/20260622142718_fix_cancelar_venda_decant_fk.sql` atualiza `cancelar_venda` para limpar `venda_itens.decant_id` antes de apagar o registro em `decants`, evitando violação de FK no estorno de vendas de decant. Aplicar manualmente no Supabase SQL Editor.
+
 Migração de consumo de decant não-faturável: `supabase/migrations/20260617_consumo_decant.sql` (colunas `classificacao`, `custo`, `custo_embalagem` em `decants`; estende constraint `transacoes_origem_check` para incluir `'decant'`; RPC atômica `registrar_consumo_decant(p_frasco_id, p_ml, p_classificacao, p_custo_embalagem, p_responsavel)`). Pré-requisito: migração de vendas aplicada. Aplicar manualmente no Supabase SQL Editor.

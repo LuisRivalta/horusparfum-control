@@ -36,7 +36,8 @@ C:\Horus\
 │       ├── 20260615_decants.sql
 │       ├── 20260616_registrar_entrada.sql
 │       ├── 20260616_vendas.sql
-│       └── 20260617_consumo_decant.sql
+│       ├── 20260617_consumo_decant.sql
+│       └── 20260622142718_fix_cancelar_venda_decant_fk.sql
 ├── frontend\
 │   ├── vercel.json             → Rewrite SPA para o deploy na Vercel
 │   └── src\
@@ -152,7 +153,6 @@ No Vercel, as mesmas variáveis são configuradas no painel do projeto.
 SUPABASE_URL=https://wyobbztexoofhqdttxzq.supabase.co
 SUPABASE_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
-JWT_SECRET=<copiar de Supabase > Settings > API > JWT Secret>
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -177,6 +177,7 @@ Browser (React SPA)
 - Login via Supabase Auth (email + senha).
 - Frontend gerencia sessão via `AuthContext` (onAuthStateChange); `ProtectedRoute` redireciona para `/login` se não autenticado.
 - Token JWT incluído automaticamente pelo Supabase JS SDK; RLS no banco exige role `authenticated` em todas as tabelas.
+- Backend valida endpoints protegidos chamando Supabase Auth (`auth.get_user(token)`), sem depender de `JWT_SECRET` local.
 - `ThemeContext` gerencia dark/light com persistência em localStorage.
 
 ## Rotas
@@ -205,7 +206,7 @@ Tudo sob `/financeiro/*` e `/estoque/*` usa o `Layout` (sidebar + header). A nav
 - `frontend/vercel.json` faz o rewrite SPA (`/(.*) → /index.html`). Root directory do projeto Vercel aponta para `frontend/`.
 - `backend/vercel.json` roteia todas as requisições para `backend/main.py`, que exporta `app` de `app.main`.
 - **Banco:** Supabase (cloud). Migrações aplicadas manualmente no SQL Editor — **aplicar antes do deploy**, senão páginas que dependem de tabelas/RPCs novas quebram em produção.
-- **Variáveis do backend em produção:** `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `FRONTEND_URL=https://horusparfum-control.vercel.app`.
+- **Variáveis do backend em produção:** `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `FRONTEND_URL=https://horusparfum-control.vercel.app`.
 
 ## Temas (dark + light)
 

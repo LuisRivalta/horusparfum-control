@@ -3,5 +3,4 @@ uvicorn[standard]
 supabase
 pydantic
 pydantic-settings
-python-jose[cryptography]
 httpx
