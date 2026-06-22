@@ -47,6 +47,7 @@ export function ProductDetailsModal({
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [form, setForm] = useState({
     nome: '',
     volume_ml: '',
@@ -96,15 +97,21 @@ export function ProductDetailsModal({
 
   async function handleDelete() {
     setDeleting(true)
+    setDeleteError(null)
     try {
       const { error } = await supabase.from('produtos').delete().eq('id', produto!.id)
-      if (!error) {
-        onDeleted()
-        onClose()
+      if (error) {
+        setDeleteError(
+          'Nao foi possivel excluir este produto. Ele pode ter historico de estoque, pedidos, vendas ou decants vinculados.'
+        )
+        return
       }
+
+      onDeleted()
+      onClose()
+      setConfirmingDelete(false)
     } finally {
       setDeleting(false)
-      setConfirmingDelete(false)
     }
   }
 
@@ -192,7 +199,13 @@ export function ProductDetailsModal({
           </div>
 
           <div className="flex justify-between gap-3 mt-2 pt-4 border-t border-line">
-            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setDeleteError(null)
+                setConfirmingDelete(true)
+              }}
+            >
               <Icon name="trash" size={14} />
               Excluir
             </Button>
@@ -213,14 +226,33 @@ export function ProductDetailsModal({
       )}
 
       {confirmingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setConfirmingDelete(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => {
+            setDeleteError(null)
+            setConfirmingDelete(false)
+          }}
+        >
           <div className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-medium mb-2">Excluir produto?</h3>
             <p className="text-sm text-muted mb-5">
               Esta ação não pode ser desfeita. O produto <strong className="text-text-2">{produto.nome}</strong> será removido permanentemente.
             </p>
+            {deleteError && (
+              <div className="mb-4 rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-sm text-down">
+                {deleteError}
+              </div>
+            )}
             <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>Cancelar</Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setDeleteError(null)
+                  setConfirmingDelete(false)
+                }}
+              >
+                Cancelar
+              </Button>
               <Button variant="danger" onClick={handleDelete} disabled={deleting}>
                 {deleting ? 'Excluindo...' : 'Excluir'}
               </Button>

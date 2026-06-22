@@ -1,5 +1,23 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-22 — Sessão 24: Feedback ao excluir produto do estoque
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Investigado o botão **Excluir** no modal de detalhes do produto.
+- Raiz encontrada: quando o Supabase bloqueava a exclusão por FK/histórico vinculado, o componente ignorava o erro e fechava a confirmação, parecendo que o botão não fazia nada.
+- `ProductDetailsModal` agora mantém a confirmação aberta e mostra uma mensagem explicando que o produto pode ter histórico de estoque, pedidos, vendas ou decants vinculados.
+- Adicionado teste `frontend/src/components/shared/__tests__/ProductDetailsModal.test.tsx` cobrindo o erro de exclusão bloqueada.
+
+### Validação
+- RED: o novo teste falhou antes da correção porque a mensagem não existia.
+- GREEN: teste específico passou.
+- Frontend: `npm run test:run` — **135 testes passando**.
+- Frontend: `npm run build` — build passando.
+
+---
+
 ## 2026-06-22 — Sessão 23: Smoke test completo e auth do backend
 
 **Responsável:** Luis + Codex

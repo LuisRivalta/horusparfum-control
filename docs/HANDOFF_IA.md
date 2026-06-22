@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-22 (Sessão 23)
+> Última atualização: 2026-06-22 (Sessão 24)
 
 ## O que já foi feito
 
@@ -123,6 +123,10 @@
     - Corrigido backend auth: endpoints protegidos agora validam JWT chamando Supabase Auth (`auth.get_user(token)`) em vez de depender de `JWT_SECRET`
     - Backend redeployado em producao na Vercel
     - Artefatos temporarios dos smoke tests removidos da producao
+30. **Feedback ao excluir produto do estoque (Sessao 24)**
+    - `ProductDetailsModal` agora mostra erro quando o banco bloqueia exclusao de produto por historico vinculado (estoque, pedidos, vendas ou decants)
+    - O modal de confirmacao permanece aberto apos falha, evitando a sensacao de que o botao nao fez nada
+    - Teste `ProductDetailsModal.test.tsx` cobre erro de exclusao bloqueada por FK
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -206,7 +210,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 134 testes frontend + 5 testes backend passando
+- 135 testes frontend + 5 testes backend passando
 
 ## Próximos passos imediatos
 
