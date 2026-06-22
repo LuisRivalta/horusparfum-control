@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-22 (Sessão 24)
+> Última atualização: 2026-06-22 (Sessão 25)
 
 ## O que já foi feito
 
@@ -127,6 +127,12 @@
     - `ProductDetailsModal` agora mostra erro quando o banco bloqueia exclusao de produto por historico vinculado (estoque, pedidos, vendas ou decants)
     - O modal de confirmacao permanece aberto apos falha, evitando a sensacao de que o botao nao fez nada
     - Teste `ProductDetailsModal.test.tsx` cobre erro de exclusao bloqueada por FK
+31. **Remover produto apenas do estoque (Sessao 25)**
+    - Na tela `/estoque`, o botao destrutivo do modal de detalhes virou "Remover do estoque"
+    - A acao registra uma saida via RPC `registrar_saida` com a quantidade total em estoque, zerando `produtos.estoque_atual`
+    - O cadastro do produto permanece em `/estoque/cadastros/produtos`; exclusao permanente continua disponivel apenas no contexto de cadastro
+    - Teste `ProductDetailsModal.test.tsx` cobre que o fluxo de estoque usa `registrar_saida` e nao executa `delete` em `produtos`
+    - Revalidacao TDD em 2026-06-22: teste focado do modal 2/2 e suite frontend completa 136/136 passando
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -210,7 +216,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 135 testes frontend + 5 testes backend passando
+- 136 testes frontend + 5 testes backend passando
 
 ## Próximos passos imediatos
 

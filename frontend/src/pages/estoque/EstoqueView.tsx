@@ -237,6 +237,7 @@ export function EstEstoque() {
         onClose={() => setSelectedProduto(null)}
         onUpdated={carregar}
         onDeleted={carregar}
+        estoqueAction="removeFromStock"
         onRegistrarSaida={(id) => {
           setSelectedProduto(null)
           setSaidaProdutoId(id)

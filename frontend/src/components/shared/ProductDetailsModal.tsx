@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { Modal } from './Modal'
 import { Button, Input, Select } from './FormControls'
 import { Icon } from './Icon'
@@ -31,6 +32,7 @@ interface ProductDetailsModalProps {
   onUpdated: () => void
   onDeleted: () => void
   onRegistrarSaida?: (produtoId: string) => void
+  estoqueAction?: 'delete' | 'removeFromStock'
 }
 
 export function ProductDetailsModal({
@@ -42,7 +44,9 @@ export function ProductDetailsModal({
   onUpdated,
   onDeleted,
   onRegistrarSaida,
+  estoqueAction = 'delete',
 }: ProductDetailsModalProps) {
+  const { user } = useAuth()
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -99,6 +103,25 @@ export function ProductDetailsModal({
     setDeleting(true)
     setDeleteError(null)
     try {
+      if (estoqueAction === 'removeFromStock') {
+        const { error } = await supabase.rpc('registrar_saida', {
+          p_produto_id: produto!.id,
+          p_qtd: produto!.estoque_atual,
+          p_motivo: 'Removido do estoque',
+          p_responsavel: user?.email || null,
+        })
+
+        if (error) {
+          setDeleteError('Nao foi possivel remover este produto do estoque. Tente novamente.')
+          return
+        }
+
+        onUpdated()
+        onClose()
+        setConfirmingDelete(false)
+        return
+      }
+
       const { error } = await supabase.from('produtos').delete().eq('id', produto!.id)
       if (error) {
         setDeleteError(
@@ -117,6 +140,14 @@ export function ProductDetailsModal({
 
   const estoqueBaixo = produto.estoque_atual < produto.estoque_minimo
   const semEstoque = produto.estoque_atual === 0
+  const removingFromStock = estoqueAction === 'removeFromStock'
+  const destructiveLabel = removingFromStock ? 'Remover do estoque' : 'Excluir'
+  const confirmTitle = removingFromStock ? 'Remover do estoque?' : 'Excluir produto?'
+  const confirmText = removingFromStock
+    ? `O cadastro de ${produto.nome} sera mantido. Vamos registrar uma saida de ${produto.estoque_atual} unidade${produto.estoque_atual !== 1 ? 's' : ''} e zerar o estoque atual.`
+    : null
+  const confirmButtonLabel = removingFromStock ? 'Remover' : 'Excluir'
+  const submittingLabel = removingFromStock ? 'Removendo...' : 'Excluindo...'
 
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Editar produto' : 'Detalhes do produto'} size="lg">
@@ -207,7 +238,7 @@ export function ProductDetailsModal({
               }}
             >
               <Icon name="trash" size={14} />
-              Excluir
+              {destructiveLabel}
             </Button>
             <div className="flex gap-2">
               {onRegistrarSaida && produto && (
@@ -234,9 +265,13 @@ export function ProductDetailsModal({
           }}
         >
           <div className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-medium mb-2">Excluir produto?</h3>
+            <h3 className="text-lg font-medium mb-2">{confirmTitle}</h3>
             <p className="text-sm text-muted mb-5">
-              Esta ação não pode ser desfeita. O produto <strong className="text-text-2">{produto.nome}</strong> será removido permanentemente.
+              {confirmText ?? (
+                <>
+                  Esta ação não pode ser desfeita. O produto <strong className="text-text-2">{produto.nome}</strong> será removido permanentemente.
+                </>
+              )}
             </p>
             {deleteError && (
               <div className="mb-4 rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-sm text-down">
@@ -254,7 +289,7 @@ export function ProductDetailsModal({
                 Cancelar
               </Button>
               <Button variant="danger" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Excluindo...' : 'Excluir'}
+                {deleting ? submittingLabel : confirmButtonLabel}
               </Button>
             </div>
           </div>

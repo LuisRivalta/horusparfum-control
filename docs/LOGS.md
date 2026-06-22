@@ -1,5 +1,26 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-22 — Sessão 25: Remover produto apenas do estoque
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Ajustado o modal de detalhes quando aberto pela tela `/estoque`: o botão destrutivo agora aparece como **Remover do estoque**.
+- A confirmação explica que o cadastro será mantido e que o estoque atual será zerado.
+- Em vez de deletar o registro de `produtos`, a ação chama a RPC `registrar_saida` com a quantidade total em estoque e motivo `Removido do estoque`.
+- O cadastro do produto continua disponível em `/estoque/cadastros/produtos`; nesse contexto, a exclusão permanente mantém o comportamento antigo com feedback de erro se houver histórico vinculado.
+- Adicionado teste em `frontend/src/components/shared/__tests__/ProductDetailsModal.test.tsx` garantindo que o fluxo de estoque usa `registrar_saida` e não chama `delete` em `produtos`.
+
+### Validação
+- RED: o novo teste falhou inicialmente porque o modal ainda exibia apenas **Excluir** e não tinha o fluxo de remoção do estoque.
+- GREEN: `npm run test:run -- src/components/shared/__tests__/ProductDetailsModal.test.tsx` — **2 testes passando**.
+- Focused rerun dos testes que tinham falhado em lote: `npm run test:run -- src/pages/auth/__tests__/Login.test.tsx src/pages/estoque/__tests__/NovoPedidoModal.test.tsx` — **11 testes passando**.
+- Frontend: `npm run test:run` — **136 testes passando**.
+- Frontend: `npm run build` — build passando.
+- Revalidação TDD solicitada: teste focado do modal novamente **2/2** e suíte frontend completa novamente **136/136**.
+
+---
+
 ## 2026-06-22 — Sessão 24: Feedback ao excluir produto do estoque
 
 **Responsável:** Luis + Codex
