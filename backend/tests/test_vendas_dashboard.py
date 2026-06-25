@@ -132,6 +132,20 @@ class VendasDashboardServiceTest(unittest.TestCase):
                 'frete_rateado': '0.00',
                 'lucro': '899.00',
             },
+            {
+                'id': 'i6',
+                'venda_id': 'v2',
+                'tipo': 'produto',
+                'produto_id': 'p6',
+                'quantidade': 1,
+                'ml': None,
+                'preco_unitario': '0.00',
+                'custo_unitario': '0.00',
+                'custo_embalagem': '0.00',
+                'taxa_rateada': '0.00',
+                'frete_rateado': '0.00',
+                'lucro': '0.00',
+            },
         ]
         canais = [
             {'id': 'c1', 'nome': 'Shopee'},
@@ -143,6 +157,7 @@ class VendasDashboardServiceTest(unittest.TestCase):
             {'id': 'p2', 'nome': 'Decant Badee'},
             {'id': 'p4', 'nome': 'Kit Revenda'},
             {'id': 'p5', 'nome': 'Cancelado'},
+            {'id': 'p6', 'nome': 'Zero Cost'},
         ]
 
         dashboard = montar_dashboard_vendas(
@@ -156,7 +171,7 @@ class VendasDashboardServiceTest(unittest.TestCase):
 
         self.assertEqual(dashboard['periodo'], {'inicio': '2026-06-01T00:00:00+00:00', 'fim': '2026-06-30T23:59:59+00:00'})
         self.assertEqual(dashboard['resumo']['qtd_vendas'], 3)
-        self.assertEqual(dashboard['resumo']['itens_vendidos'], 7)
+        self.assertEqual(dashboard['resumo']['itens_vendidos'], 8)
         self.assertEqual(dashboard['resumo']['faturamento_bruto'], 1350.0)
         self.assertEqual(dashboard['resumo']['total_custo'], 1170.0)
         self.assertEqual(dashboard['resumo']['lucro_bruto'], 135.0)
@@ -164,12 +179,15 @@ class VendasDashboardServiceTest(unittest.TestCase):
         self.assertEqual(dashboard['resumo']['roi_medio'], 11.54)
         self.assertEqual(dashboard['resumo']['ticket_medio'], 450.0)
 
-        self.assertEqual([p['produto_id'] for p in dashboard['produtos']], ['p1', 'p2', 'p4'])
+        self.assertEqual([p['produto_id'] for p in dashboard['produtos']], ['p1', 'p2', 'p4', 'p6'])
         self.assertEqual(dashboard['produtos'][0]['lucro_bruto'], 92.0)
         self.assertEqual(dashboard['produtos'][0]['margem'], 29.68)
+        self.assertEqual(dashboard['produtos'][0]['roi'], 51.69)
         self.assertEqual(dashboard['produtos'][0]['quantidade'], 2)
         self.assertNotIn('Cancelado', [p['nome'] for p in dashboard['produtos']])
-        self.assertEqual(set(dashboard['produtos'][0].keys()), {'produto_id', 'nome', 'quantidade', 'faturamento_bruto', 'total_custo', 'lucro_bruto', 'margem'})
+        self.assertEqual(dashboard['produtos'][-1]['produto_id'], 'p6')
+        self.assertIsNone(dashboard['produtos'][-1]['roi'])
+        self.assertEqual(set(dashboard['produtos'][0].keys()), {'produto_id', 'nome', 'quantidade', 'faturamento_bruto', 'total_custo', 'lucro_bruto', 'margem', 'roi'})
 
         self.assertEqual([c['canal_id'] for c in dashboard['canais']], ['c1', 'c2', 'c3'])
         self.assertEqual(dashboard['canais'][0]['lucro_bruto'], 78.0)
@@ -178,7 +196,7 @@ class VendasDashboardServiceTest(unittest.TestCase):
 
         self.assertEqual([v['numero'] for v in dashboard['vendas']], [11, 10, 12])
         self.assertEqual(dashboard['vendas'][0]['canal'], 'Loja fisica')
-        self.assertEqual(dashboard['vendas'][0]['itens'], 1)
+        self.assertEqual(dashboard['vendas'][0]['itens'], 2)
         self.assertEqual(set(dashboard['vendas'][0].keys()), {'id', 'numero', 'data_venda', 'canal', 'itens', 'faturamento_bruto', 'total_custo', 'lucro_bruto', 'margem', 'roi'})
 
     def test_evolucao_preenche_meses_sem_vendas_com_zero(self):
