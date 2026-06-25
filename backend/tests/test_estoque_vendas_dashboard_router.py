@@ -1,7 +1,6 @@
 import sys
 import types
 import unittest
-from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -15,10 +14,11 @@ from app.routers.estoque import vendas_dashboard
 
 
 class FakeQuery:
-    def __init__(self, table_name, calls):
+    def __init__(self, table_name, calls, vendas_data=None):
         self.table_name = table_name
         self.calls = calls
         self.filters = []
+        self.vendas_data = vendas_data
 
     def select(self, columns):
         self.calls.append((self.table_name, "select", columns))
@@ -39,36 +39,34 @@ class FakeQuery:
     def execute(self):
         self.calls.append((self.table_name, "execute", list(self.filters)))
         if self.table_name == "vendas":
-            return SimpleNamespace(
-                data=[
-                    {
-                        "id": "v1",
-                        "numero": 10,
-                        "status": "concluida",
-                        "data_venda": "2026-06-10",
-                        "total_bruto": "100.00",
-                        "total_custo": "60.00",
-                        "lucro_bruto": "40.00",
-                        "taxa_total": "0.00",
-                        "frete": "0.00",
-                        "canal_id": "c1",
-                        "created_at": "2026-06-10T12:00:00+00:00",
-                    },
-                    {
-                        "id": "v2",
-                        "numero": 11,
-                        "status": "concluida",
-                        "data_venda": "2026-06-11",
-                        "total_bruto": "160.00",
-                        "total_custo": "70.00",
-                        "lucro_bruto": "90.00",
-                        "taxa_total": "0.00",
-                        "frete": "0.00",
-                        "canal_id": "c2",
-                        "created_at": "2026-06-11T12:00:00+00:00",
-                    },
-                ]
-            )
+            return SimpleNamespace(data=self.vendas_data if self.vendas_data is not None else [
+                {
+                    "id": "v1",
+                    "numero": 10,
+                    "status": "concluida",
+                    "data_venda": "2026-06-10",
+                    "total_bruto": "100.00",
+                    "total_custo": "60.00",
+                    "lucro_bruto": "40.00",
+                    "taxa_total": "0.00",
+                    "frete": "0.00",
+                    "canal_id": "c1",
+                    "created_at": "2026-06-10T12:00:00+00:00",
+                },
+                {
+                    "id": "v2",
+                    "numero": 11,
+                    "status": "concluida",
+                    "data_venda": "2026-06-11",
+                    "total_bruto": "160.00",
+                    "total_custo": "70.00",
+                    "lucro_bruto": "90.00",
+                    "taxa_total": "0.00",
+                    "frete": "0.00",
+                    "canal_id": "c2",
+                    "created_at": "2026-06-11T12:00:00+00:00",
+                },
+            ])
 
         if self.table_name == "venda_itens":
             venda_ids = []
@@ -109,12 +107,13 @@ class FakeQuery:
 
 
 class FakeSupabase:
-    def __init__(self):
+    def __init__(self, vendas_data=None):
         self.calls = []
+        self.vendas_data = vendas_data
 
     def table(self, table_name):
         self.calls.append(("table", table_name))
-        return FakeQuery(table_name, self.calls)
+        return FakeQuery(table_name, self.calls, self.vendas_data if table_name == "vendas" else None)
 
 
 class EstoqueVendasDashboardRouterTest(unittest.TestCase):
@@ -151,6 +150,28 @@ class EstoqueVendasDashboardRouterTest(unittest.TestCase):
         self.assertEqual(payload["vendas"][0]["numero"], 11)
         self.assertEqual(payload["canais"][0]["nome"], "Loja fisica")
         self.assertEqual(payload["produtos"][0]["nome"], "Produto 1")
+
+    def test_sem_vendas_nao_consulta_venda_itens_e_retorna_dashboard_vazio(self):
+        fake_supabase = FakeSupabase(vendas_data=[])
+
+        with patch("app.routers.estoque.get_supabase", return_value=fake_supabase):
+            payload = vendas_dashboard(
+                inicio="2026-06-01T00:00:00Z",
+                fim="2026-06-30T23:59:59Z",
+                _user={"sub": "user-1"},
+            )
+
+        self.assertEqual([call for call in fake_supabase.calls if call[0] == "table"], [
+            ("table", "vendas"),
+            ("table", "canais"),
+            ("table", "produtos"),
+        ])
+        self.assertNotIn(("table", "venda_itens"), fake_supabase.calls)
+        self.assertEqual(payload["resumo"]["qtd_vendas"], 0)
+        self.assertEqual(payload["resumo"]["faturamento_bruto"], 0.0)
+        self.assertEqual(payload["vendas"], [])
+        self.assertEqual(payload["produtos"], [])
+        self.assertEqual(payload["canais"], [])
 
 
 if __name__ == "__main__":

@@ -64,27 +64,31 @@ def vendas_dashboard(
             .lte("data_venda", fim_dt.date().isoformat())
             .execute()
         )
-        venda_ids = [venda.get("id") for venda in (vendas_result.data or []) if venda.get("id") is not None]
-        itens_result = []
+        vendas = vendas_result.data or []
+        venda_ids = [venda.get("id") for venda in vendas if venda.get("id") is not None]
+        itens = []
         if venda_ids:
-            itens_result = (
+            itens = (
                 supabase
                 .table("venda_itens")
                 .select("id, venda_id, tipo, produto_id, quantidade, ml, preco_unitario, custo_unitario, custo_embalagem, taxa_rateada, frete_rateado, lucro")
                 .in_("venda_id", venda_ids)
                 .execute()
+                .data or []
             )
-        canais_result = (
+        canais = (
             supabase
             .table("canais")
             .select("id, nome")
             .execute()
+            .data or []
         )
-        produtos_result = (
+        produtos = (
             supabase
             .table("produtos")
             .select("id, nome")
             .execute()
+            .data or []
         )
     except Exception as exc:
         raise HTTPException(
@@ -93,10 +97,10 @@ def vendas_dashboard(
         )
 
     return montar_dashboard_vendas(
-        vendas_result.data or [],
-        itens_result.data or [],
-        canais_result.data or [],
-        produtos_result.data or [],
+        vendas,
+        itens,
+        canais,
+        produtos,
         inicio_dt,
         fim_dt,
     )
