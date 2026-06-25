@@ -187,16 +187,16 @@ class VendasDashboardServiceTest(unittest.TestCase):
         self.assertNotIn('Cancelado', [p['nome'] for p in dashboard['produtos']])
         self.assertEqual(dashboard['produtos'][-1]['produto_id'], 'p6')
         self.assertIsNone(dashboard['produtos'][-1]['roi'])
-        self.assertEqual(set(dashboard['produtos'][0].keys()), {'produto_id', 'nome', 'quantidade', 'faturamento_bruto', 'total_custo', 'lucro_bruto', 'margem', 'roi'})
+        self.assertEqual(set(dashboard['produtos'][0].keys()), {'produto_id', 'nome', 'quantidade', 'faturamento_bruto', 'lucro_bruto', 'margem', 'roi'})
 
         self.assertEqual([c['canal_id'] for c in dashboard['canais']], ['c1', 'c2', 'c3'])
         self.assertEqual(dashboard['canais'][0]['lucro_bruto'], 78.0)
         self.assertEqual(dashboard['canais'][0]['margem'], 32.5)
-        self.assertEqual(set(dashboard['canais'][0].keys()), {'canal_id', 'nome', 'qtd_vendas', 'faturamento_bruto', 'total_custo', 'lucro_bruto', 'margem', 'roi'})
+        self.assertEqual(set(dashboard['canais'][0].keys()), {'canal_id', 'nome', 'qtd_vendas', 'faturamento_bruto', 'lucro_bruto', 'margem', 'roi'})
 
         self.assertEqual([v['numero'] for v in dashboard['vendas']], [11, 10, 12])
         self.assertEqual(dashboard['vendas'][0]['canal'], 'Loja fisica')
-        self.assertEqual(dashboard['vendas'][0]['itens'], 2)
+        self.assertEqual([v['itens'] for v in dashboard['vendas']], [2, 2, 1])
         self.assertEqual(set(dashboard['vendas'][0].keys()), {'id', 'numero', 'data_venda', 'canal', 'itens', 'faturamento_bruto', 'total_custo', 'lucro_bruto', 'margem', 'roi'})
 
     def test_evolucao_preenche_meses_sem_vendas_com_zero(self):

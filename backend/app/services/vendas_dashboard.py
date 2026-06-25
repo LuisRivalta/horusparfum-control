@@ -115,13 +115,14 @@ def montar_dashboard_vendas(vendas, itens, canais, produtos, inicio, fim):
     vendas_ordenadas = sorted(vendas_validas, key=lambda v: (_data(v.get('data_venda')) or date.min, int(v.get('numero') or 0)), reverse=True)
     itens_por_venda = {}
     for item in itens_validos:
-        itens_por_venda[str(item.get('venda_id'))] = itens_por_venda.get(str(item.get('venda_id')), 0) + int(item.get('quantidade') or 0)
+        key = str(item.get('venda_id'))
+        itens_por_venda[key] = itens_por_venda.get(key, 0) + 1
 
     return {
         'periodo': {'inicio': inicio.isoformat(), 'fim': fim.isoformat()},
         'resumo': {'qtd_vendas': qtd_vendas, 'itens_vendidos': itens_vendidos, 'faturamento_bruto': _f(faturamento_bruto) or 0.0, 'total_custo': _f(total_custo) or 0.0, 'lucro_bruto': _f(lucro_bruto) or 0.0, 'margem_media': margem_media, 'roi_medio': roi_medio, 'ticket_medio': ticket_medio},
-        'produtos': [{'produto_id': r['produto_id'], 'nome': r['nome'], 'quantidade': int(r['quantidade']), 'faturamento_bruto': _f(r['faturamento_bruto']) or 0.0, 'total_custo': _f(r['total_custo']) or 0.0, 'lucro_bruto': _f(r['lucro_bruto']) or 0.0, 'margem': _f(_margem(r['lucro_bruto'], r['faturamento_bruto'])), 'roi': _f((r['lucro_bruto'] / r['total_custo']) * Decimal(100)) if r['total_custo'] != 0 else None} for r in produtos_ordenados],
-        'canais': [{'canal_id': r['canal_id'], 'nome': r['nome'], 'qtd_vendas': int(r['qtd_vendas']), 'faturamento_bruto': _f(r['faturamento_bruto']) or 0.0, 'total_custo': _f(r['total_custo']) or 0.0, 'lucro_bruto': _f(r['lucro_bruto']) or 0.0, 'margem': _f(_margem(r['lucro_bruto'], r['faturamento_bruto'])), 'roi': _f((r['lucro_bruto'] / r['total_custo']) * Decimal(100)) if r['total_custo'] != 0 else None} for r in canais_ordenados],
+        'produtos': [{'produto_id': r['produto_id'], 'nome': r['nome'], 'quantidade': int(r['quantidade']), 'faturamento_bruto': _f(r['faturamento_bruto']) or 0.0, 'lucro_bruto': _f(r['lucro_bruto']) or 0.0, 'margem': _f(_margem(r['lucro_bruto'], r['faturamento_bruto'])), 'roi': _f((r['lucro_bruto'] / r['total_custo']) * Decimal(100)) if r['total_custo'] != 0 else None} for r in produtos_ordenados],
+        'canais': [{'canal_id': r['canal_id'], 'nome': r['nome'], 'qtd_vendas': int(r['qtd_vendas']), 'faturamento_bruto': _f(r['faturamento_bruto']) or 0.0, 'lucro_bruto': _f(r['lucro_bruto']) or 0.0, 'margem': _f(_margem(r['lucro_bruto'], r['faturamento_bruto'])), 'roi': _f((r['lucro_bruto'] / r['total_custo']) * Decimal(100)) if r['total_custo'] != 0 else None} for r in canais_ordenados],
         'evolucao': evolucao,
         'vendas': [{'id': v.get('id'), 'numero': v.get('numero'), 'data_venda': v.get('data_venda'), 'canal': _nome(canais, 'id', v.get('canal_id'), 'Sem canal'), 'itens': itens_por_venda.get(str(v.get('id')), 0), 'faturamento_bruto': _f(_money(v.get('total_bruto'))) or 0.0, 'total_custo': _f(_money(v.get('total_custo'))) or 0.0, 'lucro_bruto': _f(_money(v.get('lucro_bruto'))) or 0.0, 'margem': _f(_margem(_money(v.get('lucro_bruto')), _money(v.get('total_bruto')))), 'roi': _f((_money(v.get('lucro_bruto')) / _money(v.get('total_custo'))) * Decimal(100)) if _money(v.get('total_custo')) != 0 else None} for v in vendas_ordenadas],
     }
