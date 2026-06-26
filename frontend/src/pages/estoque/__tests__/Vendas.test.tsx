@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { EstVendas, type VendaRow } from '../Vendas'
@@ -9,6 +9,10 @@ vi.mock('@/contexts/AuthContext', () => ({
 
 vi.mock('@/components/shared/Modal', () => ({
   Modal: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
+vi.mock('../vendas/VendasDashboard', () => ({
+  VendasDashboard: () => <div>Dashboard analitico de vendas</div>,
 }))
 
 const mockVendas: VendaRow[] = [
@@ -51,5 +55,15 @@ describe('EstVendas (lista)', () => {
   it('renderiza o botão "Nova venda"', () => {
     render(<MemoryRouter><EstVendas /></MemoryRouter>)
     expect(screen.getByRole('button', { name: /nova venda/i })).toBeInTheDocument()
+  })
+
+  it('alterna entre lista e dashboard sem sair da tela de vendas', async () => {
+    render(<MemoryRouter><EstVendas /></MemoryRouter>)
+
+    expect(screen.getByRole('button', { name: /^lista$/i })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: /^dashboard$/i }))
+
+    expect(screen.getByText('Dashboard analitico de vendas')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^dashboard$/i })).toHaveAttribute('aria-pressed', 'true')
   })
 })
