@@ -1,5 +1,32 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-26 — Sessão 26: Dashboard de vendas e ROI
+
+**Responsável:** Luis + Codex (subagent-driven development)
+
+### O que foi feito
+- Criado service backend `vendas_dashboard.py` para calcular dashboard de vendas com `Decimal`.
+- Criado endpoint protegido `GET /api/estoque/vendas/dashboard` com JWT Supabase, consultas server-side e tratamento de períodos inválidos.
+- Adicionada aba `Dashboard` dentro de `/estoque/vendas`, mantendo a aba `Lista` com o fluxo operacional de vendas.
+- Dashboard exibe cards de faturamento, lucro, margem e ROI, linha auxiliar de ticket/volume/itens, gráfico mensal, ranking de produtos, ranking de canais e tabela de vendas do período.
+- Vendas canceladas ficam fora de todos os indicadores.
+- Ajustado isolamento do teste de auth para não depender do pacote real `supabase` durante a importação da suíte.
+
+### Validação
+- RED/GREEN backend focado: `python -m unittest tests.test_vendas_dashboard tests.test_estoque_vendas_dashboard_router -v` — **7 testes passando**.
+- RED/GREEN frontend focado: `npm run test:run -- src/pages/estoque/__tests__/VendasDashboard.test.tsx src/pages/estoque/__tests__/Vendas.test.tsx` — **7 testes passando**.
+- Suite backend completa: `python -m unittest discover -s tests -v` — **12 testes passando**.
+- Suite frontend completa: `npm run test:run` — **141 testes passando**.
+- Build frontend: `npm run build` — passando, com aviso conhecido de chunk grande.
+- Whitespace: `git diff --check` — sem erros; apenas avisos CRLF do Windows.
+
+### Observações
+- Sem migração de banco.
+- O endpoint usa as tabelas já existentes `vendas`, `venda_itens`, `canais` e `produtos`.
+- O frontend envia datas locais (`YYYY-MM-DDT00:00:00` / `YYYY-MM-DDT23:59:59`) para evitar drift UTC em filtros sobre `data_venda`.
+
+---
+
 ## 2026-06-22 — Sessão 25: Remover produto apenas do estoque
 
 **Responsável:** Luis + Codex

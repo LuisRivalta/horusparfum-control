@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-22 (Sessão 25)
+> Última atualização: 2026-06-26 (Sessão 26)
 
 ## O que já foi feito
 
@@ -133,6 +133,15 @@
     - O cadastro do produto permanece em `/estoque/cadastros/produtos`; exclusao permanente continua disponivel apenas no contexto de cadastro
     - Teste `ProductDetailsModal.test.tsx` cobre que o fluxo de estoque usa `registrar_saida` e nao executa `delete` em `produtos`
     - Revalidacao TDD em 2026-06-22: teste focado do modal 2/2 e suite frontend completa 136/136 passando
+
+32. **Dashboard de vendas e ROI (Sessão 26)**
+    - `/estoque/vendas` ganhou abas `Lista` e `Dashboard`, mantendo o fluxo operacional de registro/cancelamento na aba Lista
+    - `GET /api/estoque/vendas/dashboard` calcula faturamento, lucro, margem, ROI, ticket medio, evolucao mensal, rankings de produtos/canais e tabela de vendas do periodo
+    - Calculo roda no backend FastAPI com `Decimal`, ignora vendas canceladas e consulta Supabase via service role
+    - Frontend consome o endpoint com JWT Supabase, seletor de periodo igual ao financeiro e datas locais para evitar drift UTC em `data_venda`
+    - Sem migracao de banco; usa `vendas`, `venda_itens`, `canais` e `produtos`
+    - Testes: backend completo 12/12, frontend completo 141/141, build frontend passando
+
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -216,15 +225,14 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 136 testes frontend + 5 testes backend passando
+- 141 testes frontend + 12 testes backend passando
 
 ## Próximos passos imediatos
 
-1. Dashboards de ROI/análise de vendas (os dados já são gerados e armazenados por venda/item — canal mais lucrativo, perfume com maior margem, evolução de receita de vendas)
-2. Remover policies temporárias de `anon` (se foram criadas para testes)
-3. Dashboard estoque com dados reais (estoque baixo e reposição)
-4. Exportação PDF do relatório de giro de estoque
-5. Importação em massa de produtos (botão "Importar" na topbar)
+1. Remover policies temporárias de `anon` (se foram criadas para testes)
+2. Dashboard estoque com dados reais (estoque baixo e reposição)
+3. Exportação PDF do relatório de giro de estoque
+4. Importação em massa de produtos (botão "Importar" na topbar)
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
