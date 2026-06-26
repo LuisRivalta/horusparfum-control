@@ -1,8 +1,14 @@
+import sys
+import types
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from fastapi import HTTPException
+
+fake_supabase_module = types.ModuleType("supabase")
+fake_supabase_module.create_client = lambda *args, **kwargs: object()
+sys.modules.setdefault("supabase", fake_supabase_module)
 
 from app.auth.deps import get_current_user
 

@@ -121,7 +121,7 @@ describe('VendasDashboard', () => {
     render(<VendasDashboard />)
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
-    const [url, options] = fetchMock.mock.calls[0]
+    const [url, options] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toContain('/api/estoque/vendas/dashboard?')
     expect(url).toContain('inicio=2026-06-01T00%3A00%3A00')
     expect(url).toContain('fim=2026-06-30T23%3A59%3A59')
@@ -188,11 +188,11 @@ describe('VendasDashboard', () => {
 
     await waitFor(() => expect(screen.getByText('3 itens vendidos')).toBeInTheDocument())
 
-    const firstOptions = fetchMock.mock.calls[0][1] as RequestInit
+    const firstOptions = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]
     fireEvent.change(screen.getByDisplayValue('Junho'), { target: { value: '6' } })
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
-    const secondUrl = String(fetchMock.mock.calls[1][0])
+    const secondUrl = String((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[0])
 
     expect((firstOptions.signal as AbortSignal).aborted).toBe(true)
     expect(secondUrl).toContain('inicio=2026-07-01T00%3A00%3A00')
