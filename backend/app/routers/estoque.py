@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from app.auth.deps import get_current_user
 from app.db.supabase import get_supabase
 from app.services.financeiro_relatorios import parse_iso_datetime
+from app.services.pedido_pdf_import import PedidoPdfParseError, parse_pedido_pdf_bytes
 from app.services.vendas_dashboard import montar_dashboard_vendas
 
 router = APIRouter()
@@ -31,6 +32,34 @@ def listar_fornecedores():
 @router.get("/alertas")
 def listar_alertas():
     return {"alertas": []}
+
+
+@router.post("/pedidos/importar-pdf")
+async def importar_pedido_pdf(
+    file: UploadFile = File(...),
+    _user: dict = Depends(get_current_user),
+):
+    content_type = (file.content_type or "").lower()
+    filename = (file.filename or "").lower()
+    if content_type != "application/pdf" and not filename.endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Envie um arquivo PDF",
+        )
+
+    pdf_bytes = await file.read()
+    try:
+        return parse_pedido_pdf_bytes(pdf_bytes)
+    except PedidoPdfParseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erro ao ler PDF: {exc}",
+        )
 
 
 @router.get("/vendas/dashboard")
