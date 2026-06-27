@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-26 (Sessão 26)
+> Última atualização: 2026-06-27 (Sessão 27)
 
 ## O que já foi feito
 
@@ -142,6 +142,15 @@
     - Sem migracao de banco; usa `vendas`, `venda_itens`, `canais` e `produtos`
     - Testes: backend completo 12/12, frontend completo 141/141, build frontend passando
 
+33. **Importação de itens de pedido por PDF (Sessão 27)**
+    - POST /api/estoque/pedidos/importar-pdf recebe PDF textual, valida tamanho/assinatura, extrai itens e retorna JSON sem gravar banco
+    - Parser backend em pedido_pdf_import.py usa pypdf, normaliza números brasileiros e cobre PDFs no padrão Onun
+    - NovoPedidoModal ganhou botão Importar PDF na seção de itens; fornecedor segue manual
+    - Frontend casa itens por nome normalizado com produtos já cadastrados e deixa pendências para seleção manual
+    - Sem migração de banco; não usa LLM/OCR no MVP
+    - Testes: backend completo 20/20, frontend completo 149/149, build frontend passando
+
+
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -225,14 +234,14 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 141 testes frontend + 12 testes backend passando
+- 149 testes frontend + 20 testes backend passando
 
 ## Próximos passos imediatos
 
 1. Remover policies temporárias de `anon` (se foram criadas para testes)
 2. Dashboard estoque com dados reais (estoque baixo e reposição)
 3. Exportação PDF do relatório de giro de estoque
-4. Importação em massa de produtos (botão "Importar" na topbar)
+4. Evolução da importação por PDF: OCR/LLM fallback para layouts diferentes, se necessário
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)

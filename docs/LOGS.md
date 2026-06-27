@@ -1,5 +1,25 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-27 — Sessão 27: Importação de pedido por PDF
+
+**Responsável:** Luis + Codex (subagent-driven development)
+
+### O que foi feito
+- Criada importação de itens por PDF textual dentro do modal Novo pedido.
+- Backend FastAPI ganhou endpoint protegido POST /api/estoque/pedidos/importar-pdf.
+- Parser usa pypdf, extrai texto, interpreta linhas de item e normaliza quantidade/preços em formato brasileiro.
+- Endpoint valida tipo, assinatura %PDF- e limite de 10 MB antes de chamar o parser.
+- Frontend envia PDF com JWT, preenche itens encontrados por nome normalizado e marca itens sem match para seleção manual.
+- Fornecedor continua manual e pedido só é salvo após revisão do usuário.
+- Sem migração de banco; sem LLM/OCR no MVP.
+
+### Validação
+- Backend: .venv\Scripts\python.exe -m pytest tests -q — 20 testes passando.
+- Frontend: npm run test:run — 149 testes passando.
+- Frontend: npm run build — build passando, com aviso conhecido de chunk grande.
+
+---
+
 ## 2026-06-26 — Sessão 26: Dashboard de vendas e ROI
 
 **Responsável:** Luis + Codex (subagent-driven development)
