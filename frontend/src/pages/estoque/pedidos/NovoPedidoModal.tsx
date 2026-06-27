@@ -318,14 +318,16 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
                 className="hidden"
                 onChange={handlePdfFileChange}
               />
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importandoPdf}
-                className="text-xs text-text-2 hover:text-gold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
+                <Icon name="download" size={14} />
                 {importandoPdf ? 'Lendo PDF...' : 'Importar PDF'}
-              </button>
+              </Button>
               <button
                 type="button"
                 onClick={() => setQuickOpen(!quickOpen)}

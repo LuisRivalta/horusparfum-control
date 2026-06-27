@@ -86,6 +86,15 @@ describe('NovoPedidoModal', () => {
     })
   })
 
+  it('mostra importação de PDF como botão visível na seção de itens', async () => {
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
+
+    const importar = await screen.findByRole('button', { name: /importar pdf/i })
+
+    expect(importar).toHaveClass('border')
+    expect(importar).toHaveClass('bg-surface-2')
+  })
+
   it('calcula o total ao vivo conforme itens são preenchidos', async () => {
     const user = userEvent.setup()
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
