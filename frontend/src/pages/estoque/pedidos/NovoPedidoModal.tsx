@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Modal } from '@/components/shared/Modal'
@@ -6,6 +6,7 @@ import { Button, Input, Select } from '@/components/shared/FormControls'
 import { Icon } from '@/components/shared/Icon'
 import { formatBRL } from '@/lib/utils'
 import { calcularTotalPedido } from '@/lib/pedidos'
+import { casarItemImportado, importarPedidoPdf, type MatchStatus } from '@/lib/pedidoPdfImport'
 
 interface Opcao { id: string; nome: string }
 
@@ -13,6 +14,9 @@ interface ItemForm {
   produto_id: string
   qtd: string
   preco: string
+  importado_nome?: string
+  importado_codigo?: string | null
+  matchStatus?: MatchStatus
 }
 
 interface ItensOriginal {
@@ -47,6 +51,8 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
   const [submitting, setSubmitting] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [itensOriginais, setItensOriginais] = useState<ItensOriginal[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [importandoPdf, setImportandoPdf] = useState(false)
 
   // cadastro rápido de produto
   const [quickOpen, setQuickOpen] = useState(false)
@@ -130,6 +136,33 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
       setQuickVolume('')
       setQuickCategoria('')
       setQuickOpen(false)
+    }
+  }
+
+  async function handlePdfFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || importandoPdf) return
+
+    setErro(null)
+    setImportandoPdf(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+
+      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
+      const resultado = await importarPedidoPdf({ file, token, apiUrl })
+      if (resultado.itens.length === 0) throw new Error('Nenhum item encontrado no PDF')
+
+      setItens(resultado.itens.map(item => casarItemImportado(item, produtos)))
+      if (resultado.avisos.length > 0) {
+        setErro(resultado.avisos.join(' '))
+      }
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Falha ao importar PDF')
+    } finally {
+      setImportandoPdf(false)
     }
   }
 
@@ -276,13 +309,31 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-[.08em] text-muted">Itens</span>
-            <button
-              type="button"
-              onClick={() => setQuickOpen(!quickOpen)}
-              className="text-xs text-gold hover:underline cursor-pointer"
-            >
-              + Cadastrar produto
-            </button>
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                aria-label="Arquivo PDF do pedido"
+                className="hidden"
+                onChange={handlePdfFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importandoPdf}
+                className="text-xs text-text-2 hover:text-gold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {importandoPdf ? 'Lendo PDF...' : 'Importar PDF'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickOpen(!quickOpen)}
+                className="text-xs text-gold hover:underline cursor-pointer"
+              >
+                + Cadastrar produto
+              </button>
+            </div>
           </div>
 
           {quickOpen && (
@@ -295,36 +346,48 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
           )}
 
           {itens.map((item, i) => (
-            <div key={i} className="grid grid-cols-[1fr_80px_110px_90px_32px] gap-2 items-end">
-              <Select
-                label={`Produto ${i + 1}`}
-                options={produtos.map(p => ({ value: p.id, label: p.nome }))}
-                value={item.produto_id}
-                onChange={(e) => setItem(i, { produto_id: e.target.value })}
-              />
-              <Input
-                label={`Qtd ${i + 1}`}
-                type="number" min="1"
-                value={item.qtd}
-                onChange={(e) => setItem(i, { qtd: e.target.value })}
-              />
-              <Input
-                label={`Preço ${i + 1}`}
-                type="number" step="0.01" min="0"
-                value={item.preco}
-                onChange={(e) => setItem(i, { preco: e.target.value })}
-              />
-              <span className="text-sm font-mono text-text-2 pb-2.5 text-right">
-                = {formatBRL((Number(item.qtd) || 0) * (Number(item.preco) || 0))}
-              </span>
-              <button
-                type="button"
-                onClick={() => setItens(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : prev)}
-                className="pb-2.5 text-muted hover:text-down cursor-pointer"
-                title="Remover item"
-              >
-                <Icon name="trash" size={16} />
-              </button>
+            <div key={i} className="flex flex-col gap-1">
+              <div className="grid grid-cols-[1fr_80px_110px_90px_32px] gap-2 items-end">
+                <Select
+                  label={`Produto ${i + 1}`}
+                  options={produtos.map(p => ({ value: p.id, label: p.nome }))}
+                  value={item.produto_id}
+                  onChange={(e) => setItem(i, {
+                    produto_id: e.target.value,
+                    matchStatus: e.target.value ? 'matched' : item.matchStatus,
+                  })}
+                />
+                <Input
+                  label={`Qtd ${i + 1}`}
+                  type="number" min="1"
+                  value={item.qtd}
+                  onChange={(e) => setItem(i, { qtd: e.target.value })}
+                />
+                <Input
+                  label={`Preço ${i + 1}`}
+                  type="number" step="0.01" min="0"
+                  value={item.preco}
+                  onChange={(e) => setItem(i, { preco: e.target.value })}
+                />
+                <span className="text-sm font-mono text-text-2 pb-2.5 text-right">
+                  = {formatBRL((Number(item.qtd) || 0) * (Number(item.preco) || 0))}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setItens(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : prev)}
+                  className="pb-2.5 text-muted hover:text-down cursor-pointer"
+                  title="Remover item"
+                >
+                  <Icon name="trash" size={16} />
+                </button>
+              </div>
+              {item.importado_nome && item.matchStatus !== 'matched' && (
+                <p className="text-xs text-warn -mt-1">
+                  {item.matchStatus === 'ambiguous'
+                    ? `Produto ambíguo: ${item.importado_nome}`
+                    : `Produto não encontrado: ${item.importado_nome}`}
+                </p>
+              )}
             </div>
           ))}
 

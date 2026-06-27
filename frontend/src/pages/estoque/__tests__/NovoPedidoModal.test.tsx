@@ -6,11 +6,17 @@ import { NovoPedidoModal } from '../pedidos/NovoPedidoModal'
 const inserts: Record<string, unknown[]> = { pedidos: [], pedido_itens: [], produtos: [] }
 const updates: Record<string, unknown[]> = { pedidos: [] }
 const deletes: Record<string, string[]> = { pedido_itens: [] }
+const getSessionMock = vi.hoisted(() => vi.fn(() => Promise.resolve({
+  data: { session: { access_token: 'jwt-test' } },
+})))
 
 const mockItemEditar = { produto_id: 'pr1', qtd_pedida: 3, preco_unitario: 150 }
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
+    auth: {
+      getSession: getSessionMock,
+    },
     from: vi.fn((table: string) => ({
       select: vi.fn(() => ({
         order: vi.fn(() => Promise.resolve({
@@ -68,12 +74,16 @@ beforeEach(() => {
 
 describe('NovoPedidoModal', () => {
   beforeEach(() => {
+    vi.unstubAllGlobals()
     vi.clearAllMocks()
     inserts.pedidos.length = 0
     inserts.pedido_itens.length = 0
     inserts.produtos.length = 0
     updates.pedidos.length = 0
     deletes.pedido_itens.length = 0
+    getSessionMock.mockResolvedValue({
+      data: { session: { access_token: 'jwt-test' } },
+    })
   })
 
   it('calcula o total ao vivo conforme itens são preenchidos', async () => {
@@ -173,5 +183,96 @@ describe('NovoPedidoModal', () => {
     expect(inserts.pedido_itens[0]).toEqual([
       { pedido_id: 'p-edit', produto_id: 'pr1', qtd_pedida: 3, preco_unitario: 150 },
     ])
+  })
+
+  it('importa PDF e preenche item com produto encontrado', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        itens: [{ nome: 'Perfume X', codigo: 'DB-X', qtd: 2, preco_unitario: 123.45, total: 246.9 }],
+        avisos: [],
+      }),
+    })) as unknown as typeof fetch
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /importar pdf/i })).toBeInTheDocument())
+    const file = new File(['%PDF fake'], 'pedido.pdf', { type: 'application/pdf' })
+    await user.upload(screen.getByLabelText(/arquivo pdf do pedido/i), file)
+
+    await waitFor(() => {
+      expect((screen.getByLabelText(/produto 1/i) as HTMLSelectElement).value).toBe('pr1')
+    })
+    expect((screen.getByLabelText(/qtd 1/i) as HTMLInputElement).value).toBe('2')
+    expect((screen.getByLabelText(/preço 1/i) as HTMLInputElement).value).toBe('123.45')
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/estoque/pedidos/importar-pdf'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: { Authorization: 'Bearer jwt-test' },
+      }),
+    )
+  })
+
+  it('importa PDF e mantém item sem match pendente', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        itens: [{ nome: 'Produto Novo 200ML', codigo: 'DB-NOVO', qtd: 1, preco_unitario: 99.99 }],
+        avisos: [],
+      }),
+    })))
+
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByLabelText(/arquivo pdf do pedido/i)).toBeInTheDocument())
+    await user.upload(screen.getByLabelText(/arquivo pdf do pedido/i), new File(['%PDF fake'], 'pedido.pdf', { type: 'application/pdf' }))
+
+    await waitFor(() => expect(screen.getByText(/produto não encontrado: produto novo 200ml/i)).toBeInTheDocument())
+    expect((screen.getByLabelText(/produto 1/i) as HTMLSelectElement).value).toBe('')
+  })
+
+  it('preserva itens atuais quando importação falha', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: false,
+      json: () => Promise.resolve({ detail: 'PDF sem texto extraível' }),
+    })))
+
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByLabelText(/produto 1/i)).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    await user.upload(screen.getByLabelText(/arquivo pdf do pedido/i), new File(['bad'], 'pedido.pdf', { type: 'application/pdf' }))
+
+    await waitFor(() => expect(screen.getByText(/pdf sem texto extraível/i)).toBeInTheDocument())
+    expect((screen.getByLabelText(/produto 1/i) as HTMLSelectElement).value).toBe('pr1')
+  })
+
+  it('bloqueia criação com item importado sem produto selecionado', async () => {
+    const user = userEvent.setup()
+    const onSaved = vi.fn()
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        itens: [{ nome: 'Produto Novo 200ML', codigo: 'DB-NOVO', qtd: 1, preco_unitario: 99.99 }],
+        avisos: [],
+      }),
+    })))
+
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
+
+    await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
+    await user.upload(screen.getByLabelText(/arquivo pdf do pedido/i), new File(['%PDF fake'], 'pedido.pdf', { type: 'application/pdf' }))
+    await waitFor(() => expect(screen.getByText(/produto não encontrado: produto novo 200ml/i)).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /criar pedido/i }))
+
+    await waitFor(() => expect(screen.getByText(/selecione o fornecedor e ao menos um item válido/i)).toBeInTheDocument())
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(inserts.pedidos).toHaveLength(0)
   })
 })
