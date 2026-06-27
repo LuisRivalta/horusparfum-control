@@ -41,12 +41,36 @@ class EstoquePedidoPdfRouterTest(unittest.TestCase):
         with patch("app.routers.estoque.parse_pedido_pdf_bytes", return_value=payload) as parser:
             response = self.client.post(
                 "/api/estoque/pedidos/importar-pdf",
-                files={"file": ("pedido.pdf", b"%PDF fake", "application/pdf")},
+                files={"file": ("pedido.pdf", b"%PDF- fake", "application/pdf")},
             )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), payload)
-        parser.assert_called_once_with(b"%PDF fake")
+        parser.assert_called_once_with(b"%PDF- fake")
+
+    def test_rejeita_pdf_com_bytes_invalidos_sem_chamar_parser(self):
+        with patch("app.routers.estoque.parse_pedido_pdf_bytes") as parser:
+            response = self.client.post(
+                "/api/estoque/pedidos/importar-pdf",
+                files={"file": ("pedido.pdf", b"not a pdf", "application/pdf")},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"detail": "Envie um arquivo PDF válido"})
+        parser.assert_not_called()
+
+    def test_rejeita_pdf_maior_que_10mb_sem_chamar_parser(self):
+        payload = b"%PDF-" + (b"a" * (10 * 1024 * 1024))
+
+        with patch("app.routers.estoque.parse_pedido_pdf_bytes") as parser:
+            response = self.client.post(
+                "/api/estoque/pedidos/importar-pdf",
+                files={"file": ("pedido.pdf", payload, "application/pdf")},
+            )
+
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(response.json(), {"detail": "PDF excede o limite de 10 MB"})
+        parser.assert_not_called()
 
     def test_retorna_erro_limpo_do_parser(self):
         with patch(
@@ -55,7 +79,7 @@ class EstoquePedidoPdfRouterTest(unittest.TestCase):
         ):
             response = self.client.post(
                 "/api/estoque/pedidos/importar-pdf",
-                files={"file": ("pedido.pdf", b"%PDF fake", "application/pdf")},
+                files={"file": ("pedido.pdf", b"%PDF- fake", "application/pdf")},
             )
 
         self.assertEqual(response.status_code, 400)

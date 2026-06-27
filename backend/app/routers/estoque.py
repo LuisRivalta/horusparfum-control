@@ -8,6 +8,8 @@ from app.services.vendas_dashboard import montar_dashboard_vendas
 
 router = APIRouter()
 
+MAX_PEDIDO_PDF_BYTES = 10 * 1024 * 1024
+
 
 @router.get("/produtos")
 def listar_produtos():
@@ -47,7 +49,19 @@ async def importar_pedido_pdf(
             detail="Envie um arquivo PDF",
         )
 
-    pdf_bytes = await file.read()
+    pdf_bytes = await file.read(MAX_PEDIDO_PDF_BYTES + 1)
+    if len(pdf_bytes) > MAX_PEDIDO_PDF_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="PDF excede o limite de 10 MB",
+        )
+
+    if not pdf_bytes.startswith(b"%PDF-"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Envie um arquivo PDF válido",
+        )
+
     try:
         return parse_pedido_pdf_bytes(pdf_bytes)
     except PedidoPdfParseError as exc:
