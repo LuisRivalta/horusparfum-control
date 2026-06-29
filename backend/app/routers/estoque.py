@@ -1,7 +1,10 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from app.auth.deps import get_current_user
 from app.db.supabase import get_supabase
+from app.services.estoque_minimo import PERIODO_PADRAO_DIAS, sugerir_estoque_minimo
 from app.services.financeiro_relatorios import parse_iso_datetime
 from app.services.pedido_pdf_import import PedidoPdfParseError, parse_pedido_pdf_bytes
 from app.services.vendas_dashboard import montar_dashboard_vendas
@@ -15,6 +18,47 @@ MAX_PEDIDO_PDF_BYTES = 10 * 1024 * 1024
 def listar_produtos():
     return {"produtos": []}
 
+
+@router.get("/produtos/{produto_id}/estoque-minimo-sugerido")
+def estoque_minimo_sugerido(
+    produto_id: str,
+    _user: dict = Depends(get_current_user),
+):
+    hoje = datetime.now(timezone.utc).date()
+    inicio = hoje - timedelta(days=PERIODO_PADRAO_DIAS - 1)
+
+    try:
+        supabase = get_supabase()
+        vendas = (
+            supabase
+            .table("vendas")
+            .select("id, status, data_venda")
+            .gte("data_venda", inicio.isoformat())
+            .neq("status", "cancelada")
+            .execute()
+            .data or []
+        )
+        venda_ids = [venda.get("id") for venda in vendas if venda.get("id") is not None]
+        if not venda_ids:
+            return sugerir_estoque_minimo(produto_id, unidades_vendidas=0)
+
+        itens = (
+            supabase
+            .table("venda_itens")
+            .select("id, venda_id, produto_id, quantidade")
+            .in_("venda_id", venda_ids)
+            .eq("produto_id", produto_id)
+            .execute()
+            .data or []
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erro ao calcular estoque minimo sugerido: {exc}",
+        )
+
+    unidades_vendidas = sum(int(item.get("quantidade") or 0) for item in itens)
+    return sugerir_estoque_minimo(produto_id, unidades_vendidas=unidades_vendidas)
 
 @router.get("/movimentacoes")
 def listar_movimentacoes():
