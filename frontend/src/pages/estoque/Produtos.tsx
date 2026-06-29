@@ -68,7 +68,6 @@ export function EstProdutos() {
     preco_referencia: '',
     categoria_id: '',
     fornecedor_id: '',
-    estoque_atual: '0',
     estoque_minimo: '0',
   })
 
@@ -166,12 +165,12 @@ export function EstProdutos() {
         preco_referencia: form.preco_referencia ? Number(form.preco_referencia) : null,
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
-        estoque_atual: Number(form.estoque_atual),
+        estoque_atual: 0,
         estoque_minimo: Number(form.estoque_minimo),
         foto_url,
       })
 
-      setForm({ nome: '', volume_ml: '', preco_referencia: '', categoria_id: '', fornecedor_id: '', estoque_atual: '0', estoque_minimo: '0' })
+      setForm({ nome: '', volume_ml: '', preco_referencia: '', categoria_id: '', fornecedor_id: '', estoque_minimo: '0' })
       clearFoto()
       setModalOpen(false)
       fetchData()
@@ -326,10 +325,7 @@ export function EstProdutos() {
             onChange={(e) => setForm({ ...form, preco_referencia: e.target.value })}
           />
           <Select label="Fornecedor" options={fornecedores.map(f => ({ value: f.id, label: f.nome }))} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Estoque atual" type="number" value={form.estoque_atual} onChange={(e) => setForm({ ...form, estoque_atual: e.target.value })} />
-            <Input label="Estoque mínimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
-          </div>
+          <Input label="Estoque mínimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
           <div className="flex justify-end gap-3 mt-2">
             <Button type="button" variant="secondary" onClick={() => { setModalOpen(false); clearFoto() }}>Cancelar</Button>
             <Button type="submit" disabled={submitting}>

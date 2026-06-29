@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-27 (Sessão 27)
+> Última atualização: 2026-06-29 (Sessão 28)
 
 ## O que já foi feito
 
@@ -151,6 +151,13 @@
     - Testes: backend completo 20/20, frontend completo 149/149, build frontend passando
 
 
+34. **Cadastro de produto sem movimentar estoque (Sessão 28)**
+    - Modal "Novo produto" em Cadastros não exibe mais campo "Estoque atual"
+    - Cadastro de produto passa a gravar sempre `estoque_atual: 0`, preservando cadastro como catálogo
+    - Edição de produto também não permite alterar `estoque_atual`; o saldo continua visível apenas como leitura nos detalhes
+    - Entradas reais continuam centralizadas em Pedidos/Confirmar chegada ou Estoque/Registrar entrada
+    - Frontend-only; sem migração de banco
+    - Testes: frontend completo 152/152, build frontend passando
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -234,7 +241,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 149 testes frontend + 20 testes backend passando
+- 152 testes frontend + 20 testes backend passando
 
 ## Próximos passos imediatos
 

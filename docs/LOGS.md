@@ -1,5 +1,22 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-29 — Sessão 28: Cadastro de produto sem estoque inicial
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Removido o campo "Estoque atual" do modal Novo produto em Cadastros.
+- Cadastro de produto agora sempre cria o item com `estoque_atual: 0`.
+- Removido o campo "Estoque atual" da edição do produto no modal de detalhes.
+- O saldo atual permanece visível nos detalhes do produto, mas não é editável pelo cadastro.
+- A movimentação real de estoque permanece nos fluxos corretos: Pedidos/Confirmar chegada e Estoque/Registrar entrada.
+
+### Validação
+- RED/GREEN focado: `npm run test:run -- src/pages/estoque/__tests__/Produtos.test.tsx src/components/shared/__tests__/ProductDetailsModal.test.tsx` — 4 testes passando.
+- Frontend: `npm run test:run` — 152 testes passando.
+- Frontend: `npm run build` — build passando.
+
+---
 ## 2026-06-27 — Sessão 27: Importação de pedido por PDF
 
 **Responsável:** Luis + Codex (subagent-driven development)

@@ -2,15 +2,18 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProductDetailsModal, type Produto } from '../ProductDetailsModal'
 
-const { mockDeleteEq, mockRpc } = vi.hoisted(() => ({
+const { mockDeleteEq, mockRpc, mockUpdate, mockUpdateEq } = vi.hoisted(() => ({
   mockDeleteEq: vi.fn(),
   mockRpc: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockUpdateEq: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     rpc: mockRpc,
     from: vi.fn(() => ({
+      update: mockUpdate,
       delete: vi.fn(() => ({
         eq: mockDeleteEq,
       })),
@@ -40,6 +43,8 @@ const produto: Produto = {
 describe('ProductDetailsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUpdate.mockReturnValue({ eq: mockUpdateEq })
+    mockUpdateEq.mockResolvedValue({ error: null })
 
     HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
       this.open = true
@@ -108,5 +113,32 @@ describe('ProductDetailsModal', () => {
     expect(mockDeleteEq).not.toHaveBeenCalled()
     expect(onUpdated).toHaveBeenCalled()
     expect(onClose).toHaveBeenCalled()
+  })
+  it('edita cadastro sem permitir alterar estoque atual', async () => {
+    const onUpdated = vi.fn()
+
+    render(
+      <ProductDetailsModal
+        open
+        produto={produto}
+        categorias={[{ id: 'c1', nome: 'Masculino' }]}
+        fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        onClose={vi.fn()}
+        onUpdated={onUpdated}
+        onDeleted={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+
+    expect(screen.queryByLabelText(/estoque atual/i)).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Asad Lattafa' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(onUpdated).toHaveBeenCalled())
+    expect(mockUpdate).toHaveBeenCalledWith(expect.not.objectContaining({
+      estoque_atual: expect.anything(),
+    }))
   })
 })

@@ -58,7 +58,6 @@ export function ProductDetailsModal({
     preco_referencia: '',
     categoria_id: '',
     fornecedor_id: '',
-    estoque_atual: '0',
     estoque_minimo: '0',
   })
 
@@ -71,7 +70,6 @@ export function ProductDetailsModal({
       preco_referencia: produto!.preco_referencia != null ? String(produto!.preco_referencia) : '',
       categoria_id: produto!.categoria_id ?? '',
       fornecedor_id: produto!.fornecedor_id ?? '',
-      estoque_atual: produto!.estoque_atual.toString(),
       estoque_minimo: produto!.estoque_minimo.toString(),
     })
     setEditing(true)
@@ -87,7 +85,6 @@ export function ProductDetailsModal({
         preco_referencia: form.preco_referencia ? Number(form.preco_referencia) : null,
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
-        estoque_atual: Number(form.estoque_atual),
         estoque_minimo: Number(form.estoque_minimo),
       }).eq('id', produto!.id)
       if (!error) {
@@ -165,10 +162,7 @@ export function ProductDetailsModal({
             onChange={(e) => setForm({ ...form, preco_referencia: e.target.value })}
           />
           <Select label="Fornecedor" options={[{ value: '', label: '—' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))]} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Estoque atual" type="number" value={form.estoque_atual} onChange={(e) => setForm({ ...form, estoque_atual: e.target.value })} />
-            <Input label="Estoque mínimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
-          </div>
+          <Input label="Estoque mínimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
           <div className="flex justify-end gap-3 mt-2">
             <Button type="button" variant="secondary" onClick={() => setEditing(false)}>Cancelar</Button>
             <Button type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
