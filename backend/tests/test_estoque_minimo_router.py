@@ -28,6 +28,10 @@ class FakeQuery:
         self.filters.append(("gte", field, value))
         return self
 
+    def lte(self, field, value):
+        self.filters.append(("lte", field, value))
+        return self
+
     def neq(self, field, value):
         self.filters.append(("neq", field, value))
         return self
@@ -48,10 +52,17 @@ class FakeQuery:
                 {"id": "v2", "status": "concluida", "data_venda": "2026-06-12"},
             ])
         if self.table_name == "venda_itens":
-            return SimpleNamespace(data=[
-                {"id": "i1", "venda_id": "v1", "produto_id": "p1", "quantidade": 2},
-                {"id": "i2", "venda_id": "v2", "produto_id": "p1", "quantidade": 10},
-            ])
+            data = [
+                {"id": "i1", "venda_id": "v1", "produto_id": "p1", "tipo": "produto", "quantidade": 2},
+                {"id": "i2", "venda_id": "v2", "produto_id": "p1", "tipo": "produto", "quantidade": 10},
+                {"id": "i3", "venda_id": "v2", "produto_id": "p1", "tipo": "decant", "quantidade": 5},
+            ]
+            for operator, field, value in self.filters:
+                if operator == "eq":
+                    data = [item for item in data if item.get(field) == value]
+                if operator == "in":
+                    data = [item for item in data if item.get(field) in value]
+            return SimpleNamespace(data=data)
         return SimpleNamespace(data=[])
 
 
@@ -93,8 +104,14 @@ class EstoqueMinimoRouterTest(unittest.TestCase):
         venda_filters = [call[2] for call in fake_supabase.calls if call[0] == "vendas" and call[1] == "execute"][0]
         item_filters = [call[2] for call in fake_supabase.calls if call[0] == "venda_itens" and call[1] == "execute"][0]
         self.assertIn(("neq", "status", "cancelada"), venda_filters)
+        self.assertTrue(any(filter_[0] == "lte" and filter_[1] == "data_venda" for filter_ in venda_filters))
         self.assertIn(("eq", "produto_id", "p1"), item_filters)
+        self.assertIn(("eq", "tipo", "produto"), item_filters)
         self.assertIn(("in", "venda_id", ["v1", "v2"]), item_filters)
+        self.assertIn(
+            ("venda_itens", "select", "id, venda_id, produto_id, tipo, quantidade"),
+            fake_supabase.calls,
+        )
 
     def test_sem_vendas_nao_consulta_itens(self):
         class EmptySupabase(FakeSupabase):

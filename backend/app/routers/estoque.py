@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
@@ -12,6 +13,10 @@ from app.services.vendas_dashboard import montar_dashboard_vendas
 router = APIRouter()
 
 MAX_PEDIDO_PDF_BYTES = 10 * 1024 * 1024
+try:
+    SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
+except ZoneInfoNotFoundError:
+    SAO_PAULO_TZ = timezone(timedelta(hours=-3), "America/Sao_Paulo")
 
 
 @router.get("/produtos")
@@ -24,7 +29,7 @@ def estoque_minimo_sugerido(
     produto_id: str,
     _user: dict = Depends(get_current_user),
 ):
-    hoje = datetime.now(timezone.utc).date()
+    hoje = datetime.now(SAO_PAULO_TZ).date()
     inicio = hoje - timedelta(days=PERIODO_PADRAO_DIAS - 1)
 
     try:
@@ -34,6 +39,7 @@ def estoque_minimo_sugerido(
             .table("vendas")
             .select("id, status, data_venda")
             .gte("data_venda", inicio.isoformat())
+            .lte("data_venda", hoje.isoformat())
             .neq("status", "cancelada")
             .execute()
             .data or []
@@ -45,9 +51,10 @@ def estoque_minimo_sugerido(
         itens = (
             supabase
             .table("venda_itens")
-            .select("id, venda_id, produto_id, quantidade")
+            .select("id, venda_id, produto_id, tipo, quantidade")
             .in_("venda_id", venda_ids)
             .eq("produto_id", produto_id)
+            .eq("tipo", "produto")
             .execute()
             .data or []
         )
