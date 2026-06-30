@@ -1,16 +1,20 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProductDetailsModal, type Produto } from '../ProductDetailsModal'
 
-const { mockDeleteEq, mockRpc, mockUpdate, mockUpdateEq } = vi.hoisted(() => ({
+const { mockDeleteEq, mockRpc, mockUpdate, mockUpdateEq, mockGetSession } = vi.hoisted(() => ({
   mockDeleteEq: vi.fn(),
   mockRpc: vi.fn(),
   mockUpdate: vi.fn(),
   mockUpdateEq: vi.fn(),
+  mockGetSession: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
+    auth: {
+      getSession: mockGetSession,
+    },
     rpc: mockRpc,
     from: vi.fn(() => ({
       update: mockUpdate,
@@ -45,6 +49,22 @@ describe('ProductDetailsModal', () => {
     vi.clearAllMocks()
     mockUpdate.mockReturnValue({ eq: mockUpdateEq })
     mockUpdateEq.mockResolvedValue({ error: null })
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'jwt-produto' } },
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        produto_id: 'p1',
+        periodo_dias: 90,
+        unidades_vendidas: 12,
+        media_diaria: 0.13,
+        dias_reposicao: 15,
+        margem_seguranca: 0.3,
+        estoque_minimo_sugerido: 3,
+        tem_dados: true,
+      }),
+    }))
 
     HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
       this.open = true
@@ -52,6 +72,83 @@ describe('ProductDetailsModal', () => {
     HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
       this.open = false
     })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('mostra sugestao de estoque minimo por vendas', async () => {
+    render(
+      <ProductDetailsModal
+        open
+        produto={produto}
+        categorias={[{ id: 'c1', nome: 'Masculino' }]}
+        fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+        onDeleted={vi.fn()}
+      />
+    )
+
+    const heading = await screen.findByText(/sugestao por vendas/i)
+    const blocoSugestao = heading.closest('[data-testid="sugestao-estoque-minimo"]')
+    expect(blocoSugestao).not.toBeNull()
+    expect(within(blocoSugestao as HTMLElement).getByText('3')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/estoque/produtos/p1/estoque-minimo-sugerido'),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer jwt-produto' }),
+      })
+    )
+  })
+
+  it('usa sugestao para preencher estoque minimo no modo edicao', async () => {
+    render(
+      <ProductDetailsModal
+        open
+        produto={produto}
+        categorias={[{ id: 'c1', nome: 'Masculino' }]}
+        fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+        onDeleted={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /usar sugestao/i }))
+
+    expect(screen.getByLabelText(/estoque minimo/i)).toHaveValue(3)
+  })
+
+  it('mostra estado sem dados quando nao ha vendas suficientes', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        produto_id: 'p1',
+        periodo_dias: 90,
+        unidades_vendidas: 0,
+        media_diaria: 0,
+        dias_reposicao: 15,
+        margem_seguranca: 0.3,
+        estoque_minimo_sugerido: null,
+        tem_dados: false,
+      }),
+    } as Response)
+
+    render(
+      <ProductDetailsModal
+        open
+        produto={produto}
+        categorias={[{ id: 'c1', nome: 'Masculino' }]}
+        fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+        onDeleted={vi.fn()}
+      />
+    )
+
+    expect(await screen.findByText(/ainda sem vendas suficientes/i)).toBeInTheDocument()
   })
 
   it('mostra erro quando o banco bloqueia a exclusao do produto', async () => {

@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Modal } from './Modal'
 import { Button, Input, Select } from './FormControls'
 import { Icon } from './Icon'
+
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
 
 interface Categoria { id: string; nome: string }
 interface Fornecedor { id: string; nome: string }
@@ -23,6 +25,16 @@ export interface Produto {
   fornecedores?: { nome: string } | null
 }
 
+interface EstoqueMinimoSugestao {
+  produto_id: string
+  periodo_dias: number
+  unidades_vendidas: number
+  media_diaria: number
+  dias_reposicao: number
+  margem_seguranca: number
+  estoque_minimo_sugerido: number | null
+  tem_dados: boolean
+}
 interface ProductDetailsModalProps {
   open: boolean
   produto: Produto | null
@@ -52,6 +64,9 @@ export function ProductDetailsModal({
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [sugestao, setSugestao] = useState<EstoqueMinimoSugestao | null>(null)
+  const [loadingSugestao, setLoadingSugestao] = useState(false)
+  const [sugestaoError, setSugestaoError] = useState<string | null>(null)
   const [form, setForm] = useState({
     nome: '',
     volume_ml: '',
@@ -60,6 +75,47 @@ export function ProductDetailsModal({
     fornecedor_id: '',
     estoque_minimo: '0',
   })
+
+  useEffect(() => {
+    if (!open || !produto) {
+      setSugestao(null)
+      setSugestaoError(null)
+      setLoadingSugestao(false)
+      return
+    }
+
+    let cancelled = false
+    const produtoId = produto.id
+
+    async function loadSugestao() {
+      setLoadingSugestao(true)
+      setSugestao(null)
+      setSugestaoError(null)
+      try {
+        const { data } = await supabase.auth.getSession()
+        const token = data.session?.access_token
+        if (!token) throw new Error('Sessao expirada')
+
+        const response = await fetch(`${API_URL}/api/estoque/produtos/${produtoId}/estoque-minimo-sugerido`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!response.ok) throw new Error('Erro ao carregar sugestao')
+
+        const payload = await response.json() as EstoqueMinimoSugestao
+        if (!cancelled) setSugestao(payload)
+      } catch {
+        if (!cancelled) setSugestaoError('Nao foi possivel carregar sugestao por vendas.')
+      } finally {
+        if (!cancelled) setLoadingSugestao(false)
+      }
+    }
+
+    loadSugestao()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, produto?.id])
 
   if (!produto) return null
 
@@ -162,7 +218,15 @@ export function ProductDetailsModal({
             onChange={(e) => setForm({ ...form, preco_referencia: e.target.value })}
           />
           <Select label="Fornecedor" options={[{ value: '', label: '—' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))]} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
-          <Input label="Estoque mínimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
+          <div className="flex flex-col gap-2">
+            <Input label="Estoque minimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
+            <SugestaoEstoqueMinimo
+              sugestao={sugestao}
+              loading={loadingSugestao}
+              error={sugestaoError}
+              onUse={(valor) => setForm({ ...form, estoque_minimo: String(valor) })}
+            />
+          </div>
           <div className="flex justify-end gap-3 mt-2">
             <Button type="button" variant="secondary" onClick={() => setEditing(false)}>Cancelar</Button>
             <Button type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
@@ -204,6 +268,13 @@ export function ProductDetailsModal({
                 <div>
                   <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Estoque mínimo</div>
                   <div className="font-mono text-2xl text-text-2">{produto.estoque_minimo}</div>
+                </div>
+                <div className="col-span-2">
+                  <SugestaoEstoqueMinimo
+                    sugestao={sugestao}
+                    loading={loadingSugestao}
+                    error={sugestaoError}
+                  />
                 </div>
                 {produto.preco_referencia != null && (
                   <div>
@@ -290,5 +361,61 @@ export function ProductDetailsModal({
         </div>
       )}
     </Modal>
+  )
+}
+function SugestaoEstoqueMinimo({
+  sugestao,
+  loading,
+  error,
+  onUse,
+}: {
+  sugestao: EstoqueMinimoSugestao | null
+  loading: boolean
+  error: string | null
+  onUse?: (valor: number) => void
+}) {
+  if (loading) {
+    return (
+      <div data-testid="sugestao-estoque-minimo" className="rounded-lg border border-line bg-raise/40 px-3 py-2 text-xs text-muted">
+        Calculando sugestao por vendas...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div data-testid="sugestao-estoque-minimo" className="rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">
+        {error}
+      </div>
+    )
+  }
+
+  if (!sugestao) return null
+
+  if (!sugestao.tem_dados || sugestao.estoque_minimo_sugerido == null) {
+    return (
+      <div data-testid="sugestao-estoque-minimo" className="rounded-lg border border-line bg-raise/40 px-3 py-2 text-xs text-muted">
+        Ainda sem vendas suficientes para sugerir.
+      </div>
+    )
+  }
+
+  return (
+    <div data-testid="sugestao-estoque-minimo" className="flex items-center justify-between gap-3 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2">
+      <div>
+        <div className="text-xs uppercase tracking-wider text-gold">Sugestao por vendas</div>
+        <div className="text-xs text-muted">
+          {sugestao.unidades_vendidas} un. em {sugestao.periodo_dias} dias, reposicao de {sugestao.dias_reposicao} dias
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-lg text-text">{sugestao.estoque_minimo_sugerido}</span>
+        {onUse && (
+          <Button type="button" size="sm" variant="secondary" onClick={() => onUse(sugestao.estoque_minimo_sugerido!)}>
+            Usar sugestao
+          </Button>
+        )}
+      </div>
+    </div>
   )
 }
