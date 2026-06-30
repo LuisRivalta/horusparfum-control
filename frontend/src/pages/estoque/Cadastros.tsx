@@ -43,7 +43,8 @@ export function Cadastros() {
       <h1 className="text-4xl tracking-tight mt-1.5">Cadastros</h1>
 
       <div className="flex items-center justify-between gap-4 flex-wrap mt-5">
-        <div className="relative inline-flex bg-surface-2 border border-line-2 rounded-xl p-1">
+        <div className="w-full overflow-x-auto pb-1">
+          <div className="relative inline-flex min-w-max bg-surface-2 border border-line-2 rounded-xl p-1">
           <span
             className="absolute top-1 bottom-1 left-1 rounded-lg bg-gold shadow-[0_3px_14px_rgba(201,168,76,0.34)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={{ width: TAB_WIDTH, transform: `translateX(${activeIndex * TAB_WIDTH}px)` }}
@@ -72,6 +73,7 @@ export function Cadastros() {
               </NavLink>
             )
           })}
+          </div>
         </div>
 
         <div ref={setActionSlot} className="flex items-center gap-2" />
