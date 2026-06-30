@@ -1,5 +1,23 @@
 # Logs — Histórico de Sessões
 
+## 2026-06-30 — Sessão 29: Estoque mínimo sugerido por vendas
+
+**Responsável:** Luis + Codex (subagent-driven development)
+
+### O que foi feito
+- Criado cálculo backend para sugestão de `estoque_minimo` baseada em vendas reais dos últimos 90 dias.
+- Adicionado endpoint protegido `GET /api/estoque/produtos/{produto_id}/estoque-minimo-sugerido`.
+- O cálculo usa 15 dias de reposição e 30% de margem, ignora vendas canceladas, ignora itens de decant e limita a janela pela data local de São Paulo.
+- Modal de produto passou a exibir a sugestão, estado sem dados e erro de carregamento.
+- Botão `Usar sugestao` preenche o campo `Estoque minimo` no modo edição sem salvar automaticamente.
+- Sem migração de banco.
+
+### Validação
+- Backend: `.venv\Scripts\python.exe -m unittest discover tests -v` — 26 testes passando.
+- Frontend: `npm run test:run` — 155 testes passando.
+- Frontend: `npm run build` — build passando.
+
+---
 ## 2026-06-29 — Sessão 28: Cadastro de produto sem estoque inicial
 
 **Responsável:** Luis + Codex

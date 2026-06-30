@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-29 (Sessão 28)
+> Última atualização: 2026-06-30 (Sessão 29)
 
 ## O que já foi feito
 
@@ -158,6 +158,16 @@
     - Entradas reais continuam centralizadas em Pedidos/Confirmar chegada ou Estoque/Registrar entrada
     - Frontend-only; sem migração de banco
     - Testes: frontend completo 152/152, build frontend passando
+
+35. **Estoque mínimo sugerido por vendas (Sessão 29)**
+    - Backend `GET /api/estoque/produtos/{produto_id}/estoque-minimo-sugerido` calcula sugestão por vendas reais dos últimos 90 dias
+    - Sugestão usa 15 dias de reposição e 30% de margem de segurança, ignorando vendas canceladas e itens de decant
+    - Janela de cálculo usa data local de São Paulo e limita vendas futuras
+    - Modal de detalhes/edição do produto exibe a sugestão e permite aplicar manualmente no campo `Estoque mínimo`
+    - Sem vendas suficientes, o sistema não sugere zero artificialmente
+    - Sem migração de banco
+    - Testes: backend completo 26/26, frontend completo 155/155, build frontend passando
+
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -241,7 +251,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 152 testes frontend + 20 testes backend passando
+- 155 testes frontend + 26 testes backend passando
 
 ## Próximos passos imediatos
 
