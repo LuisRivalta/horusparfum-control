@@ -28,6 +28,14 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | ultima_compra | date | Data da última compra |
 | created_at | timestamptz | — |
 
+### `marcas`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| nome | text unique | Marca/fabricante do produto, ex: Lattafa, Armaf |
+| created_at | timestamptz | — |
+
 ### `produtos`
 
 | Coluna | Tipo | Descrição |
@@ -37,6 +45,7 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | volume_ml | int | Volume em ml |
 | categoria_id | uuid (FK → categorias) | — |
 | fornecedor_id | uuid (FK → fornecedores) | Nullable |
+| marca_id | uuid (FK → marcas) | Nullable; marca/fabricante do produto |
 | estoque_atual | int | Unidades em estoque |
 | estoque_minimo | int | Alerta quando atual < mínimo |
 | foto_url | text | URL da imagem (Supabase Storage) |
@@ -227,6 +236,7 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 ```
 categorias ←── produtos
 fornecedores ←── produtos
+marcas ←── produtos
 produtos ←── movimentacoes
 fornecedores ←── pedidos ←── pedido_itens ──→ produtos
 pedidos ←── divergencias ──→ fornecedores
@@ -287,3 +297,5 @@ Migração de vendas: `supabase/migrations/20260616_vendas.sql` (tabelas `canais
 Correção de cancelamento de decant: `supabase/migrations/20260622142718_fix_cancelar_venda_decant_fk.sql` atualiza `cancelar_venda` para limpar `venda_itens.decant_id` antes de apagar o registro em `decants`, evitando violação de FK no estorno de vendas de decant. Aplicar manualmente no Supabase SQL Editor.
 
 Migração de consumo de decant não-faturável: `supabase/migrations/20260617_consumo_decant.sql` (colunas `classificacao`, `custo`, `custo_embalagem` em `decants`; estende constraint `transacoes_origem_check` para incluir `'decant'`; RPC atômica `registrar_consumo_decant(p_frasco_id, p_ml, p_classificacao, p_custo_embalagem, p_responsavel)`). Pré-requisito: migração de vendas aplicada. Aplicar manualmente no Supabase SQL Editor.
+
+Migração de marcas: `supabase/migrations/20260630_marcas_produtos.sql` (tabela `marcas`, coluna nullable `produtos.marca_id`, índice e RLS para `authenticated`). Aplicar manualmente no Supabase SQL Editor.
