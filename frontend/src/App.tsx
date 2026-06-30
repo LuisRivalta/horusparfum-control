@@ -13,6 +13,7 @@ import { EstEstoque } from '@/pages/estoque/EstoqueView'
 import { EstPedidos } from '@/pages/estoque/Pedidos'
 import { EstCategorias } from '@/pages/estoque/Categorias'
 import { EstFornecedores } from '@/pages/estoque/Fornecedores'
+import { EstMarcas } from '@/pages/estoque/Marcas'
 import { EstRelatorios } from '@/pages/estoque/Relatorios'
 import { EstDivergencias } from '@/pages/estoque/Divergencias'
 import { EstDecants } from '@/pages/estoque/Decants'
@@ -41,6 +42,7 @@ export function App() {
           <Route path="produtos" element={<EstProdutos />} />
           <Route path="categorias" element={<EstCategorias />} />
           <Route path="fornecedores" element={<EstFornecedores />} />
+          <Route path="marcas" element={<EstMarcas />} />
         </Route>
         <Route path="/estoque/produtos" element={<Navigate to="/estoque/cadastros/produtos" replace />} />
         <Route path="/estoque/categorias" element={<Navigate to="/estoque/cadastros/categorias" replace />} />

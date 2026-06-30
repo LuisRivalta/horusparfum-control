@@ -19,6 +19,7 @@ function renderAt(path: string) {
           <Route path="produtos" element={<div>stub-produtos</div>} />
           <Route path="categorias" element={<div>stub-categorias</div>} />
           <Route path="fornecedores" element={<div>stub-fornecedores</div>} />
+          <Route path="marcas" element={<div>stub-marcas</div>} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -26,21 +27,22 @@ function renderAt(path: string) {
 }
 
 describe('Cadastros (layout de abas)', () => {
-  it('renderiza o título e as três abas', () => {
+  it('renderiza o titulo e as quatro abas', () => {
     renderAt('/estoque/cadastros/produtos')
     expect(screen.getByText('Cadastros')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /produtos/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /categorias/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /fornecedores/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /marcas/i })).toBeInTheDocument()
   })
 
   it('marca a aba da rota atual como ativa e renderiza a filha', () => {
-    renderAt('/estoque/cadastros/categorias')
-    expect(screen.getByRole('link', { name: /categorias/i })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByText('stub-categorias')).toBeInTheDocument()
+    renderAt('/estoque/cadastros/marcas')
+    expect(screen.getByRole('link', { name: /marcas/i })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByText('stub-marcas')).toBeInTheDocument()
   })
 
-  it('exibe a contagem nas abas após carregar', async () => {
+  it('exibe a contagem nas abas apos carregar', async () => {
     renderAt('/estoque/cadastros/produtos')
     await waitFor(() => expect(screen.getAllByText('5').length).toBeGreaterThan(0))
   })

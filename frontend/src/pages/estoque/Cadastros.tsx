@@ -6,18 +6,21 @@ import { cn } from '@/lib/utils'
 
 interface Aba { id: string; label: string; icon: string; path: string; tabela: string }
 
+const TAB_WIDTH = 150
+
 const ABAS: Aba[] = [
   { id: 'produtos', label: 'Produtos', icon: 'tag', path: '/estoque/cadastros/produtos', tabela: 'produtos' },
   { id: 'categorias', label: 'Categorias', icon: 'grid', path: '/estoque/cadastros/categorias', tabela: 'categorias' },
   { id: 'fornecedores', label: 'Fornecedores', icon: 'supplier', path: '/estoque/cadastros/fornecedores', tabela: 'fornecedores' },
+  { id: 'marcas', label: 'Marcas', icon: 'tag', path: '/estoque/cadastros/marcas', tabela: 'marcas' },
 ]
 
 export function Cadastros() {
   const location = useLocation()
   const [actionSlot, setActionSlot] = useState<HTMLDivElement | null>(null)
-  const [contagens, setContagens] = useState<Record<string, number | null>>({
-    produtos: null, categorias: null, fornecedores: null,
-  })
+  const [contagens, setContagens] = useState<Record<string, number | null>>(
+    Object.fromEntries(ABAS.map((aba) => [aba.id, null]))
+  )
 
   useEffect(() => {
     ABAS.forEach((aba) => {
@@ -42,8 +45,8 @@ export function Cadastros() {
       <div className="flex items-center justify-between gap-4 flex-wrap mt-5">
         <div className="relative inline-flex bg-surface-2 border border-line-2 rounded-xl p-1">
           <span
-            className="absolute top-1 bottom-1 left-1 w-[160px] rounded-lg bg-gold shadow-[0_3px_14px_rgba(201,168,76,0.34)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            style={{ transform: `translateX(${activeIndex * 160}px)` }}
+            className="absolute top-1 bottom-1 left-1 rounded-lg bg-gold shadow-[0_3px_14px_rgba(201,168,76,0.34)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            style={{ width: TAB_WIDTH, transform: `translateX(${activeIndex * TAB_WIDTH}px)` }}
           />
           {ABAS.map((aba) => {
             const ativo = location.pathname.startsWith(aba.path)
@@ -53,9 +56,10 @@ export function Cadastros() {
                 key={aba.id}
                 to={aba.path}
                 className={cn(
-                  'relative z-10 w-[160px] flex items-center justify-center gap-2 py-2.5 text-sm rounded-lg transition-colors',
+                  'relative z-10 flex items-center justify-center gap-2 py-2.5 text-sm rounded-lg transition-colors',
                   ativo ? 'text-[#1A1407] font-semibold' : 'text-text-2 font-medium hover:text-gold'
                 )}
+                style={{ width: TAB_WIDTH }}
               >
                 <Icon name={aba.icon} size={17} />
                 {aba.label}
