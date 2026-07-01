@@ -24,14 +24,16 @@ vi.mock('@/lib/supabase', () => ({
                   {
                     id: 'p1', nome: 'Asad', volume_ml: 100, categoria_id: 'c1',
                     fornecedor_id: 'f1', estoque_atual: 8, estoque_minimo: 3,
-                    foto_url: null, created_at: '',
+                    marca_id: 'm1', foto_url: null, created_at: '',
                     categorias: { nome: 'Masculino' }, fornecedores: { nome: 'Cairo' },
+                    marcas: { nome: 'Lattafa' },
                   },
                   {
                     id: 'p2', nome: 'Lattafa', volume_ml: 50, categoria_id: 'c2',
                     fornecedor_id: 'f1', estoque_atual: 2, estoque_minimo: 5,
-                    foto_url: null, created_at: '',
+                    marca_id: 'm2', foto_url: null, created_at: '',
                     categorias: { nome: 'Unissex' }, fornecedores: { nome: 'Cairo' },
+                    marcas: { nome: 'Armaf' },
                   },
                 ],
                 error: null,
@@ -40,7 +42,14 @@ vi.mock('@/lib/supabase', () => ({
           })),
         }
       }
-      // categorias e fornecedores
+      if (table === 'marcas') {
+        return {
+          select: vi.fn(() => Promise.resolve({
+            data: [{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }],
+            error: null,
+          })),
+        }
+      }
       return { select: vi.fn(() => Promise.resolve({ data: [], error: null })) }
     }),
   },
@@ -54,7 +63,7 @@ describe('EstEstoque', () => {
   it('renderiza cards com nome e badge de quantidade', async () => {
     render(<EstEstoque />)
     await waitFor(() => expect(screen.getByText('Asad')).toBeInTheDocument())
-    expect(screen.getByText('Lattafa')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Lattafa/ })).toBeInTheDocument()
     expect(screen.getByText('8')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
   })
@@ -66,7 +75,19 @@ describe('EstEstoque', () => {
       target: { value: 'Lattafa' },
     })
     expect(screen.queryByText('Asad')).not.toBeInTheDocument()
-    expect(screen.getByText('Lattafa')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Lattafa/ })).toBeInTheDocument()
+  })
+
+  it('filtra cards por marca', async () => {
+    render(<EstEstoque />)
+    await waitFor(() => expect(screen.getByText('Asad')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByDisplayValue('Marca'), {
+      target: { value: 'm2' },
+    })
+
+    expect(screen.queryByText('Asad')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Lattafa/ })).toBeInTheDocument()
   })
 
   it('mostra estado vazio quando nenhum produto em estoque', async () => {

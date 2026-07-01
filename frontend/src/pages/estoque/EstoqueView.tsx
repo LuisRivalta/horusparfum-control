@@ -14,6 +14,7 @@ interface Produto {
   volume_ml: number | null
   categoria_id: string | null
   fornecedor_id: string | null
+  marca_id: string | null
   estoque_atual: number
   estoque_minimo: number
   foto_url: string | null
@@ -21,10 +22,12 @@ interface Produto {
   created_at: string
   categorias?: { nome: string } | null
   fornecedores?: { nome: string } | null
+  marcas?: { nome: string } | null
 }
 
 interface Categoria { id: string; nome: string }
 interface Fornecedor { id: string; nome: string }
+interface Marca { id: string; nome: string }
 
 const BADGE_CLASSES: Record<SituacaoEstoque, string> = {
   ok: 'bg-gold text-[#1A1407]',
@@ -36,11 +39,13 @@ export function EstEstoque() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
+  const [marcas, setMarcas] = useState<Marca[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterCategoria, setFilterCategoria] = useState('')
   const [filterFornecedor, setFilterFornecedor] = useState('')
+  const [filterMarca, setFilterMarca] = useState('')
   const [ordem, setOrdem] = useState<OrdemEstoque>('qty_desc')
   const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null)
   const [saidaOpen, setSaidaOpen] = useState(false)
@@ -51,15 +56,17 @@ export function EstEstoque() {
   async function carregar() {
     setLoading(true)
     setErro(null)
-    const [{ data: prods, error: e1 }, { data: cats }, { data: forns }] = await Promise.all([
-      supabase.from('produtos').select('*, categorias(nome), fornecedores(nome)').gt('estoque_atual', 0),
+    const [{ data: prods, error: e1 }, { data: cats }, { data: forns }, { data: marcasData }] = await Promise.all([
+      supabase.from('produtos').select('*, categorias(nome), fornecedores(nome), marcas(nome)').gt('estoque_atual', 0),
       supabase.from('categorias').select('id, nome'),
       supabase.from('fornecedores').select('id, nome'),
+      supabase.from('marcas').select('id, nome'),
     ])
     if (e1) { setErro(e1.message); setLoading(false); return }
     setProdutos((prods as Produto[]) ?? [])
     setCategorias(cats ?? [])
     setFornecedores(forns ?? [])
+    setMarcas(marcasData ?? [])
     setLoading(false)
   }
 
@@ -70,12 +77,13 @@ export function EstEstoque() {
       if (search && !p.nome.toLowerCase().includes(search.toLowerCase())) return false
       if (filterCategoria && p.categoria_id !== filterCategoria) return false
       if (filterFornecedor && p.fornecedor_id !== filterFornecedor) return false
+      if (filterMarca && p.marca_id !== filterMarca) return false
       return true
     }),
     ordem
   )
 
-  const temFiltros = !!(search || filterCategoria || filterFornecedor)
+  const temFiltros = !!(search || filterCategoria || filterFornecedor || filterMarca)
 
   return (
     <>
@@ -100,6 +108,7 @@ export function EstEstoque() {
                   setSearch('')
                   setFilterCategoria('')
                   setFilterFornecedor('')
+                  setFilterMarca('')
                 }}
                 className="text-xs text-muted hover:text-text transition-colors cursor-pointer"
               >
@@ -150,6 +159,24 @@ export function EstEstoque() {
             value={filterFornecedor}
             onChange={(e) => setFilterFornecedor(e.target.value)}
           />
+          <div className="relative">
+            <select
+              className="w-full appearance-none px-3.5 py-2.5 pr-9 rounded-lg border border-line bg-surface-2 text-text text-sm cursor-pointer transition-all duration-200 focus:outline-none focus:border-gold/60 focus:shadow-[0_0_0_3px_rgba(201,168,76,0.12)] hover:border-line-2"
+              value={filterMarca}
+              onChange={(e) => setFilterMarca(e.target.value)}
+            >
+              <option value="">Marca</option>
+              {marcas.map((m) => (
+                <option key={m.id} value={m.id}>{m.nome}</option>
+              ))}
+            </select>
+            <svg
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+              width="12" height="12" viewBox="0 0 12 12" fill="none"
+            >
+              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
           <Select
             label=""
             options={[
@@ -234,6 +261,7 @@ export function EstEstoque() {
         produto={selectedProduto}
         categorias={categorias}
         fornecedores={fornecedores}
+        marcas={marcas}
         onClose={() => setSelectedProduto(null)}
         onUpdated={carregar}
         onDeleted={carregar}
