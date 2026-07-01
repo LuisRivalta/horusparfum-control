@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-30 (Sessão 29)
+> Última atualização: 2026-07-01 (Sessão 30)
 
 ## O que já foi feito
 
@@ -169,6 +169,14 @@
     - Testes: backend completo 26/26, frontend completo 155/155, build frontend passando
 
 
+36. **Marcas em produtos (Sessão 30)**
+    - Nova tabela marcas e coluna nullable produtos.marca_id
+    - Cadastros ganhou aba Marcas com criação simples
+    - Cadastro e edição de produto permitem marca opcional
+    - Catálogo e Estoque filtram por marca
+    - Migração: supabase/migrations/20260630_marcas_produtos.sql — aplicar manualmente no Supabase SQL Editor antes de usar em produção
+    - Testes: frontend completo 162/162, backend completo 26/26, build frontend passando
+
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -252,7 +260,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 155 testes frontend + 26 testes backend passando
+- 162 testes frontend + 26 testes backend passando
 
 ## Próximos passos imediatos
 

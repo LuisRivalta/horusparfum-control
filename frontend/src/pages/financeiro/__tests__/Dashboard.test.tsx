@@ -1,5 +1,5 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { FinDashboard } from '../Dashboard'
 
 // Mockar os gráficos: em jsdom o ResponsiveContainer não tem largura.
@@ -26,7 +26,15 @@ vi.mock('@/lib/supabase', () => ({
 }))
 
 describe('FinDashboard', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-06-20T12:00:00'))
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
   it('mostra saldo histórico (entradas - saídas de tudo)', async () => {
     render(<FinDashboard />)

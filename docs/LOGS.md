@@ -1,6 +1,28 @@
 # Logs — Histórico de Sessões
 
 
+## 2026-07-01 — Sessão 30: Marcas em produtos
+
+**Responsável:** Luis + Codex (subagent-driven development)
+
+### O que foi feito
+- Criada migration para tabela marcas e coluna opcional produtos.marca_id.
+- Adicionada aba Marcas em Cadastros.
+- Produto novo e edição de produto passaram a aceitar marca opcional.
+- Catálogo e Estoque ganharam filtro por marca.
+- docs/BANCO.md atualizado com a nova tabela e relação.
+- Corrigido teste do dashboard financeiro para fixar a data de Junho de 2026 e não depender do mês atual.
+
+### Validação
+- Frontend: npm run test:run — 162 testes passando.
+- Frontend: npm run build — build passando.
+- Backend: .venv\Scripts\python.exe -m unittest discover tests -v — 26 testes passando.
+
+### Pendência operacional
+- Aplicar supabase/migrations/20260630_marcas_produtos.sql no Supabase SQL Editor antes de usar a feature em produção.
+
+---
+
 ## 2026-06-30 — Sessão 29: Estoque mínimo sugerido por vendas
 
 **Responsável:** Luis + Codex (subagent-driven development)
