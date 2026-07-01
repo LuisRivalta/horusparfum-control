@@ -1,6 +1,19 @@
 # Logs — Histórico de Sessões
 
 
+## 2026-07-01 — Sessão 31: Ajuste de prioridades do handoff
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Removida a exportação PDF do relatório de giro de estoque dos próximos passos imediatos.
+- Removida a decisão pendente sobre formato de PDF do relatório de giro.
+
+### Validação
+- Mudança apenas documental; testes não executados.
+
+---
+
 ## 2026-07-01 — Sessão 30: Marcas em produtos
 
 **Responsável:** Luis + Codex (subagent-driven development)

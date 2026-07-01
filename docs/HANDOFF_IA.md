@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-01 (Sessão 30)
+> Última atualização: 2026-07-01 (Sessão 31)
 
 ## O que já foi feito
 
@@ -266,8 +266,7 @@
 
 1. Remover policies temporárias de `anon` (se foram criadas para testes)
 2. Dashboard estoque com dados reais (estoque baixo e reposição)
-3. Exportação PDF do relatório de giro de estoque
-4. Evolução da importação por PDF: OCR/LLM fallback para layouts diferentes, se necessário
+3. Evolução da importação por PDF: OCR/LLM fallback para layouts diferentes, se necessário
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
@@ -276,7 +275,7 @@
 
 ## Decisões pendentes
 
-- Definir se o relatório de giro terá PDF simples via impressão do navegador (como financeiro) ou geração dedicada no backend/frontend
+- Nenhuma decisão pendente registrada no momento.
 
 ## Para a IA
 
