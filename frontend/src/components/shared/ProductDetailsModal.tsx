@@ -142,15 +142,19 @@ export function ProductDetailsModal({
     e.preventDefault()
     setSaving(true)
     try {
-      const { error } = await supabase.from('produtos').update({
+      const payload: Record<string, string | number | null> = {
         nome: form.nome,
         volume_ml: form.volume_ml ? Number(form.volume_ml) : null,
         preco_referencia: form.preco_referencia ? Number(form.preco_referencia) : null,
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
-        marca_id: form.marca_id || null,
         estoque_minimo: Number(form.estoque_minimo),
-      }).eq('id', produto!.id)
+      }
+      if ('marca_id' in produto!) {
+        Object.assign(payload, { marca_id: form.marca_id || null })
+      }
+
+      const { error } = await supabase.from('produtos').update(payload).eq('id', produto!.id)
       if (!error) {
         onUpdated()
         setEditing(false)

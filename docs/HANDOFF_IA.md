@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-06-30 (Sessão 29)
+> Última atualização: 2026-07-01 (Sessão 30)
 
 ## O que já foi feito
 
@@ -167,6 +167,12 @@
     - Sem vendas suficientes, o sistema não sugere zero artificialmente
     - Sem migração de banco
     - Testes: backend completo 26/26, frontend completo 155/155, build frontend passando
+
+36. **Marca preservada em callers legados (Sessão 30)**
+    - `ProductDetailsModal` não envia `marca_id` ao salvar produto recebido de caller legado sem essa propriedade, evitando limpar marca inadvertidamente
+    - Callers que enviam `marca_id` continuam podendo editar ou limpar marca explicitamente
+    - Frontend-only; sem migração de banco
+    - Teste focado do modal 9/9 e build frontend passando
 
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba

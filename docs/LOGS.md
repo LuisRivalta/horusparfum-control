@@ -1,5 +1,20 @@
 # Logs — Histórico de Sessões
 
+## 2026-07-01 — Sessão 30: Preservar marca em callers legados
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Corrigido `ProductDetailsModal` para não enviar `marca_id` no payload de update quando o produto recebido não possui a propriedade `marca_id`.
+- Mantido o comportamento de edição de marca para callers que já enviam `marca_id` no produto.
+- Adicionado teste de regressão cobrindo produto legado sem `marca_id` e sem `marcas`.
+
+### Validação
+- RED: `npm run test:run -- src/components/shared/__tests__/ProductDetailsModal.test.tsx` — falhou porque o payload ainda continha `marca_id`.
+- GREEN: `npm run test:run -- src/components/shared/__tests__/ProductDetailsModal.test.tsx` — 9 testes passando.
+- Frontend: `npm run build` — build passando, com aviso conhecido de chunk grande.
+
+---
 ## 2026-06-30 — Sessão 29: Estoque mínimo sugerido por vendas
 
 **Responsável:** Luis + Codex (subagent-driven development)

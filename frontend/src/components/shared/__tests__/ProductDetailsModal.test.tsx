@@ -246,6 +246,30 @@ describe('ProductDetailsModal', () => {
       estoque_atual: expect.anything(),
     }))
   })
+  it('nao envia marca_id ao salvar produto recebido sem suporte a marca', async () => {
+    const onUpdated = vi.fn()
+    const { marca_id, marcas, ...produtoSemMarcaField } = produto
+
+    render(
+      <ProductDetailsModal
+        open
+        produto={produtoSemMarcaField}
+        categorias={[{ id: 'c1', nome: 'Masculino' }]}
+        fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        onClose={vi.fn()}
+        onUpdated={onUpdated}
+        onDeleted={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Asad Legacy' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(onUpdated).toHaveBeenCalled())
+    const payload = mockUpdate.mock.calls.at(-1)?.[0] as Record<string, unknown>
+    expect(Object.keys(payload)).not.toContain('marca_id')
+  })
   it('exibe a marca no modo leitura', async () => {
     render(
       <ProductDetailsModal
