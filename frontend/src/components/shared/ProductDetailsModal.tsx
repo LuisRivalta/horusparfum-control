@@ -18,7 +18,7 @@ export interface Produto {
   preco_referencia: number | null
   categoria_id: string | null
   fornecedor_id: string | null
-  marca_id: string | null
+  marca_id?: string | null
   estoque_atual: number
   estoque_minimo: number
   foto_url: string | null
