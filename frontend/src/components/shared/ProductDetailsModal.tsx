@@ -9,6 +9,7 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replac
 
 interface Categoria { id: string; nome: string }
 interface Fornecedor { id: string; nome: string }
+interface Marca { id: string; nome: string }
 
 export interface Produto {
   id: string
@@ -17,12 +18,14 @@ export interface Produto {
   preco_referencia: number | null
   categoria_id: string | null
   fornecedor_id: string | null
+  marca_id: string | null
   estoque_atual: number
   estoque_minimo: number
   foto_url: string | null
   created_at: string
   categorias?: { nome: string } | null
   fornecedores?: { nome: string } | null
+  marcas?: { nome: string } | null
 }
 
 interface EstoqueMinimoSugestao {
@@ -40,6 +43,7 @@ interface ProductDetailsModalProps {
   produto: Produto | null
   categorias: Categoria[]
   fornecedores: Fornecedor[]
+  marcas?: Marca[]
   onClose: () => void
   onUpdated: () => void
   onDeleted: () => void
@@ -52,6 +56,7 @@ export function ProductDetailsModal({
   produto,
   categorias,
   fornecedores,
+  marcas = [],
   onClose,
   onUpdated,
   onDeleted,
@@ -73,6 +78,7 @@ export function ProductDetailsModal({
     preco_referencia: '',
     categoria_id: '',
     fornecedor_id: '',
+    marca_id: '',
     estoque_minimo: '0',
   })
 
@@ -126,6 +132,7 @@ export function ProductDetailsModal({
       preco_referencia: produto!.preco_referencia != null ? String(produto!.preco_referencia) : '',
       categoria_id: produto!.categoria_id ?? '',
       fornecedor_id: produto!.fornecedor_id ?? '',
+      marca_id: produto!.marca_id ?? '',
       estoque_minimo: produto!.estoque_minimo.toString(),
     })
     setEditing(true)
@@ -141,6 +148,7 @@ export function ProductDetailsModal({
         preco_referencia: form.preco_referencia ? Number(form.preco_referencia) : null,
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
+        marca_id: form.marca_id || null,
         estoque_minimo: Number(form.estoque_minimo),
       }).eq('id', produto!.id)
       if (!error) {
@@ -218,6 +226,7 @@ export function ProductDetailsModal({
             onChange={(e) => setForm({ ...form, preco_referencia: e.target.value })}
           />
           <Select label="Fornecedor" options={[{ value: '', label: '—' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))]} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
+          <Select label="Marca" options={[{ value: '', label: '—' }, ...marcas.map(m => ({ value: m.id, label: m.nome }))]} value={form.marca_id} onChange={(e) => setForm({ ...form, marca_id: e.target.value })} />
           <div className="flex flex-col gap-2">
             <Input label="Estoque minimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
             <SugestaoEstoqueMinimo
@@ -258,6 +267,10 @@ export function ProductDetailsModal({
                 <div>
                   <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Fornecedor</div>
                   <div className="text-text-2">{produto.fornecedores?.nome || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Marca</div>
+                  <div className="text-text-2">{produto.marcas?.nome || '—'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Estoque atual</div>

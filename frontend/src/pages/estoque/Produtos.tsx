@@ -17,12 +17,14 @@ interface Produto {
   preco_referencia: number | null
   categoria_id: string | null
   fornecedor_id: string | null
+  marca_id: string | null
   estoque_atual: number
   estoque_minimo: number
   foto_url: string | null
   created_at: string
   categorias?: { nome: string } | null
   fornecedores?: { nome: string } | null
+  marcas?: { nome: string } | null
 }
 
 interface Categoria {
@@ -35,10 +37,16 @@ interface Fornecedor {
   nome: string
 }
 
+interface Marca {
+  id: string
+  nome: string
+}
+
 export function EstProdutos() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
+  const [marcas, setMarcas] = useState<Marca[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [fotoFile, setFotoFile] = useState<File | null>(null)
@@ -50,6 +58,7 @@ export function EstProdutos() {
   const [search, setSearch] = useState('')
   const [filterCategoria, setFilterCategoria] = useState('')
   const [filterFornecedor, setFilterFornecedor] = useState('')
+  const [filterMarca, setFilterMarca] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null)
   const [saidaOpen, setSaidaOpen] = useState(false)
@@ -59,6 +68,7 @@ export function EstProdutos() {
     if (search && !p.nome.toLowerCase().includes(search.toLowerCase())) return false
     if (filterCategoria && p.categoria_id !== filterCategoria) return false
     if (filterFornecedor && p.fornecedor_id !== filterFornecedor) return false
+    if (filterMarca && p.marca_id !== filterMarca) return false
     return true
   })
 
@@ -68,19 +78,22 @@ export function EstProdutos() {
     preco_referencia: '',
     categoria_id: '',
     fornecedor_id: '',
+    marca_id: '',
     estoque_minimo: '0',
   })
 
   async function fetchData() {
     setLoading(true)
-    const [{ data: prods }, { data: cats }, { data: forns }] = await Promise.all([
-      supabase.from('produtos').select('*, categorias(nome), fornecedores(nome)').order('created_at', { ascending: false }),
+    const [{ data: prods }, { data: cats }, { data: forns }, { data: marcasData }] = await Promise.all([
+      supabase.from('produtos').select('*, categorias(nome), fornecedores(nome), marcas(nome)').order('created_at', { ascending: false }),
       supabase.from('categorias').select('id, nome'),
       supabase.from('fornecedores').select('id, nome'),
+      supabase.from('marcas').select('id, nome').order('nome'),
     ])
     setProdutos(prods || [])
     setCategorias(cats || [])
     setFornecedores(forns || [])
+    setMarcas(marcasData || [])
     setLoading(false)
   }
 
@@ -165,12 +178,13 @@ export function EstProdutos() {
         preco_referencia: form.preco_referencia ? Number(form.preco_referencia) : null,
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
+        marca_id: form.marca_id || null,
         estoque_atual: 0,
         estoque_minimo: Number(form.estoque_minimo),
         foto_url,
       })
 
-      setForm({ nome: '', volume_ml: '', preco_referencia: '', categoria_id: '', fornecedor_id: '', estoque_minimo: '0' })
+      setForm({ nome: '', volume_ml: '', preco_referencia: '', categoria_id: '', fornecedor_id: '', marca_id: '', estoque_minimo: '0' })
       clearFoto()
       setModalOpen(false)
       fetchData()
@@ -219,10 +233,16 @@ export function EstProdutos() {
           value={filterFornecedor}
           onChange={(e) => setFilterFornecedor(e.target.value)}
         />
-        {(search || filterCategoria || filterFornecedor) && (
+        <Select
+          label=""
+          options={[{ value: '', label: 'Marca' }, ...marcas.map(m => ({ value: m.id, label: m.nome }))]}
+          value={filterMarca}
+          onChange={(e) => setFilterMarca(e.target.value)}
+        />
+        {(search || filterCategoria || filterFornecedor || filterMarca) && (
           <button
             type="button"
-            onClick={() => { setSearch(''); setFilterCategoria(''); setFilterFornecedor('') }}
+            onClick={() => { setSearch(''); setFilterCategoria(''); setFilterFornecedor(''); setFilterMarca('') }}
             className="text-xs text-muted hover:text-text transition-colors cursor-pointer whitespace-nowrap"
           >
             Limpar filtros
@@ -325,6 +345,7 @@ export function EstProdutos() {
             onChange={(e) => setForm({ ...form, preco_referencia: e.target.value })}
           />
           <Select label="Fornecedor" options={fornecedores.map(f => ({ value: f.id, label: f.nome }))} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
+          <Select label="Marca" options={[{ value: '', label: '—' }, ...marcas.map(m => ({ value: m.id, label: m.nome }))]} value={form.marca_id} onChange={(e) => setForm({ ...form, marca_id: e.target.value })} />
           <Input label="Estoque mínimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
           <div className="flex justify-end gap-3 mt-2">
             <Button type="button" variant="secondary" onClick={() => { setModalOpen(false); clearFoto() }}>Cancelar</Button>
@@ -347,6 +368,7 @@ export function EstProdutos() {
         produto={selectedProduto}
         categorias={categorias}
         fornecedores={fornecedores}
+        marcas={marcas}
         onClose={() => setSelectedProduto(null)}
         onUpdated={fetchData}
         onDeleted={fetchData}

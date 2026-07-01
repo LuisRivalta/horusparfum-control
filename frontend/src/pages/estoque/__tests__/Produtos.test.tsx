@@ -38,7 +38,9 @@ vi.mock('@/lib/supabase', () => ({
             ? [{ id: 'c1', nome: 'Arabes' }]
             : table === 'fornecedores'
               ? [{ id: 'f1', nome: 'Onun' }]
-              : [],
+              : table === 'marcas'
+                ? [{ id: 'm1', nome: 'Lattafa' }]
+                : [],
           error: null,
         })),
       })),
@@ -58,6 +60,7 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
     this.open = false
   })
+
 })
 
 describe('EstProdutos', () => {
@@ -68,6 +71,7 @@ describe('EstProdutos', () => {
     await user.click(await screen.findByRole('button', { name: /novo produto/i }))
 
     expect(screen.queryByLabelText(/estoque atual/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/marca/i)).toBeInTheDocument()
 
     await user.type(screen.getByLabelText(/nome/i), 'Lattafa Asad')
     await user.clear(screen.getByLabelText(/estoque mínimo/i))
@@ -79,6 +83,23 @@ describe('EstProdutos', () => {
       nome: 'Lattafa Asad',
       estoque_atual: 0,
       estoque_minimo: 2,
+      marca_id: null,
+    })
+  })
+
+  it('permite cadastrar produto com marca opcional', async () => {
+    const user = userEvent.setup()
+    render(<EstProdutos />)
+
+    await user.click(await screen.findByRole('button', { name: /novo produto/i }))
+    await user.type(screen.getByLabelText(/nome/i), 'Lattafa Asad')
+    await user.selectOptions(screen.getByLabelText(/marca/i), 'm1')
+    await user.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(inserts).toHaveLength(1))
+    expect(inserts[0]).toMatchObject({
+      nome: 'Lattafa Asad',
+      marca_id: 'm1',
     })
   })
 })

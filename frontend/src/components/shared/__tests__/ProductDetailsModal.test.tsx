@@ -36,12 +36,14 @@ const produto: Produto = {
   preco_referencia: 120,
   categoria_id: 'c1',
   fornecedor_id: 'f1',
+  marca_id: 'm1',
   estoque_atual: 3,
   estoque_minimo: 1,
   foto_url: null,
   created_at: '2026-06-22T00:00:00Z',
   categorias: { nome: 'Masculino' },
   fornecedores: { nome: 'Cairo' },
+  marcas: { nome: 'Lattafa' },
 }
 
 describe('ProductDetailsModal', () => {
@@ -84,6 +86,7 @@ describe('ProductDetailsModal', () => {
         produto={produto}
         categorias={[{ id: 'c1', nome: 'Masculino' }]}
         fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }]}
         onClose={vi.fn()}
         onUpdated={vi.fn()}
         onDeleted={vi.fn()}
@@ -109,6 +112,7 @@ describe('ProductDetailsModal', () => {
         produto={produto}
         categorias={[{ id: 'c1', nome: 'Masculino' }]}
         fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }]}
         onClose={vi.fn()}
         onUpdated={vi.fn()}
         onDeleted={vi.fn()}
@@ -142,6 +146,7 @@ describe('ProductDetailsModal', () => {
         produto={produto}
         categorias={[{ id: 'c1', nome: 'Masculino' }]}
         fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }]}
         onClose={vi.fn()}
         onUpdated={vi.fn()}
         onDeleted={vi.fn()}
@@ -164,6 +169,7 @@ describe('ProductDetailsModal', () => {
         produto={produto}
         categorias={[{ id: 'c1', nome: 'Masculino' }]}
         fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }]}
         onClose={vi.fn()}
         onUpdated={vi.fn()}
         onDeleted={vi.fn()}
@@ -189,6 +195,7 @@ describe('ProductDetailsModal', () => {
         produto={produto}
         categorias={[{ id: 'c1', nome: 'Masculino' }]}
         fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }]}
         onClose={onClose}
         onUpdated={onUpdated}
         onDeleted={vi.fn()}
@@ -220,6 +227,7 @@ describe('ProductDetailsModal', () => {
         produto={produto}
         categorias={[{ id: 'c1', nome: 'Masculino' }]}
         fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }]}
         onClose={vi.fn()}
         onUpdated={onUpdated}
         onDeleted={vi.fn()}
@@ -236,6 +244,49 @@ describe('ProductDetailsModal', () => {
     await waitFor(() => expect(onUpdated).toHaveBeenCalled())
     expect(mockUpdate).toHaveBeenCalledWith(expect.not.objectContaining({
       estoque_atual: expect.anything(),
+    }))
+  })
+  it('exibe a marca no modo leitura', async () => {
+    render(
+      <ProductDetailsModal
+        open
+        produto={produto}
+        categorias={[{ id: 'c1', nome: 'Masculino' }]}
+        fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }]}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+        onDeleted={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Marca')).toBeInTheDocument()
+    expect(screen.getByText('Lattafa')).toBeInTheDocument()
+  })
+
+  it('edita marca do produto', async () => {
+    const onUpdated = vi.fn()
+
+    render(
+      <ProductDetailsModal
+        open
+        produto={produto}
+        categorias={[{ id: 'c1', nome: 'Masculino' }]}
+        fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }]}
+        onClose={vi.fn()}
+        onUpdated={onUpdated}
+        onDeleted={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.change(screen.getByLabelText(/marca/i), { target: { value: 'm2' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(onUpdated).toHaveBeenCalled())
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      marca_id: 'm2',
     }))
   })
 })
