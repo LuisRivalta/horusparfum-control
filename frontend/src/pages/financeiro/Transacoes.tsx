@@ -142,7 +142,7 @@ export function FinTransacoes() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova transação">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input label="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} required placeholder="Ex: Venda balcão — Kit Trio Karnak" />
+          <Input label="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} required placeholder="Descrição da transação" />
           <div className="grid grid-cols-2 gap-3">
             <Select label="Tipo" options={[{ value: 'entrada', label: 'Entrada' }, { value: 'saida', label: 'Saída' }]} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })} required />
             <Input label="Valor (R$)" type="number" step="0.01" min="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} required />

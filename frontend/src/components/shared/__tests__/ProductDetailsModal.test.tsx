@@ -246,6 +246,31 @@ describe('ProductDetailsModal', () => {
       estoque_atual: expect.anything(),
     }))
   })
+
+  it('fecha o modal e atualiza os dados depois de salvar a edicao', async () => {
+    const onUpdated = vi.fn()
+    const onClose = vi.fn()
+
+    render(
+      <ProductDetailsModal
+        open
+        produto={produto}
+        categorias={[{ id: 'c1', nome: 'Masculino' }]}
+        fornecedores={[{ id: 'f1', nome: 'Cairo' }]}
+        marcas={[{ id: 'm1', nome: 'Lattafa' }, { id: 'm2', nome: 'Armaf' }]}
+        onClose={onClose}
+        onUpdated={onUpdated}
+        onDeleted={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Produto revisado' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(onUpdated).toHaveBeenCalled())
+    expect(onClose).toHaveBeenCalled()
+  })
   it('nao envia marca_id ao salvar produto recebido sem suporte a marca', async () => {
     const onUpdated = vi.fn()
     const { marca_id, marcas, ...produtoSemMarcaField } = produto

@@ -17,6 +17,7 @@ export function EstMarcas() {
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ nome: '' })
+  const [editingMarca, setEditingMarca] = useState<Marca | null>(null)
 
   const ctx = useOutletContext<{ actionSlot: HTMLElement | null } | null>()
   const actionSlot = ctx?.actionSlot ?? null
@@ -30,18 +31,39 @@ export function EstMarcas() {
 
   useEffect(() => { fetchData() }, [])
 
+  function openCreateModal() {
+    setEditingMarca(null)
+    setForm({ nome: '' })
+    setModalOpen(true)
+  }
+
+  function openEditModal(marca: Marca) {
+    setEditingMarca(marca)
+    setForm({ nome: marca.nome })
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+    setEditingMarca(null)
+    setForm({ nome: '' })
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    await supabase.from('marcas').insert({ nome: form.nome })
-    setForm({ nome: '' })
-    setModalOpen(false)
+    if (editingMarca) {
+      await supabase.from('marcas').update({ nome: form.nome }).eq('id', editingMarca.id)
+    } else {
+      await supabase.from('marcas').insert({ nome: form.nome })
+    }
+    closeModal()
     fetchData()
   }
 
   return (
     <div className="flex flex-col gap-5">
       {actionSlot && createPortal(
-        <Button onClick={() => setModalOpen(true)}>
+        <Button onClick={openCreateModal}>
           <Icon name="plus" size={16} />
           Nova marca
         </Button>,
@@ -55,21 +77,27 @@ export function EstMarcas() {
           <p className="text-muted col-span-full text-center py-8">Nenhuma marca cadastrada</p>
         ) : (
           marcas.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 p-4 border border-line rounded-xl bg-surface hover:bg-surface-2 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-gold-dim flex items-center justify-center">
-                <Icon name="tag" size={20} gold />
+            <div key={m.id} className="flex items-center justify-between gap-3 p-4 border border-line rounded-xl bg-surface hover:bg-surface-2 transition-colors">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gold-dim flex items-center justify-center">
+                  <Icon name="tag" size={20} gold />
+                </div>
+                <span className="font-medium truncate">{m.nome}</span>
               </div>
-              <span className="font-medium">{m.nome}</span>
+              <Button type="button" variant="ghost" size="sm" aria-label={`Editar ${m.nome}`} onClick={() => openEditModal(m)}>
+                <Icon name="edit" size={15} />
+                Editar
+              </Button>
             </div>
           ))
         )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova marca">
+      <Modal open={modalOpen} onClose={closeModal} title={editingMarca ? 'Editar marca' : 'Nova marca'}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input label="Nome" value={form.nome} onChange={(e) => setForm({ nome: e.target.value })} required placeholder="Ex: Lattafa, Armaf" />
+          <Input label="Nome" value={form.nome} onChange={(e) => setForm({ nome: e.target.value })} required placeholder="Nome da marca" />
           <div className="flex justify-end gap-3 mt-2">
-            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button type="button" variant="secondary" onClick={closeModal}>Cancelar</Button>
             <Button type="submit">Salvar</Button>
           </div>
         </form>

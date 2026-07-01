@@ -72,8 +72,8 @@ export function EstCategorias() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova categoria">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required placeholder="Ex: Masculino, Feminino, Unissex" />
-          <Input label="Ícone" value={form.icone} onChange={(e) => setForm({ ...form, icone: e.target.value })} placeholder="Ex: box, grid (opcional)" />
+          <Input label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required placeholder="Nome da categoria" />
+          <Input label="Ícone" value={form.icone} onChange={(e) => setForm({ ...form, icone: e.target.value })} placeholder="Nome do ícone (opcional)" />
           <div className="flex justify-end gap-3 mt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button type="submit">Salvar</Button>

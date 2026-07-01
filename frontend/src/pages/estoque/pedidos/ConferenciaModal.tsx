@@ -167,7 +167,7 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
                     label="Observação"
                     value={item.divergenciaObs}
                     onChange={(e) => setItem(item.itemId, { divergenciaObs: e.target.value })}
-                    placeholder="Ex: caixa veio violada"
+                    placeholder="Descreva a divergência"
                   />
                 </div>
               )}

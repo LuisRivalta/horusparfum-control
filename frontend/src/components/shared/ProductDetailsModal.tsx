@@ -156,8 +156,9 @@ export function ProductDetailsModal({
 
       const { error } = await supabase.from('produtos').update(payload).eq('id', produto!.id)
       if (!error) {
-        onUpdated()
         setEditing(false)
+        onClose()
+        onUpdated()
       }
     } finally {
       setSaving(false)

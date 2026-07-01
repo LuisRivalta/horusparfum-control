@@ -149,7 +149,7 @@ export function FinMetas() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova meta">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input label="Label" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} required placeholder="Ex: Receita mensal" />
+          <Input label="Label" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} required placeholder="Nome da meta" />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Valor atual" type="number" step="0.01" value={form.valor_atual} onChange={(e) => setForm({ ...form, valor_atual: e.target.value })} />
             <Input label="Valor alvo" type="number" step="0.01" value={form.valor_alvo} onChange={(e) => setForm({ ...form, valor_alvo: e.target.value })} required />
@@ -159,7 +159,7 @@ export function FinMetas() {
           </p>
           <div className="grid grid-cols-2 gap-3">
             <Input label="Sufixo" value={form.sufixo} onChange={(e) => setForm({ ...form, sufixo: e.target.value })} placeholder="%, R$, etc" />
-            <Input label="Período" value={form.periodo} onChange={(e) => setForm({ ...form, periodo: e.target.value })} placeholder="Ex: 2026-Q2 ou 2026-06" />
+            <Input label="Período" value={form.periodo} onChange={(e) => setForm({ ...form, periodo: e.target.value })} placeholder="AAAA-MM ou AAAA-Qn" />
           </div>
           <div className="flex justify-end gap-3 mt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>

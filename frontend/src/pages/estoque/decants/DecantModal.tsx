@@ -148,7 +148,7 @@ export function DecantModal({ frasco, onClose, onSaved }: Props) {
               type="number" min={1} max={frasco.ml_restante}
               value={mlCustom}
               onChange={handleCustomChange}
-              placeholder="ex: 7"
+              placeholder="ML"
             />
             {!isPerda && (
               <Input

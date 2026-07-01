@@ -1,5 +1,78 @@
 # Logs — Histórico de Sessões
 
+---
+
+## 2026-07-01 - Sessao 35: Redeploy da API para importacao de PDF
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Investigado erro `Not Found` no modal ao importar PDF em Pedidos.
+- Confirmado que o backend local e `origin/main` tinham a rota `POST /api/estoque/pedidos/importar-pdf`.
+- Confirmado que a API publicada em `https://horusparfum-control-api.vercel.app` estava em deploy antigo: OpenAPI nao listava a rota e o endpoint retornava 404.
+- Executado `npx vercel --prod --yes` dentro de `backend/`, atualizando o alias de producao `horusparfum-control-api.vercel.app`.
+
+### Verificacao
+- `GET /api/health` em producao retornou 200.
+- `GET /api/estoque/pedidos/importar-pdf` em producao passou de 404 para 405 com `Allow: POST`, confirmando que a rota POST esta publicada.
+- `openapi.json` publicado passou a listar `/api/estoque/pedidos/importar-pdf` e `/api/estoque/vendas/dashboard`.
+
+### Proximo
+- Testar no navegador o upload real de PDF logado; se o PDF for textual e no padrao suportado, o erro 404 nao deve mais ocorrer.
+
+## 2026-07-01 — Sessão 34: Fechamento do modal ao editar produto
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Investigado o fluxo de edição do `ProductDetailsModal`.
+- Raiz encontrada: após `update` bem-sucedido, o componente chamava `onUpdated()` e saía do modo edição, mas não chamava `onClose()`, mantendo o modal aberto enquanto a lista recarregava os dados.
+- Ajustado o caminho de sucesso do salvamento para fechar o modal e atualizar os dados.
+
+### Validação
+- RED focado: `npm run test:run -- src/components/shared/__tests__/ProductDetailsModal.test.tsx` falhou porque `onClose` não era chamado.
+- GREEN focado: `npm run test:run -- src/components/shared/__tests__/ProductDetailsModal.test.tsx` — 10 testes passando.
+- Frontend: `npm run test:run` — 165 testes passando.
+- Frontend: `npm run build` — build passando.
+
+---
+
+
+## 2026-07-01 — Sessão 33: Edição de marcas
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Adicionada ação Editar em cada card da aba Marcas.
+- O modal de Marcas agora alterna entre criação e edição, preenchendo o nome atual ao editar.
+- Ao salvar uma edição, o frontend executa `update({ nome }).eq('id', marca.id)` em `marcas`.
+- Os produtos vinculados continuam apontando para a mesma marca, sem migração de banco.
+
+### Validação
+- RED focado: `npm run test:run -- src/pages/estoque/__tests__/Marcas.test.tsx` falhou por ausência do botão Editar.
+- GREEN focado: `npm run test:run -- src/pages/estoque/__tests__/Marcas.test.tsx` — 4 testes passando.
+- Frontend: `npm run test:run` — 164 testes passando.
+
+---
+
+
+## 2026-07-01 — Sessão 32: Limpeza de placeholders da interface
+
+**Responsável:** Luis + Codex
+
+### O que foi feito
+- Removidos exemplos fixos com nomes de marcas/produtos reais em placeholders visíveis.
+- Ajustados placeholders para textos neutros em Marcas, Categorias, Metas, Transações, Conferência de pedidos e Decants.
+- Adicionado teste garantindo que o modal de Marcas não volte a usar Lattafa/Armaf como placeholder.
+
+### Validação
+- RED focado: `npm run test:run -- src/pages/estoque/__tests__/Marcas.test.tsx` falhou com o placeholder antigo.
+- GREEN focado: `npm run test:run -- src/pages/estoque/__tests__/Marcas.test.tsx` — 3 testes passando.
+- Frontend: `npm run test:run` — 163 testes passando.
+- Frontend: `npm run build` — build passando.
+
+---
+
 
 ## 2026-07-01 — Sessão 31: Ajuste de prioridades do handoff
 

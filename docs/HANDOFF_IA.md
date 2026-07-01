@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-01 (Sessão 31)
+> Última atualização: 2026-07-01 (Sessão 35)
 
 ## O que já foi feito
 
@@ -177,6 +177,31 @@
     - Migração: supabase/migrations/20260630_marcas_produtos.sql — aplicar manualmente no Supabase SQL Editor antes de usar em produção
     - Testes: frontend completo 162/162, backend completo 26/26, build frontend passando
 
+37. **Limpeza de placeholders da interface (Sessão 32)**
+    - Removidos exemplos fixos com marcas/produtos reais de placeholders visíveis, incluindo Marcas, Categorias, Metas, Transações, Divergências e Decants
+    - Placeholder de Marcas agora usa texto neutro "Nome da marca"
+    - Teste `Marcas.test.tsx` cobre que exemplos como Lattafa/Armaf não voltem como placeholder
+    - Frontend: 163 testes passando e build passando
+
+38. **Edição de marcas (Sessão 33)**
+    - Aba Marcas ganhou ação Editar por item
+    - O modal reutiliza o formulário de marca, alternando entre Nova marca e Editar marca
+    - Salvamento de edição faz `update` em `marcas` pelo id, mantendo produtos vinculados à mesma marca
+    - Teste `Marcas.test.tsx` cobre abertura, preenchimento e chamada `update().eq('id', ...)`
+    - Frontend: 164 testes passando
+
+39. **Fechamento do modal ao editar produto (Sessão 34)**
+    - Corrigido `ProductDetailsModal`: após salvar edição com sucesso, o modal fecha e a lista é atualizada
+    - Mantido `preventDefault` do formulário e atualização via callback, sem reload real da página
+    - Teste `ProductDetailsModal.test.tsx` cobre fechamento (`onClose`) e atualização (`onUpdated`) após salvar
+    - Frontend: 165 testes passando e build passando
+
+40. **Redeploy da API para importação de PDF (Sessão 35)**
+    - Investigado erro 404 ao importar PDF em Pedidos
+    - Causa raiz: produção do backend estava rodando um deploy antigo sem `/api/estoque/pedidos/importar-pdf`, apesar da rota existir em `origin/main`
+    - API `horusparfum-control-api` redeployada via Vercel CLI a partir de `backend/`
+    - Verificação: `/api/health` retornou 200; `GET /api/estoque/pedidos/importar-pdf` passou de 404 para 405 com `Allow: POST`; OpenAPI publicado lista a rota de importação
+
 22. **Divergências como aba dentro de Pedidos (Sessão 14)**
     - Nova rota-layout `PedidosLayout.tsx` (espelha `Cadastros.tsx`): abas **Pedidos** (rota index `/estoque/pedidos`) e **Divergências** (`/estoque/pedidos/divergencias`), indicador dourado deslizante + contadores por aba
     - `EstPedidos` (index) e `EstDivergencias` (filha) aninhadas sob o layout no `App.tsx`; rota antiga `/estoque/divergencias` redireciona com `<Navigate replace />`
@@ -260,7 +285,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 162 testes frontend + 26 testes backend passando
+- 165 testes frontend + 26 testes backend passando
 
 ## Próximos passos imediatos
 
