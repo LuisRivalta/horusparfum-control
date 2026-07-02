@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-07-02 - Sessao 42: Correcao do submit do Novo pedido
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Corrigido caso em que o botao Criar pedido parecia nao funcionar quando o fornecedor estava vazio.
+- Causa raiz: validacao nativa do select required bloqueava o submit antes de o handleSubmit do React exibir erro no modal.
+- Adicionado noValidate ao formulario para centralizar a validacao no componente.
+
+### Verificacao
+- RED focado: NovoPedidoModal.test.tsx falhou porque o erro visivel nao aparecia ao criar sem fornecedor.
+- GREEN focado: NovoPedidoModal.test.tsx passou com 13 testes.
+- Frontend completo: npm run test:run - 173 testes passando.
+- Frontend build: npm run build - passou, com aviso conhecido de chunk grande do Vite.
+- Whitespace: git diff --check - sem erros.
+
+---
+
 ## 2026-07-02 - Sessao 41: Correcao de posicionamento do Modal
 
 **Responsavel:** Codex + Luis

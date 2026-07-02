@@ -340,4 +340,21 @@ describe('NovoPedidoModal', () => {
     expect(onSaved).not.toHaveBeenCalled()
   })
 
+  it('mostra erro visivel ao criar sem fornecedor', async () => {
+    const user = userEvent.setup()
+    const onSaved = vi.fn()
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
+
+    await waitFor(() => expect(screen.getByLabelText(/produto 1/i)).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    await user.clear(screen.getByLabelText(/preço 1/i))
+    await user.type(screen.getByLabelText(/preço 1/i), '100')
+    await user.click(screen.getByRole('button', { name: /criar pedido/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/selecione o fornecedor e ao menos um item válido/i)).toBeInTheDocument()
+    })
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(inserts.pedidos).toHaveLength(0)
+  })
 })

@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-02 (Sessão 41)
+> Última atualização: 2026-07-02 (Sessão 42)
 
 ## O que já foi feito
 
@@ -232,6 +232,12 @@
     - Teste Modal.test.tsx cobre que o dialog não volta a receber flex/flex-col
     - Testes: frontend completo 172/172 e build frontend passando
 
+47. **Correção do submit do Novo pedido (Sessão 42)**
+    - Formulário de NovoPedidoModal agora usa noValidate para impedir que validação nativa do navegador bloqueie o React submit sem feedback visível
+    - Validação de fornecedor/item fica centralizada em handleSubmit, exibindo erro dentro do modal quando faltam dados
+    - Teste NovoPedidoModal.test.tsx cobre clique em Criar pedido sem fornecedor e garante mensagem visível
+    - Testes: frontend completo 173/173 e build frontend passando
+
 
 41. **Importação de PDF com parser robusto e match inteligente (Sessão 36)**
     - Parser backend de pedidos agora ignora cabeçalho/cliente/rodapé e começa a leitura na tabela de itens
@@ -331,7 +337,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 172 testes frontend + 32 testes backend passando
+- 173 testes frontend + 32 testes backend passando
 
 ## Próximos passos imediatos
 

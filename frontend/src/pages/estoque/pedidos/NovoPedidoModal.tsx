@@ -316,7 +316,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
       title={pedidoParaEditar ? `Editar pedido #${pedidoParaEditar.numero}` : 'Novo pedido'}
       size="lg"
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <Select
             label="Fornecedor"
