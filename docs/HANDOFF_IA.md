@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-02 (Sessão 36)
+> Última atualização: 2026-07-02 (Sessão 37)
 
 ## O que já foi feito
 
@@ -197,6 +197,15 @@
     - Frontend: 165 testes passando e build passando
 
 
+
+42. **Hardening de segurança inicial (Sessão 37)**
+    - Endpoints placeholder do backend passaram a exigir JWT Supabase via `get_current_user`, evitando rotas públicas que poderiam vazar dados se fossem preenchidas futuramente
+    - Nova migração `supabase/migrations/20260702_harden_registrar_entrada.sql` recria `registrar_entrada` com `set search_path = public`, revoga execução de `PUBLIC` e concede execução apenas a `authenticated`
+    - `npm audit fix` atualizou `undici` transitivo do ambiente de testes (`jsdom`) para remover vulnerabilidade alta reportada pelo audit
+    - RLS por papéis/ownership não foi alterado neste ciclo porque muda o modelo de acesso do ERP; continua como próximo passo de segurança caso o app passe a ter perfis ou signup aberto
+    - Testes adicionados: autenticação dos endpoints placeholder e verificação estática da migração de hardening
+    - Migração aplicada no Supabase SQL Editor pelo Luis em 2026-07-02
+
 41. **Importação de PDF com parser robusto e match inteligente (Sessão 36)**
     - Parser backend de pedidos agora ignora cabeçalho/cliente/rodapé e começa a leitura na tabela de itens
     - Suporte a itens Onuh com linhas separadas e também a linhas inline com `NCM + qtd + preço + total`
@@ -295,7 +304,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 168 testes frontend + 28 testes backend passando
+- 168 testes frontend + 31 testes backend passando
 
 ## Próximos passos imediatos
 

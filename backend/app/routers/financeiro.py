@@ -12,12 +12,12 @@ router = APIRouter()
 
 
 @router.get("/transacoes")
-def listar_transacoes():
+def listar_transacoes(_user: dict = Depends(get_current_user)):
     return {"transacoes": []}
 
 
 @router.get("/contas")
-def listar_contas():
+def listar_contas(_user: dict = Depends(get_current_user)):
     return {"contas": []}
 
 

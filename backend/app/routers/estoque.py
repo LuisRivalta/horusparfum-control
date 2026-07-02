@@ -20,7 +20,7 @@ except ZoneInfoNotFoundError:
 
 
 @router.get("/produtos")
-def listar_produtos():
+def listar_produtos(_user: dict = Depends(get_current_user)):
     return {"produtos": []}
 
 
@@ -68,22 +68,22 @@ def estoque_minimo_sugerido(
     return sugerir_estoque_minimo(produto_id, unidades_vendidas=unidades_vendidas)
 
 @router.get("/movimentacoes")
-def listar_movimentacoes():
+def listar_movimentacoes(_user: dict = Depends(get_current_user)):
     return {"movimentacoes": []}
 
 
 @router.get("/categorias")
-def listar_categorias():
+def listar_categorias(_user: dict = Depends(get_current_user)):
     return {"categorias": []}
 
 
 @router.get("/fornecedores")
-def listar_fornecedores():
+def listar_fornecedores(_user: dict = Depends(get_current_user)):
     return {"fornecedores": []}
 
 
 @router.get("/alertas")
-def listar_alertas():
+def listar_alertas(_user: dict = Depends(get_current_user)):
     return {"alertas": []}
 
 

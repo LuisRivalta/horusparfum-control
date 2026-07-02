@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-07-02 - Sessao 37: Hardening inicial de seguranca
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Corrigidos endpoints placeholder do backend para exigir autenticacao via `Depends(get_current_user)` antes de retornarem dados.
+- Adicionado teste `backend/tests/test_public_placeholder_auth.py`, que falhou em RED porque as rotas retornavam 200 sem token e passou apos a correcao.
+- Criada a migracao `supabase/migrations/20260702_harden_registrar_entrada.sql` para endurecer a RPC `registrar_entrada` com `set search_path = public`, `revoke all ... from public` e `grant execute ... to authenticated`.
+- Adicionado teste `backend/tests/test_supabase_security_migrations.py` para garantir que a migracao de hardening existe e contem as permissoes esperadas.
+- Executado `npm audit fix` no frontend; `undici` transitivo foi atualizado de 7.27.0 para 7.28.0 no lockfile.
+- Luis aplicou `supabase/migrations/20260702_harden_registrar_entrada.sql` no Supabase SQL Editor.
+
+### Verificacao
+- RED backend auth: `python -m unittest tests.test_public_placeholder_auth` falhou com 200 nos endpoints sem token.
+- GREEN backend auth: `python -m unittest tests.test_public_placeholder_auth` - 2 testes passando.
+- RED migration: `python -m unittest tests.test_supabase_security_migrations` falhou porque a migration nao existia.
+- GREEN migration: `python -m unittest tests.test_supabase_security_migrations` - 1 teste passando.
+- `npm audit --audit-level=moderate` - 0 vulnerabilidades.
+
+### Proximo
+- Definir se o ERP continuara com acesso total para qualquer usuario autenticado ou se tera perfis/ownership por tabela; essa decisao antecede uma migracao de RLS mais restritiva.
 ## 2026-07-02 - Sessao 36: Importacao de PDF com parser robusto e match inteligente
 
 **Responsavel:** Codex + Luis
@@ -25,10 +46,6 @@
 ### Proximo
 - Testar no navegador a importacao do PDF real em producao depois do deploy do frontend/backend.
 - Manter LLM/OCR como fallback futuro apenas para PDFs escaneados ou layouts muito diferentes.
-# Logs — Histórico de Sessões
-
----
-
 ## 2026-07-01 - Sessao 35: Redeploy da API para importacao de PDF
 
 **Responsavel:** Codex + Luis
