@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-07-02 - Sessao 44: Feedback ao criar pedido com produto repetido
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Corrigido caso em que Criar pedido parecia nao fazer nada quando havia produto repetido.
+- Causa raiz: o botao estava desabilitado por duplicidade, mas visualmente ainda parecia acionavel.
+- A validacao de duplicidade passou para o handleSubmit, exibindo erro visivel e impedindo insert no banco.
+
+### Verificacao
+- RED focado: NovoPedidoModal.test.tsx falhou porque o botao estava disabled.
+- GREEN focado: NovoPedidoModal.test.tsx passou com 14 testes.
+- Frontend completo: npm run test:run - 174 testes passando.
+- Frontend build: npm run build - passou, com aviso conhecido de chunk grande do Vite.
+- Whitespace: git diff --check - sem erros.
+
+---
+
 ## 2026-07-02 - Sessao 43: Correcao do scroll interno de modais com Lenis
 
 **Responsavel:** Codex + Luis

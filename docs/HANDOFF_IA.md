@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-02 (Sessão 43)
+> Última atualização: 2026-07-02 (Sessão 44)
 
 ## O que já foi feito
 
@@ -244,6 +244,12 @@
     - Teste Modal.test.tsx cobre que o modal mantém data-lenis-prevent no dialog e no corpo rolável
     - Testes: frontend completo 173/173 e build frontend passando
 
+49. **Feedback ao criar pedido com produto repetido (Sessão 44)**
+    - NovoPedidoModal não desabilita mais o botão Criar pedido apenas por haver produto repetido
+    - Clique no botão agora executa validação e mostra erro visível orientando unir/remover linhas duplicadas
+    - Teste NovoPedidoModal.test.tsx cobre o clique com produtos repetidos e garante que nada é salvo no banco
+    - Testes: frontend completo 174/174 e build frontend passando
+
 
 41. **Importação de PDF com parser robusto e match inteligente (Sessão 36)**
     - Parser backend de pedidos agora ignora cabeçalho/cliente/rodapé e começa a leitura na tabela de itens
@@ -343,7 +349,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 173 testes frontend + 32 testes backend passando
+- 174 testes frontend + 32 testes backend passando
 
 ## Próximos passos imediatos
 

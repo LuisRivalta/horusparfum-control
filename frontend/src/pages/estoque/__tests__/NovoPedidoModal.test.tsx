@@ -129,6 +129,32 @@ describe('NovoPedidoModal', () => {
     expect(screen.getByText(/produto repetido/i)).toBeInTheDocument()
   })
 
+  it('mostra erro ao tentar criar pedido com produto repetido', async () => {
+    const user = userEvent.setup()
+    const onSaved = vi.fn()
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
+
+    await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
+    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    await user.clear(screen.getByLabelText(/preço 1/i))
+    await user.type(screen.getByLabelText(/preço 1/i), '100')
+    await user.click(screen.getByRole('button', { name: /adicionar item/i }))
+    await user.selectOptions(screen.getByLabelText(/produto 2/i), 'pr1')
+    await user.clear(screen.getByLabelText(/preço 2/i))
+    await user.type(screen.getByLabelText(/preço 2/i), '100')
+
+    const criarPedido = screen.getByRole('button', { name: /criar pedido/i })
+    expect(criarPedido).not.toBeDisabled()
+    await user.click(criarPedido)
+
+    await waitFor(() => {
+      expect(screen.getByText(/há produtos repetidos/i)).toBeInTheDocument()
+    })
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(inserts.pedidos).toHaveLength(0)
+  })
+
   it('submete pedido e itens com payload correto', async () => {
     const user = userEvent.setup()
     const onSaved = vi.fn()

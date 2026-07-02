@@ -281,8 +281,12 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (submitting || duplicado) return
+    if (submitting) return
     setErro(null)
+    if (duplicado) {
+      setErro('Há produtos repetidos — una as linhas duplicadas antes de criar o pedido')
+      return
+    }
     const preenchidos = itens.filter(i => i.produto_id || i.preco || Number(i.qtd) > 1)
     const validos = preenchidos.filter(i => i.produto_id && Number(i.qtd) >= 1)
     if (!fornecedorId || validos.length === 0) {
@@ -456,7 +460,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={submitting || duplicado}>
+          <Button type="submit" disabled={submitting}>
             {submitting
               ? (pedidoParaEditar ? 'Salvando...' : 'Criando...')
               : (pedidoParaEditar ? 'Salvar alterações' : 'Criar pedido')}
