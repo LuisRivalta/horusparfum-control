@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-01 (Sessão 35)
+> Última atualização: 2026-07-02 (Sessão 36)
 
 ## O que já foi feito
 
@@ -196,6 +196,16 @@
     - Teste `ProductDetailsModal.test.tsx` cobre fechamento (`onClose`) e atualização (`onUpdated`) após salvar
     - Frontend: 165 testes passando e build passando
 
+
+41. **Importação de PDF com parser robusto e match inteligente (Sessão 36)**
+    - Parser backend de pedidos agora ignora cabeçalho/cliente/rodapé e começa a leitura na tabela de itens
+    - Suporte a itens Onuh com linhas separadas e também a linhas inline com `NCM + qtd + preço + total`
+    - Backend valida `Número de itens` declarado no PDF e retorna aviso se divergir da quantidade extraída
+    - Matching frontend mantém igualdade exata como prioridade e adiciona fallback fuzzy por tokens, com peso de volume em ml
+    - Matches fortes são selecionados automaticamente; matches fracos, volumes divergentes ou ambíguos ficam pendentes para seleção manual
+    - PDF real `PEDIDO RINALDO ROMEU (1).pdf` validado localmente: 33/33 itens extraídos, sem avisos
+    - Sem LLM/OCR neste ciclo; LLM fica como fallback futuro para PDFs escaneados ou layouts muito diferentes
+    - Testes: backend completo 28/28, frontend completo 168/168, build frontend passando
 40. **Redeploy da API para importação de PDF (Sessão 35)**
     - Investigado erro 404 ao importar PDF em Pedidos
     - Causa raiz: produção do backend estava rodando um deploy antigo sem `/api/estoque/pedidos/importar-pdf`, apesar da rota existir em `origin/main`
@@ -285,7 +295,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 165 testes frontend + 26 testes backend passando
+- 168 testes frontend + 28 testes backend passando
 
 ## Próximos passos imediatos
 

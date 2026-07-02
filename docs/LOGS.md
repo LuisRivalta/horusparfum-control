@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-07-02 - Sessao 36: Importacao de PDF com parser robusto e match inteligente
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Investigado o PDF real `PEDIDO RINALDO ROMEU (1).pdf`, confirmando que o texto era extraivel, mas o parser antigo juntava cabecalho/cliente no primeiro item e nao separava bem linhas inline.
+- Melhorado `backend/app/services/pedido_pdf_import.py` para iniciar a leitura na tabela, ignorar rodape, parsear itens em linhas separadas e inline, capturar codigo quando vier ao final do nome e validar o `Número de itens` declarado.
+- Melhorado `frontend/src/lib/pedidoPdfImport.ts` para fazer match exato primeiro e fallback fuzzy por tokens, preservando pendencia em casos ambiguos, fracos ou com volume divergente.
+- Criadas spec e plano em `docs/superpowers/specs/2026-07-02-importacao-pdf-fuzzy-design.md` e `docs/superpowers/plans/2026-07-02-importacao-pdf-fuzzy.md`.
+
+### Verificacao
+- RED backend: testes novos falharam porque o parser incluia cabecalho e nao avisava divergencia de contagem.
+- GREEN backend focado: `python -m unittest tests.test_pedido_pdf_import` - 5 testes passando.
+- PDF real validado localmente: 33/33 itens extraidos, sem avisos.
+- RED frontend: testes novos falharam porque o matching era apenas por igualdade exata.
+- GREEN frontend focado: `npm run test:run -- src/lib/__tests__/pedidoPdfImport.test.ts` - 7 testes passando.
+- Frontend completo: `npm run test:run` - 168 testes passando.
+- Backend completo: `python -m unittest discover -s tests` - 28 testes passando.
+- Frontend build: `npm run build` - passou, com aviso conhecido de chunk grande do Vite.
+
+### Proximo
+- Testar no navegador a importacao do PDF real em producao depois do deploy do frontend/backend.
+- Manter LLM/OCR como fallback futuro apenas para PDFs escaneados ou layouts muito diferentes.
+# Logs — Histórico de Sessões
+
+---
+
 ## 2026-07-01 - Sessao 35: Redeploy da API para importacao de PDF
 
 **Responsavel:** Codex + Luis

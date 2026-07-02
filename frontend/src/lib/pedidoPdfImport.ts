@@ -27,6 +27,10 @@ export interface ItemImportadoForm {
   matchStatus: MatchStatus
 }
 
+const MATCH_THRESHOLD = 0.78
+const AMBIGUOUS_DELTA = 0.03
+const IGNORED_MATCH_TOKENS = new Set(['edp'])
+
 export function normalizarNomeProduto(nome: string) {
   return nome
     .normalize('NFD')
@@ -37,18 +41,68 @@ export function normalizarNomeProduto(nome: string) {
     .replace(/\s+/g, ' ')
 }
 
+function extrairVolumeMl(nome: string) {
+  const match = normalizarNomeProduto(nome).match(/\b(\d{1,4})\s*ml\b/)
+  return match ? Number(match[1]) : null
+}
+
+function tokensParaMatch(nome: string) {
+  return normalizarNomeProduto(nome)
+    .split(' ')
+    .filter((token) => token && !IGNORED_MATCH_TOKENS.has(token))
+}
+
+function tokenScore(importado: string, cadastrado: string) {
+  const importadoTokens = new Set(tokensParaMatch(importado))
+  const cadastradoTokens = new Set(tokensParaMatch(cadastrado))
+
+  if (importadoTokens.size === 0 || cadastradoTokens.size === 0) return 0
+
+  const comuns = [...importadoTokens].filter((token) => cadastradoTokens.has(token)).length
+  return (2 * comuns) / (importadoTokens.size + cadastradoTokens.size)
+}
+
+function encontrarMatchFuzzy(item: PedidoPdfItem, produtos: ProdutoOpcao[]) {
+  const volumeImportado = extrairVolumeMl(item.nome)
+  const candidatos = produtos
+    .map((produto) => {
+      const volumeProduto = extrairVolumeMl(produto.nome)
+      if (volumeImportado !== null && volumeProduto !== null && volumeImportado !== volumeProduto) {
+        return { produto, score: 0 }
+      }
+
+      const score = tokenScore(item.nome, produto.nome)
+      return { produto, score }
+    })
+    .filter((candidato) => candidato.score >= MATCH_THRESHOLD)
+    .sort((a, b) => b.score - a.score)
+
+  const melhor = candidatos[0]
+  if (!melhor) return { produto: null, status: 'unmatched' as MatchStatus }
+
+  const segundo = candidatos[1]
+  if (segundo && melhor.score - segundo.score <= AMBIGUOUS_DELTA) {
+    return { produto: null, status: 'ambiguous' as MatchStatus }
+  }
+
+  return { produto: melhor.produto, status: 'matched' as MatchStatus }
+}
+
 export function casarItemImportado(item: PedidoPdfItem, produtos: ProdutoOpcao[]): ItemImportadoForm {
   const nomeNormalizado = normalizarNomeProduto(item.nome)
   const matches = produtos.filter((produto) => normalizarNomeProduto(produto.nome) === nomeNormalizado)
   const matchUnico = matches.length === 1 ? matches[0] : null
+  const fuzzy = matchUnico ? null : matches.length > 1 ? null : encontrarMatchFuzzy(item, produtos)
+  const produto = matchUnico ?? fuzzy?.produto ?? null
+  const matchStatus: MatchStatus = matchUnico ? 'matched' : matches.length > 1 ? 'ambiguous' : fuzzy?.status ?? 'unmatched'
 
   return {
-    produto_id: matchUnico?.id ?? '',
+    produto_id: produto?.id ?? '',
     qtd: String(item.qtd),
     preco: String(item.preco_unitario),
     importado_nome: item.nome,
     importado_codigo: item.codigo ?? null,
-    matchStatus: matchUnico ? 'matched' : matches.length > 1 ? 'ambiguous' : 'unmatched',
+    matchStatus,
   }
 }
 
