@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-07-02 - Sessao 43: Correcao do scroll interno de modais com Lenis
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Corrigido scroll interno de modais quando Lenis esta ativo no layout principal.
+- Causa raiz: o Modal tinha overflow interno, mas nao estava marcado com data-lenis-prevent; o Lenis interceptava o wheel antes do scroll nativo.
+- Adicionado data-lenis-prevent no dialog e no corpo rolavel do Modal.
+
+### Verificacao
+- RED focado: Modal.test.tsx falhou enquanto o atributo data-lenis-prevent nao existia.
+- GREEN focado: Modal.test.tsx passou apos adicionar o atributo.
+- Frontend completo: npm run test:run - 173 testes passando.
+- Frontend build: npm run build - passou.
+- Whitespace: git diff --check - sem erros.
+
+---
+
 ## 2026-07-02 - Sessao 42: Correcao do submit do Novo pedido
 
 **Responsavel:** Codex + Luis

@@ -30,5 +30,7 @@ describe('Modal', () => {
     expect(dialog).not.toHaveClass('flex-col')
     expect(body).toHaveClass('max-h-[calc(100dvh-7rem)]')
     expect(body).toHaveClass('overflow-y-auto')
+    expect(dialog).toHaveAttribute('data-lenis-prevent')
+    expect(body).toHaveAttribute('data-lenis-prevent')
   })
 })

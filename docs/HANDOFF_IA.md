@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-02 (Sessão 42)
+> Última atualização: 2026-07-02 (Sessão 43)
 
 ## O que já foi feito
 
@@ -236,6 +236,12 @@
     - Formulário de NovoPedidoModal agora usa noValidate para impedir que validação nativa do navegador bloqueie o React submit sem feedback visível
     - Validação de fornecedor/item fica centralizada em handleSubmit, exibindo erro dentro do modal quando faltam dados
     - Teste NovoPedidoModal.test.tsx cobre clique em Criar pedido sem fornecedor e garante mensagem visível
+    - Testes: frontend completo 173/173 e build frontend passando
+
+48. **Correção do scroll interno de modais com Lenis (Sessão 43)**
+    - Modal compartilhado agora marca dialog e corpo rolável com data-lenis-prevent
+    - Causa raiz: Lenis interceptava eventos de wheel sobre o modal, impedindo o scroll nativo da área interna
+    - Teste Modal.test.tsx cobre que o modal mantém data-lenis-prevent no dialog e no corpo rolável
     - Testes: frontend completo 173/173 e build frontend passando
 
 
