@@ -32,8 +32,9 @@ export function calcularCustoMedio(
   return total.div(new Decimal(estoqueAtual).add(qtdRecebida)).toDecimalPlaces(2).toNumber()
 }
 
-export function calcularTotalPedido(itens: { qtd: number; preco: number }[]): number {
-  return itens.reduce((acc, i) => acc + i.qtd * i.preco, 0)
+export function calcularTotalPedido(itens: { qtd: number; preco: number }[], frete = 0): number {
+  const subtotal = itens.reduce((acc, i) => acc.add(new Decimal(i.qtd).mul(i.preco)), new Decimal(0))
+  return subtotal.add(frete).toDecimalPlaces(2).toNumber()
 }
 
 /** Retorna lista de mensagens de erro; vazia = conferência válida. */

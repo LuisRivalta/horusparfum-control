@@ -43,6 +43,13 @@ describe('calcularTotalPedido', () => {
   it('retorna 0 para lista vazia', () => {
     expect(calcularTotalPedido([])).toBe(0)
   })
+
+  it('soma frete opcional ao total dos itens', () => {
+    expect(calcularTotalPedido([
+      { qtd: 5, preco: 100 },
+      { qtd: 3, preco: 130 },
+    ], 25)).toBe(915)
+  })
 })
 
 describe('validarConferencia', () => {

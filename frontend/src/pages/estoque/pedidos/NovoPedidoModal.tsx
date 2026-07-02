@@ -35,10 +35,28 @@ interface Props {
     fornecedor_id: string
     previsao_chegada: string | null
     valor_total: number
+    frete?: number
   }
 }
 
 const ITEM_VAZIO: ItemForm = { produto_id: '', qtd: '1', preco: '' }
+
+function formatarErroSalvarPedido(err: unknown): string {
+  const message = err instanceof Error ? err.message : 'Erro ao salvar pedido'
+  const normalizado = message.toLowerCase()
+  const erroFrete = normalizado.includes('frete') && (
+    normalizado.includes('schema cache') ||
+    normalizado.includes('could not find') ||
+    normalizado.includes('column') ||
+    normalizado.includes('does not exist')
+  )
+
+  if (erroFrete) {
+    return 'Aplique a migration de frete supabase/migrations/20260702142406_frete_pedidos.sql no Supabase SQL Editor e tente novamente.'
+  }
+
+  return message
+}
 
 export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Props) {
   const { user } = useAuth()
@@ -47,6 +65,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
   const [categorias, setCategorias] = useState<Opcao[]>([])
   const [fornecedorId, setFornecedorId] = useState('')
   const [previsao, setPrevisao] = useState('')
+  const [frete, setFrete] = useState('')
   const [itens, setItens] = useState<ItemForm[]>([{ ...ITEM_VAZIO }])
   const [submitting, setSubmitting] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -75,6 +94,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
     if (pedidoParaEditar) {
       setFornecedorId(pedidoParaEditar.fornecedor_id)
       setPrevisao(pedidoParaEditar.previsao_chegada || '')
+      setFrete(String(pedidoParaEditar.frete ?? 0))
       supabase
         .from('pedido_itens')
         .select('produto_id, qtd_pedida, preco_unitario')
@@ -95,18 +115,19 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
     } else {
       setFornecedorId('')
       setPrevisao('')
+      setFrete('')
       setItens([{ ...ITEM_VAZIO }])
       setItensOriginais([])
     }
-  }, [open, pedidoParaEditar?.id])
+  }, [open, pedidoParaEditar?.id, pedidoParaEditar?.frete])
 
   const duplicado = itens.some(
     (item, i) => item.produto_id && itens.findIndex(o => o.produto_id === item.produto_id) !== i
   )
 
-  const total = calcularTotalPedido(
-    itens.map(i => ({ qtd: Number(i.qtd) || 0, preco: Number(i.preco) || 0 }))
-  )
+  const itensTotalizaveis = itens.map(i => ({ qtd: Number(i.qtd) || 0, preco: Number(i.preco) || 0 }))
+  const freteValor = Math.max(Number(frete) || 0, 0)
+  const total = calcularTotalPedido(itensTotalizaveis, freteValor)
 
   function setItem(index: number, patch: Partial<ItemForm>) {
     setItens(prev => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
@@ -167,12 +188,14 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
   }
 
   async function handleCreateSubmit(validos: ItemForm[]) {
+    const freteValor = Math.max(Number(frete) || 0, 0)
     const { data: pedido, error } = await supabase
       .from('pedidos')
       .insert({
         fornecedor_id: fornecedorId,
         previsao_chegada: previsao || null,
-        valor_total: calcularTotalPedido(validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 }))),
+        frete: freteValor,
+        valor_total: calcularTotalPedido(validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 })), freteValor),
         responsavel: user?.email || null,
       })
       .select()
@@ -194,13 +217,15 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
   }
 
   async function handleEditSubmit(validos: ItemForm[]) {
+    const freteValor = Math.max(Number(frete) || 0, 0)
     const valor_total = calcularTotalPedido(
-      validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 }))
+      validos.map(i => ({ qtd: Number(i.qtd), preco: Number(i.preco) || 0 })),
+      freteValor
     )
 
     const { error: updateError } = await supabase
       .from('pedidos')
-      .update({ fornecedor_id: fornecedorId, previsao_chegada: previsao || null, valor_total })
+      .update({ fornecedor_id: fornecedorId, previsao_chegada: previsao || null, frete: freteValor, valor_total })
       .eq('id', pedidoParaEditar!.id)
       .eq('status', 'aguardando')
     if (updateError) throw new Error(updateError.message)
@@ -216,6 +241,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
         .update({
           fornecedor_id: pedidoParaEditar!.fornecedor_id,
           previsao_chegada: pedidoParaEditar!.previsao_chegada,
+          frete: pedidoParaEditar!.frete ?? 0,
           valor_total: pedidoParaEditar!.valor_total,
         })
         .eq('id', pedidoParaEditar!.id)
@@ -237,6 +263,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
         .update({
           fornecedor_id: pedidoParaEditar!.fornecedor_id,
           previsao_chegada: pedidoParaEditar!.previsao_chegada,
+          frete: pedidoParaEditar!.frete ?? 0,
           valor_total: pedidoParaEditar!.valor_total,
         })
         .eq('id', pedidoParaEditar!.id)
@@ -276,7 +303,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
       onSaved()
       onClose()
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Erro ao salvar pedido')
+      setErro(formatarErroSalvarPedido(err))
     } finally {
       setSubmitting(false)
     }
@@ -405,6 +432,17 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
             <Icon name="plus" size={14} />
             Adicionar item
           </Button>
+        </div>
+
+        <div className="border-t border-line pt-3">
+          <Input
+            label="Frete (R$)"
+            type="number"
+            step="0.01"
+            min="0"
+            value={frete}
+            onChange={(e) => setFrete(e.target.value)}
+          />
         </div>
 
         <div className="flex items-center justify-between border-t border-line pt-3">

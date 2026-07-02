@@ -2,6 +2,69 @@
 
 ---
 
+## 2026-07-02 - Sessao 40: Correcao do modal de Novo pedido
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Corrigido o Modal compartilhado para ter altura máxima baseada na viewport e corpo interno rolável.
+- Corrigido o feedback do NovoPedidoModal quando o salvar falha por coluna frete ausente no schema cache do Supabase.
+- O erro agora orienta aplicar supabase/migrations/20260702142406_frete_pedidos.sql no Supabase SQL Editor.
+
+### Verificacao
+- RED focado: Modal.test.tsx e NovoPedidoModal.test.tsx falharam antes da correção.
+- GREEN focado: 13 testes passando nos testes do Modal e NovoPedidoModal.
+- Frontend completo: npm run test:run - 172 testes passando.
+- Backend completo: python -m unittest discover -s tests - 32 testes passando.
+- Frontend build: npm run build - passou, com aviso conhecido de chunk grande do Vite.
+- Whitespace: git diff --check - sem erros.
+
+### Proximo
+- Aplicar supabase/migrations/20260702142406_frete_pedidos.sql no Supabase SQL Editor se ainda não foi aplicada.
+
+---
+
+## 2026-07-02 - Sessao 39: Frete em pedidos de compra
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Adicionado frete separado no fluxo de Novo pedido e edição de pedido.
+- Total do pedido passou a somar subtotal dos itens + frete.
+- Criada migration supabase/migrations/20260702142406_frete_pedidos.sql para pedidos.frete com default zero e check nao negativo.
+- Importacao por PDF permanece focada nos itens; frete continua manual.
+
+### Verificacao
+- RED frontend: teste de calcularTotalPedido e teste do modal falharam antes da implementacao.
+- RED backend: teste estatico falhou enquanto a migration nao existia.
+- Frontend completo: npm run test:run - 170 testes passando.
+- Backend completo: python -m unittest discover -s tests - 32 testes passando.
+- Frontend build: npm run build - passou, com aviso conhecido de chunk grande do Vite.
+
+### Proximo
+- Aplicar supabase/migrations/20260702142406_frete_pedidos.sql no Supabase SQL Editor antes de usar a feature em producao.
+
+---
+## 2026-07-02 - Sessao 38: Redeploy da API para parser atual de PDF
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Investigado o print de produção em que a importação de PDF ainda juntava cabeçalho/cliente no primeiro item.
+- Rodado o parser local contra o PDF real PEDIDO RINALDO ROMEU (1).pdf; o código atual extraiu 33/33 itens corretamente, sem avisos.
+- Confirmado pela OpenAPI publicada que a API de produção ainda estava em deploy antigo, pois não refletia o hardening mais recente nos endpoints placeholder.
+- Executado npx vercel --prod --yes dentro de backend/, atualizando o alias de produção horusparfum-control-api.vercel.app.
+
+### Verificacao
+- Local: parse_pedido_pdf_bytes no PDF real retornou 33 itens; primeiro item MAISON ALHAMBRA MAISON MAITRE DE BLUE EDP 100ML.
+- Produção: GET /api/health retornou status ok.
+- Produção: /openapi.json passou a mostrar os endpoints placeholder com security HTTPBearer, confirmando que o deploy atual está publicado.
+
+### Proximo
+- Testar novamente o upload do PDF no modal Novo pedido em produção; se o navegador mantiver bundle/cache antigo, recarregar com Ctrl+F5.
+
+---
+
 ## 2026-07-02 - Sessao 37: Hardening inicial de seguranca
 
 **Responsavel:** Codex + Luis

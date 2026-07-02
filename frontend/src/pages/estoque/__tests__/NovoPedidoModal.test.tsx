@@ -9,6 +9,7 @@ const deletes: Record<string, string[]> = { pedido_itens: [] }
 const getSessionMock = vi.hoisted(() => vi.fn(() => Promise.resolve({
   data: { session: { access_token: 'jwt-test' } },
 })))
+const pedidoInsertError = vi.hoisted(() => ({ value: null as { message: string } | null }))
 
 const mockItemEditar = { produto_id: 'pr1', qtd_pedida: 3, preco_unitario: 150 }
 
@@ -36,7 +37,12 @@ vi.mock('@/lib/supabase', () => ({
         inserts[table]?.push(payload)
         return {
           select: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({ data: { id: 'novo-id' }, error: null })),
+            single: vi.fn(() => {
+              if (table === 'pedidos' && pedidoInsertError.value) {
+                return Promise.resolve({ data: null, error: pedidoInsertError.value })
+              }
+              return Promise.resolve({ data: { id: 'novo-id' }, error: null })
+            }),
           })),
         }
       }),
@@ -81,6 +87,7 @@ describe('NovoPedidoModal', () => {
     inserts.produtos.length = 0
     updates.pedidos.length = 0
     deletes.pedido_itens.length = 0
+    pedidoInsertError.value = null
     getSessionMock.mockResolvedValue({
       data: { session: { access_token: 'jwt-test' } },
     })
@@ -284,4 +291,53 @@ describe('NovoPedidoModal', () => {
     expect(onSaved).not.toHaveBeenCalled()
     expect(inserts.pedidos).toHaveLength(0)
   })
+
+  it('inclui frete no total e no payload do pedido', async () => {
+    const user = userEvent.setup()
+    const onSaved = vi.fn()
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
+
+    await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
+    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    await user.clear(screen.getByLabelText(/qtd 1/i))
+    await user.type(screen.getByLabelText(/qtd 1/i), '5')
+    await user.clear(screen.getByLabelText(/preço 1/i))
+    await user.type(screen.getByLabelText(/preço 1/i), '100')
+    await user.type(screen.getByLabelText(/frete/i), '25')
+
+    expect(screen.getByText('R$ 525,00')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /criar pedido/i }))
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(inserts.pedidos[0]).toMatchObject({
+      fornecedor_id: 'f1',
+      frete: 25,
+      valor_total: 525,
+      responsavel: 'teste@horus.com',
+    })
+  })
+
+  it('orienta aplicar migration quando o banco ainda nao tem frete', async () => {
+    const user = userEvent.setup()
+    const onSaved = vi.fn()
+    pedidoInsertError.value = { message: 'schema cache missing frete column on pedidos' }
+
+    render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
+
+    await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
+    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    await user.clear(screen.getByLabelText(/preço 1/i))
+    await user.type(screen.getByLabelText(/preço 1/i), '100')
+    await user.click(screen.getByRole('button', { name: /criar pedido/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/aplique a migration de frete/i)).toBeInTheDocument()
+    })
+    expect(screen.getByText(/20260702142406_frete_pedidos/i)).toBeInTheDocument()
+    expect(onSaved).not.toHaveBeenCalled()
+  })
+
 })

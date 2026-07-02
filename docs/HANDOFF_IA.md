@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-02 (Sessão 37)
+> Última atualização: 2026-07-02 (Sessão 40)
 
 ## O que já foi feito
 
@@ -206,6 +206,27 @@
     - Testes adicionados: autenticação dos endpoints placeholder e verificação estática da migração de hardening
     - Migração aplicada no Supabase SQL Editor pelo Luis em 2026-07-02
 
+43. **Redeploy da API com parser atual de PDF (Sessão 38)**
+    - Investigado novo print em produção mostrando cabeçalho/cliente misturado no primeiro item importado do PDF
+    - Reproduzido localmente com PEDIDO RINALDO ROMEU (1).pdf: o código atual extrai 33/33 itens corretamente, sem misturar cabeçalho
+    - Causa raiz: produção ainda estava em deploy antigo da API; OpenAPI publicada não refletia o hardening mais recente
+    - Executado npx vercel --prod --yes em backend/, atualizando o alias https://horusparfum-control-api.vercel.app
+    - Verificação: /api/health retornou 200 e OpenAPI publicada passou a refletir endpoints placeholder com HTTPBearer
+
+44. **Frete em pedidos de compra (Sessão 39)**
+    - Pedidos ganharam campo de frete separado, persistido em pedidos.frete e somado ao valor_total
+    - Modal Novo pedido e modo de edição exibem Frete (R$); valor vazio equivale a zero
+    - Importação por PDF continua preenchendo apenas os itens; frete permanece manual
+    - Nova migration: supabase/migrations/20260702142406_frete_pedidos.sql - aplicar manualmente no Supabase SQL Editor antes de usar em produção
+    - Testes: frontend completo 170/170, backend completo 32/32, build frontend passando
+
+45. **Correção do modal de Novo pedido (Sessão 40)**
+    - Modal compartilhado agora limita a altura à viewport e deixa o corpo interno rolável, mantendo o cabeçalho visível
+    - NovoPedidoModal agora mostra orientação clara quando o Supabase ainda não tem pedidos.frete, apontando para supabase/migrations/20260702142406_frete_pedidos.sql
+    - Causa provável em produção: migration de frete pendente no Supabase; sem ela o insert falha e parecia que o botão não fazia nada
+    - Testes: frontend completo 172/172, backend completo 32/32, build frontend passando
+
+
 41. **Importação de PDF com parser robusto e match inteligente (Sessão 36)**
     - Parser backend de pedidos agora ignora cabeçalho/cliente/rodapé e começa a leitura na tabela de itens
     - Suporte a itens Onuh com linhas separadas e também a linhas inline com `NCM + qtd + preço + total`
@@ -304,7 +325,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 168 testes frontend + 31 testes backend passando
+- 172 testes frontend + 32 testes backend passando
 
 ## Próximos passos imediatos
 

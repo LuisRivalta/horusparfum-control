@@ -78,7 +78,8 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | fornecedor_id | uuid (FK → fornecedores) | — |
 | status | text | "aguardando", "recebido" ou "cancelado" |
 | previsao_chegada | date | Data prevista de chegada |
-| valor_total | numeric(12,2) | Total do pedido (calculado no frontend) |
+| valor_total | numeric(12,2) | Total do pedido (itens + frete, calculado no frontend) |
+| frete | numeric(12,2) | Frete do pedido de compra (default 0) |
 | responsavel | text | Nome do usuário que criou o pedido |
 | recebido_em | timestamptz | Data/hora do recebimento |
 | recebido_por | text | Nome do usuário que fez a conferência |
@@ -299,3 +300,5 @@ Correção de cancelamento de decant: `supabase/migrations/20260622142718_fix_ca
 Migração de consumo de decant não-faturável: `supabase/migrations/20260617_consumo_decant.sql` (colunas `classificacao`, `custo`, `custo_embalagem` em `decants`; estende constraint `transacoes_origem_check` para incluir `'decant'`; RPC atômica `registrar_consumo_decant(p_frasco_id, p_ml, p_classificacao, p_custo_embalagem, p_responsavel)`). Pré-requisito: migração de vendas aplicada. Aplicar manualmente no Supabase SQL Editor.
 
 Migração de marcas: `supabase/migrations/20260630_marcas_produtos.sql` (tabela `marcas`, coluna nullable `produtos.marca_id`, índice e RLS para `authenticated`). Aplicar manualmente no Supabase SQL Editor.
+
+Migração de frete em pedidos: supabase/migrations/20260702142406_frete_pedidos.sql (coluna pedidos.frete com default 0 e check não negativo). Aplicar manualmente no Supabase SQL Editor.

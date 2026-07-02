@@ -15,6 +15,7 @@ export interface PedidoRow {
   numero: number
   status: PedidoStatus
   valor_total: number
+  frete?: number | null
   previsao_chegada: string | null
   responsavel: string | null
   created_at: string
@@ -138,6 +139,7 @@ export function EstPedidos() {
           fornecedor_id: editando.fornecedor_id,
           previsao_chegada: editando.previsao_chegada,
           valor_total: editando.valor_total,
+          frete: editando.frete ?? 0,
         } : undefined}
       />
       <ConferenciaModal

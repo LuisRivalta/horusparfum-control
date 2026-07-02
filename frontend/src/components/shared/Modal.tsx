@@ -31,14 +31,14 @@ export function Modal({ open, onClose, title, children, className, size = 'md' }
       ref={ref}
       onClose={onClose}
       className={cn(
-        'gold-hairline bg-surface border border-line-2 rounded-2xl p-0 w-full text-text m-auto',
+        'gold-hairline bg-surface border border-line-2 rounded-2xl p-0 w-full text-text m-auto max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col',
         'shadow-[0_32px_80px_-20px_rgba(0,0,0,0.7),0_0_40px_-24px_rgba(201,168,76,0.3)]',
         open && 'open:animate-[scale-in_0.3s_cubic-bezier(0.22,1,0.36,1)]',
         sizeClass,
         className
       )}
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+      <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-line">
         <h2 className="text-2xl font-serif font-semibold tracking-wide">{title}</h2>
         <button
           onClick={onClose}
@@ -48,7 +48,7 @@ export function Modal({ open, onClose, title, children, className, size = 'md' }
           <Icon name="plus" size={18} style={{ transform: 'rotate(45deg)' }} />
         </button>
       </div>
-      <div className="p-6">{children}</div>
+      <div className="p-6 overflow-y-auto min-h-0">{children}</div>
     </dialog>
   )
 }
