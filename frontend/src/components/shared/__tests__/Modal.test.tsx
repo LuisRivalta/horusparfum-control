@@ -26,9 +26,9 @@ describe('Modal', () => {
 
     expect(dialog).toHaveClass('max-h-[calc(100dvh-2rem)]')
     expect(dialog).toHaveClass('overflow-hidden')
-    expect(dialog).toHaveClass('flex')
-    expect(dialog).toHaveClass('flex-col')
+    expect(dialog).not.toHaveClass('flex')
+    expect(dialog).not.toHaveClass('flex-col')
+    expect(body).toHaveClass('max-h-[calc(100dvh-7rem)]')
     expect(body).toHaveClass('overflow-y-auto')
-    expect(body).toHaveClass('min-h-0')
   })
 })

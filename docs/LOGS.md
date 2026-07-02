@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-07-02 - Sessao 41: Correcao de posicionamento do Modal
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Corrigida regressao em que o Modal aparecia no fluxo da pagina em vez de abrir centralizado.
+- Causa raiz: classes flex/flex-col aplicadas diretamente no elemento dialog, sobrescrevendo o comportamento nativo do dialog.
+- Mantido scroll interno no corpo do modal com max-height propria.
+
+### Verificacao
+- RED focado: Modal.test.tsx falhou enquanto dialog ainda tinha flex.
+- GREEN focado: Modal.test.tsx passou apos remover flex/flex-col do dialog.
+- Frontend completo: npm run test:run - 172 testes passando.
+- Frontend build: npm run build - passou, com aviso conhecido de chunk grande do Vite.
+- Whitespace: git diff --check - sem erros.
+
+---
+
 ## 2026-07-02 - Sessao 40: Correcao do modal de Novo pedido
 
 **Responsavel:** Codex + Luis

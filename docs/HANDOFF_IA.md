@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-02 (Sessão 40)
+> Última atualização: 2026-07-02 (Sessão 41)
 
 ## O que já foi feito
 
@@ -225,6 +225,12 @@
     - NovoPedidoModal agora mostra orientação clara quando o Supabase ainda não tem pedidos.frete, apontando para supabase/migrations/20260702142406_frete_pedidos.sql
     - Causa provável em produção: migration de frete pendente no Supabase; sem ela o insert falha e parecia que o botão não fazia nada
     - Testes: frontend completo 172/172, backend completo 32/32, build frontend passando
+
+46. **Correção de posicionamento do Modal (Sessão 41)**
+    - Removido flex/flex-col direto do elemento dialog, preservando o comportamento nativo de top layer e centralização
+    - Corpo interno do modal mantém altura máxima e scroll próprio para formulários longos
+    - Teste Modal.test.tsx cobre que o dialog não volta a receber flex/flex-col
+    - Testes: frontend completo 172/172 e build frontend passando
 
 
 41. **Importação de PDF com parser robusto e match inteligente (Sessão 36)**
