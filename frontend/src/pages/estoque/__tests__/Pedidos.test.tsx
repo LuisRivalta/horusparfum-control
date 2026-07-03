@@ -93,6 +93,18 @@ describe('EstPedidos (lista)', () => {
     expect(screen.getByText('Recebido')).toBeInTheDocument()
   })
 
+
+  it('mantem a lista em um container rolavel no mobile', async () => {
+    render(<MemoryRouter><EstPedidos /></MemoryRouter>)
+
+    await waitFor(() => {
+      expect(screen.getByText('Essências Cairo')).toBeInTheDocument()
+    })
+
+    const table = screen.getByRole('table')
+    expect(table.parentElement).toHaveClass('overflow-x-auto')
+    expect(table).toHaveClass('min-w-[760px]')
+  })
   it('renderiza o botão "Novo pedido" no slot de ação do layout', async () => {
     renderComLayout()
     await waitFor(() =>

@@ -99,14 +99,14 @@ export function EstVendas() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold">Estoque / Vendas</p>
           <h1 className="text-3xl font-medium tracking-tight mt-1">Vendas</h1>
           <p className="text-muted text-sm mt-1">Registro de vendas com baixa de estoque e lançamento no caixa</p>
         </div>
         {aba === 'lista' && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button variant="secondary" onClick={() => navigate('/estoque/vendas/config')}>
               <Icon name="filter" size={16} />
               Canais e embalagens
@@ -137,7 +137,8 @@ export function EstVendas() {
           )}
 
           <div className="border border-line rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface">
                   <th className="text-left px-4 py-3 text-text-2 font-medium">Nº</th>
@@ -193,6 +194,7 @@ export function EstVendas() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           <NovaVendaModal open={novoOpen} onClose={() => setNovoOpen(false)} onSaved={fetchData} />
@@ -204,7 +206,7 @@ export function EstVendas() {
                 Cancelar a venda <span className="font-mono">#{cancelando?.numero}</span>? O estoque é devolvido,
                 os decants são estornados e os lançamentos no caixa são removidos. A venda não pode ser reaberta.
               </p>
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <Button variant="secondary" onClick={() => setCancelando(null)}>Voltar</Button>
                 <Button variant="danger" disabled={cancelSubmitting} onClick={confirmarCancelamento}>
                   {cancelSubmitting ? 'Cancelando...' : 'Cancelar venda'}

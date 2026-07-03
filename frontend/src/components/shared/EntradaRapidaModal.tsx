@@ -73,7 +73,7 @@ export function EntradaRapidaModal({ open, onClose, onDone, produtoId }: Props) 
           onChange={(e) => setForm({ ...form, produto_id: e.target.value })}
           required
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Quantidade"
             type="number" min="1" step="1"
@@ -92,7 +92,7 @@ export function EntradaRapidaModal({ open, onClose, onDone, produtoId }: Props) 
         {erro && (
           <div role="alert" className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">{erro}</div>
         )}
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Registrando...' : 'Registrar'}

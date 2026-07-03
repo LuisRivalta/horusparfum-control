@@ -220,7 +220,7 @@ export function ProductDetailsModal({
       {editing ? (
         <form onSubmit={handleSave} className="flex flex-col gap-3">
           <Input label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Volume (ml)" type="number" value={form.volume_ml} onChange={(e) => setForm({ ...form, volume_ml: e.target.value })} />
             <Select label="Categoria" options={[{ value: '', label: '—' }, ...categorias.map(c => ({ value: c.id, label: c.nome }))]} value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} />
           </div>
@@ -241,7 +241,7 @@ export function ProductDetailsModal({
               onUse={(valor) => setForm({ ...form, estoque_minimo: String(valor) })}
             />
           </div>
-          <div className="flex justify-end gap-3 mt-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={() => setEditing(false)}>Cancelar</Button>
             <Button type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
           </div>
@@ -264,7 +264,7 @@ export function ProductDetailsModal({
                 <h2 className="text-2xl font-medium truncate">{produto.nome}</h2>
                 <p className="text-sm text-muted font-mono mt-1">{produto.volume_ml ? `${produto.volume_ml}mL` : '—'}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                   <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Categoria</div>
                   <div className="text-text-2">{produto.categorias?.nome || '—'}</div>
@@ -361,7 +361,7 @@ export function ProductDetailsModal({
                 {deleteError}
               </div>
             )}
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button
                 variant="secondary"
                 onClick={() => {

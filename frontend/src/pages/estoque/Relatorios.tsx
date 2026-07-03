@@ -311,7 +311,8 @@ export function EstRelatorios() {
         </div>
 
         <div className="border border-line rounded-xl overflow-hidden bg-surface/40">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-line bg-surface">
                 <th className="text-left px-4 py-3 font-medium">Produto</th>
@@ -355,6 +356,7 @@ export function EstRelatorios() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
@@ -365,7 +367,8 @@ export function EstRelatorios() {
         </div>
 
         <div className="border border-line rounded-xl overflow-hidden bg-surface/40">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-line bg-surface">
                 <th className="text-left px-4 py-3 font-medium">Produto</th>
@@ -397,6 +400,7 @@ export function EstRelatorios() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </div>

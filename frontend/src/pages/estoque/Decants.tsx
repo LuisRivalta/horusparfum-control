@@ -75,7 +75,7 @@ export function EstDecants() {
   return (
     <>
       <div className="flex flex-col gap-6 stagger">
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold flex items-center gap-2">
               <span className="w-1 h-1 bg-gold rotate-45" />

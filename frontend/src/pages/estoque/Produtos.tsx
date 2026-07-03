@@ -210,7 +210,7 @@ export function EstProdutos() {
       )}
 
       {/* Barra de busca e filtros */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
         <div className="flex-1 max-w-md relative">
           <Icon name="search" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           <input
@@ -258,7 +258,7 @@ export function EstProdutos() {
           Nenhum produto encontrado
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3">
           {produtosFiltrados.map((p) => (
             <button
               key={p.id}
@@ -334,7 +334,7 @@ export function EstProdutos() {
           </div>
 
           <Input label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Volume (ml)" type="number" value={form.volume_ml} onChange={(e) => setForm({ ...form, volume_ml: e.target.value })} />
             <Select label="Categoria" options={categorias.map(c => ({ value: c.id, label: c.nome }))} value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} />
           </div>
@@ -347,7 +347,7 @@ export function EstProdutos() {
           <Select label="Fornecedor" options={fornecedores.map(f => ({ value: f.id, label: f.nome }))} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
           <Select label="Marca" options={[{ value: '', label: '—' }, ...marcas.map(m => ({ value: m.id, label: m.nome }))]} value={form.marca_id} onChange={(e) => setForm({ ...form, marca_id: e.target.value })} />
           <Input label="Estoque mínimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
-          <div className="flex justify-end gap-3 mt-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={() => { setModalOpen(false); clearFoto() }}>Cancelar</Button>
             <Button type="submit" disabled={submitting}>
               {submitting ? 'Salvando...' : 'Salvar'}

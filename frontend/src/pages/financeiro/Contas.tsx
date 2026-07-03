@@ -86,7 +86,7 @@ export function FinContas({ tipo }: FinContasProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold">Financeiro</p>
           <h1 className="text-3xl font-medium tracking-tight mt-1">Contas a {tipo}</h1>
@@ -99,7 +99,8 @@ export function FinContas({ tipo }: FinContasProps) {
       </div>
 
       <div className="border border-line rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-line bg-surface">
               <th className="text-left px-4 py-3 text-text-2 font-medium">Entidade</th>
@@ -131,18 +132,19 @@ export function FinContas({ tipo }: FinContasProps) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={`Nova conta a ${tipo}`}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input label="Entidade" value={form.entidade} onChange={(e) => setForm({ ...form, entidade: e.target.value })} placeholder={tipo === 'pagar' ? 'Fornecedor' : 'Cliente'} />
           <Input label="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Valor (R$)" type="number" step="0.01" min="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} required />
             <Input label="Vencimento" type="date" value={form.vencimento} onChange={(e) => setForm({ ...form, vencimento: e.target.value })} />
           </div>
           <Select label="Status" options={statusOpts} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} />
-          <div className="flex justify-end gap-3 mt-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button type="submit">Salvar</Button>
           </div>

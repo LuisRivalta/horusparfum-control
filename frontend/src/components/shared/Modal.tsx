@@ -32,15 +32,15 @@ export function Modal({ open, onClose, title, children, className, size = 'md' }
       onClose={onClose}
       data-lenis-prevent
       className={cn(
-        'gold-hairline bg-surface border border-line-2 rounded-2xl p-0 w-full text-text m-auto max-h-[calc(100dvh-2rem)] overflow-hidden',
+        'gold-hairline bg-surface border border-line-2 rounded-2xl p-0 w-full text-text mx-3 my-auto sm:mx-auto max-h-[calc(100dvh-2rem)] overflow-hidden',
         'shadow-[0_32px_80px_-20px_rgba(0,0,0,0.7),0_0_40px_-24px_rgba(201,168,76,0.3)]',
         open && 'open:animate-[scale-in_0.3s_cubic-bezier(0.22,1,0.36,1)]',
         sizeClass,
         className
       )}
     >
-      <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-line">
-        <h2 className="text-2xl font-serif font-semibold tracking-wide">{title}</h2>
+      <div className="flex shrink-0 items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-line">
+        <h2 className="text-xl sm:text-2xl font-serif font-semibold tracking-wide">{title}</h2>
         <button
           onClick={onClose}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-muted hover:text-text hover:bg-surface-2 hover:rotate-90 transition-all duration-300 cursor-pointer"
@@ -49,7 +49,7 @@ export function Modal({ open, onClose, title, children, className, size = 'md' }
           <Icon name="plus" size={18} style={{ transform: 'rotate(45deg)' }} />
         </button>
       </div>
-      <div className="p-6 max-h-[calc(100dvh-7rem)] overflow-y-auto" data-lenis-prevent>{children}</div>
+      <div className="p-4 sm:p-6 max-h-[calc(100dvh-7rem)] overflow-y-auto" data-lenis-prevent>{children}</div>
     </dialog>
   )
 }

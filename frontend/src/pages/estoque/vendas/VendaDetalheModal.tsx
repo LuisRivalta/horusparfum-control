@@ -54,7 +54,8 @@ export function VendaDetalheModal({ venda, onClose }: Props) {
       ) : (
         <div className="flex flex-col gap-4">
           <div className="border border-line rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface">
                   <th className="text-left px-3 py-2 text-text-2 font-medium">Item</th>
@@ -81,6 +82,7 @@ export function VendaDetalheModal({ venda, onClose }: Props) {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {venda && (

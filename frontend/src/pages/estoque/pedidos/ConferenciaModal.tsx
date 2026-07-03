@@ -128,7 +128,7 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
               key={item.itemId}
               className={`border rounded-xl p-3 flex flex-col gap-3 ${divergente ? 'border-warn/40 bg-warn/5' : 'border-line'}`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="w-10 h-10 rounded-lg bg-surface-2 overflow-hidden flex items-center justify-center shrink-0">
                   {item.fotoUrl
                     ? <img src={item.fotoUrl} alt={item.nome} className="w-full h-full object-cover" />
@@ -138,7 +138,7 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
                   <div className="text-sm font-medium truncate">{item.nome}</div>
                   <div className="text-xs text-muted font-mono">Pedido: {item.qtdPedida} un.</div>
                 </div>
-                <div className="w-28">
+                <div className="w-full sm:w-28">
                   <Input
                     label="Qtd recebida"
                     type="number" min="0" step="1"
@@ -154,7 +154,7 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
               </div>
 
               {divergente && (
-                <div className="grid grid-cols-2 gap-3 pl-13">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:pl-13">
                   <Select
                     label="Tipo de divergência"
                     options={DIVERGENCIA_TIPOS.map(t => ({ value: t.value, label: t.label }))}
@@ -184,12 +184,12 @@ export function ConferenciaModal({ pedido, onClose, onConfirmed }: Props) {
           </div>
         )}
 
-        <div className="flex items-center justify-between border-t border-line pt-3">
+        <div className="flex flex-col gap-3 border-t border-line pt-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm text-muted">
             {itens.length - divergentes} {itens.length - divergentes === 1 ? 'item ok' : 'itens ok'}
             {divergentes > 0 && <span className="text-warn"> · {divergentes} divergência{divergentes > 1 ? 's' : ''}</span>}
           </span>
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
             <Button type="button" onClick={handleConfirm} disabled={submitting || loading || itens.length === 0}>
               {submitting ? 'Confirmando...' : 'Confirmar recebimento'}

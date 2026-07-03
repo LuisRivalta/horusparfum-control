@@ -88,7 +88,7 @@ export function EstEstoque() {
   return (
     <>
       <div className="flex flex-col gap-5">
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold">
               Estoque / Visão
@@ -132,7 +132,7 @@ export function EstEstoque() {
         </div>
 
         {/* Filtros */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
           <div className="flex-1 max-w-md relative">
             <Icon
               name="search"
@@ -213,7 +213,7 @@ export function EstEstoque() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3">
             {filtrados.map((p) => {
               const sit = situacaoEstoque(p.estoque_atual, p.estoque_minimo)
               return (

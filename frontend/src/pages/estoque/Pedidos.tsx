@@ -70,7 +70,8 @@ export function EstPedidos() {
       )}
 
       <div className="border border-line rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="border-b border-line bg-surface">
               <th className="text-left px-4 py-3 text-text-2 font-medium">Nº</th>
@@ -109,7 +110,7 @@ export function EstPedidos() {
                   <td className="px-4 py-3 text-text-2">{p.responsavel || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     {p.status === 'aguardando' && (
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <Button size="sm" onClick={() => setConferindo(p)}>
                           Confirmar chegada
                         </Button>
@@ -127,6 +128,7 @@ export function EstPedidos() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <NovoPedidoModal
@@ -153,7 +155,7 @@ export function EstPedidos() {
           <p className="text-sm text-text-2">
             Cancelar o pedido <span className="font-mono">#{cancelando?.numero}</span>? Pedido cancelado não movimenta estoque e não pode ser reaberto.
           </p>
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button variant="secondary" onClick={() => setCancelando(null)}>Voltar</Button>
             <Button
               variant="danger"

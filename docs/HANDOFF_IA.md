@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-02 (Sessão 44)
+> Última atualização: 2026-07-03 (Sessão 50)
 
 ## O que já foi feito
 
@@ -249,6 +249,16 @@
     - Clique no botão agora executa validação e mostra erro visível orientando unir/remover linhas duplicadas
     - Teste NovoPedidoModal.test.tsx cobre o clique com produtos repetidos e garante que nada é salvo no banco
     - Testes: frontend completo 174/174 e build frontend passando
+50. **Responsividade mobile 360px (Sessão 50)**
+    - Frontend ajustado para operação diária em celular pequeno (alvo mínimo 360px), mantendo o visual premium existente
+    - Modal compartilhado ganhou margem/padding/título responsivos sem perder o comportamento nativo de `dialog`
+    - Tabelas largas em Vendas, Pedidos, Transações, Contas, Divergências, Fornecedores, Relatório de giro e Detalhe de venda agora rolam horizontalmente dentro do próprio bloco
+    - Formulários e modais críticos passaram a empilhar campos no mobile: Novo pedido, Conferência, Nova venda, Produto, Transações, Contas, Metas, Entrada/Saída rápida e Decants
+    - Grids de produtos/estoque usam 1 coluna em 360px e 2 colunas a partir de 420px
+    - Spec: `docs/superpowers/specs/2026-07-03-mobile-responsivo-360-design.md`
+    - Plano: `docs/superpowers/plans/2026-07-03-mobile-responsivo-360.md`
+    - Testes: frontend completo 178/178 e build frontend passando
+
 
 
 41. **Importação de PDF com parser robusto e match inteligente (Sessão 36)**
@@ -349,7 +359,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 174 testes frontend + 32 testes backend passando
+- 178 testes frontend passando; backend 32 testes last known, sem alterações nesta sessão
 
 ## Próximos passos imediatos
 

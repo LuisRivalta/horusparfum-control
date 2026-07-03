@@ -96,7 +96,7 @@ export function EstMarcas() {
       <Modal open={modalOpen} onClose={closeModal} title={editingMarca ? 'Editar marca' : 'Nova marca'}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input label="Nome" value={form.nome} onChange={(e) => setForm({ nome: e.target.value })} required placeholder="Nome da marca" />
-          <div className="flex justify-end gap-3 mt-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancelar</Button>
             <Button type="submit">Salvar</Button>
           </div>

@@ -142,7 +142,7 @@ export function DecantModal({ frasco, onClose, onSaved }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
             <Input
               label="Ou ml (custom)"
               type="number" min={1} max={frasco.ml_restante}

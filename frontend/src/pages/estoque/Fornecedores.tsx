@@ -62,7 +62,8 @@ export function EstFornecedores() {
       )}
 
       <div className="border border-line rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[620px] text-sm">
           <thead>
             <tr className="border-b border-line bg-surface">
               <th className="text-left px-4 py-3 text-text-2 font-medium">Nome</th>
@@ -92,6 +93,7 @@ export function EstFornecedores() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Novo fornecedor">
@@ -99,7 +101,7 @@ export function EstFornecedores() {
           <Input label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required placeholder="Razão social ou nome fantasia" />
           <Input label="Contato" value={form.contato} onChange={(e) => setForm({ ...form, contato: e.target.value })} placeholder="Email ou telefone" />
           <Select label="Status" options={[{ value: 'ativo', label: 'Ativo' }, { value: 'inativo', label: 'Inativo' }]} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} />
-          <div className="flex justify-end gap-3 mt-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button type="submit">Salvar</Button>
           </div>

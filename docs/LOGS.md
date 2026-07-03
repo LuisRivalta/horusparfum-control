@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-07-03 - Sessao 50: Responsividade mobile 360px
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Ajustada a responsividade do frontend para uso operacional diario em celular pequeno, com alvo minimo de 360px.
+- Modal compartilhado ganhou margem horizontal segura, padding responsivo e titulo menor no mobile, mantendo o `dialog` nativo sem `flex/flex-col`.
+- Tabelas largas passaram a ter scroll horizontal dentro do proprio bloco em Vendas, Pedidos, Transacoes, Contas, Divergencias, Fornecedores, Relatorio de giro e Detalhe de venda.
+- Formularios e modais criticos passaram a empilhar campos no mobile: Novo pedido, Conferencia, Nova venda, Produto, Transacoes, Contas, Metas, Entrada/Saida rapida e Decants.
+- Grids de produtos e estoque passam a usar 1 coluna em 360px e 2 colunas a partir de 420px.
+- Criadas spec e plano em `docs/superpowers/specs/2026-07-03-mobile-responsivo-360-design.md` e `docs/superpowers/plans/2026-07-03-mobile-responsivo-360.md`.
+
+### Verificacao
+- RED focado: Modal, Vendas, Pedidos e NovaVendaModal falharam antes dos ajustes responsivos.
+- GREEN focado: 31 testes passando nos componentes/telas criticos.
+- Frontend completo: `npm run test:run` - 178 testes passando.
+- Frontend build: `npm run build` - passou, com aviso conhecido de chunk grande do Vite.
+- Whitespace: `git diff --check` - sem erros.
+- Backend nao alterado nesta sessao.
+
+---
+
 ## 2026-07-02 - Sessao 44: Feedback ao criar pedido com produto repetido
 
 **Responsavel:** Codex + Luis

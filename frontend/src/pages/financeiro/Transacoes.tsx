@@ -77,7 +77,7 @@ export function FinTransacoes() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold">Financeiro</p>
           <h1 className="text-3xl font-medium tracking-tight mt-1">Transações</h1>
@@ -90,7 +90,8 @@ export function FinTransacoes() {
       </div>
 
       <div className="border border-line rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-line bg-surface">
               <th className="text-left px-4 py-3 text-text-2 font-medium">Data</th>
@@ -138,21 +139,22 @@ export function FinTransacoes() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova transação">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input label="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} required placeholder="Descrição da transação" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select label="Tipo" options={[{ value: 'entrada', label: 'Entrada' }, { value: 'saida', label: 'Saída' }]} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })} required />
             <Input label="Valor (R$)" type="number" step="0.01" min="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} required />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select label="Categoria" options={categoriaOpts} value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} />
             <Select label="Forma de pagamento" options={pagamentoOpts} value={form.forma_pagamento} onChange={(e) => setForm({ ...form, forma_pagamento: e.target.value })} />
           </div>
           <Input label="Responsável" value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} />
-          <div className="flex justify-end gap-3 mt-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button type="submit">Salvar</Button>
           </div>

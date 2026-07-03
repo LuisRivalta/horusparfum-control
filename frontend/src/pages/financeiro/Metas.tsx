@@ -82,7 +82,7 @@ export function FinMetas() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-mono text-[0.66rem] uppercase tracking-[.28em] text-gold">Financeiro</p>
           <h1 className="text-3xl font-medium tracking-tight mt-1">Metas financeiras</h1>
@@ -150,18 +150,18 @@ export function FinMetas() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova meta">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input label="Label" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} required placeholder="Nome da meta" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Valor atual" type="number" step="0.01" value={form.valor_atual} onChange={(e) => setForm({ ...form, valor_atual: e.target.value })} />
             <Input label="Valor alvo" type="number" step="0.01" value={form.valor_alvo} onChange={(e) => setForm({ ...form, valor_alvo: e.target.value })} required />
           </div>
           <p className="text-xs text-muted -mt-2">
             Metas em R$ usam automaticamente a receita registrada no financeiro. Valor atual manual fica para metas em %.
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Sufixo" value={form.sufixo} onChange={(e) => setForm({ ...form, sufixo: e.target.value })} placeholder="%, R$, etc" />
             <Input label="Período" value={form.periodo} onChange={(e) => setForm({ ...form, periodo: e.target.value })} placeholder="AAAA-MM ou AAAA-Qn" />
           </div>
-          <div className="flex justify-end gap-3 mt-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button type="submit">Salvar</Button>
           </div>

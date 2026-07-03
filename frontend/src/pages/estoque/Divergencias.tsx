@@ -71,7 +71,7 @@ export function EstDivergencias() {
 
       {/* selects crus (não FormControls.Select) — precisamos de "Todos..." como opção vazia,
           e o Select compartilhado injeta "Selecione..." fixo */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
         <select
           value={filtroFornecedor}
           onChange={(e) => setFiltroFornecedor(e.target.value)}
@@ -93,7 +93,8 @@ export function EstDivergencias() {
       </div>
 
       <div className="border border-line rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] text-sm">
           <thead>
             <tr className="border-b border-line bg-surface">
               <th className="text-left px-4 py-3 text-text-2 font-medium">Data</th>
@@ -129,6 +130,7 @@ export function EstDivergencias() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

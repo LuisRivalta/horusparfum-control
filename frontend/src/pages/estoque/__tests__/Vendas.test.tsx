@@ -57,6 +57,16 @@ describe('EstVendas (lista)', () => {
     expect(screen.getByRole('button', { name: /nova venda/i })).toBeInTheDocument()
   })
 
+
+  it('mantem a lista em um container rolavel no mobile', async () => {
+    render(<MemoryRouter><EstVendas /></MemoryRouter>)
+
+    await waitFor(() => expect(screen.getByText('Shopee')).toBeInTheDocument())
+
+    const table = screen.getAllByRole('table')[0]
+    expect(table.parentElement).toHaveClass('overflow-x-auto')
+    expect(table).toHaveClass('min-w-[760px]')
+  })
   it('alterna entre lista e dashboard sem sair da tela de vendas', async () => {
     render(<MemoryRouter><EstVendas /></MemoryRouter>)
 

@@ -101,7 +101,7 @@ export function AbrirFrascoModal({ onClose, onSaved }: Props) {
           </p>
         )}
 
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end pt-2">
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             Cancelar
           </Button>

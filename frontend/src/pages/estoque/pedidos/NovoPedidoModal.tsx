@@ -321,7 +321,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
       size="lg"
     >
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
             label="Fornecedor"
             options={fornecedores.map(f => ({ value: f.id, label: f.nome }))}
@@ -338,9 +338,9 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
         </div>
 
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-xs font-medium uppercase tracking-[.08em] text-muted">Itens</span>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -370,7 +370,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
           </div>
 
           {quickOpen && (
-            <div className="flex items-end gap-2 p-3 border border-dashed border-gold-line rounded-lg">
+            <div className="grid grid-cols-1 gap-2 p-3 border border-dashed border-gold-line rounded-lg sm:grid-cols-[1fr_100px_1fr_auto] sm:items-end">
               <Input label="Nome do produto" value={quickNome} onChange={(e) => setQuickNome(e.target.value)} />
               <Input label="Volume (ml)" type="number" value={quickVolume} onChange={(e) => setQuickVolume(e.target.value)} />
               <Select label="Categoria" options={categorias.map(c => ({ value: c.id, label: c.nome }))} value={quickCategoria} onChange={(e) => setQuickCategoria(e.target.value)} />
@@ -380,7 +380,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
 
           {itens.map((item, i) => (
             <div key={i} className="flex flex-col gap-1">
-              <div className="grid grid-cols-[1fr_80px_110px_90px_32px] gap-2 items-end">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_80px_110px_90px_32px] gap-2 items-end">
                 <Select
                   label={`Produto ${i + 1}`}
                   options={produtos.map(p => ({ value: p.id, label: p.nome }))}
@@ -458,7 +458,7 @@ export function NovoPedidoModal({ open, onClose, onSaved, pedidoParaEditar }: Pr
           <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">{erro}</div>
         )}
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={submitting}>
             {submitting

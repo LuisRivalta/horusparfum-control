@@ -74,7 +74,7 @@ export function EstCategorias() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required placeholder="Nome da categoria" />
           <Input label="Ícone" value={form.icone} onChange={(e) => setForm({ ...form, icone: e.target.value })} placeholder="Nome do ícone (opcional)" />
-          <div className="flex justify-end gap-3 mt-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button type="submit">Salvar</Button>
           </div>

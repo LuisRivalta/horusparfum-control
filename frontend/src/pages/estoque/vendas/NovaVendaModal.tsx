@@ -166,7 +166,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="Nova venda" size="lg">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
             label="Canal"
             options={canais.map(c => ({ value: c.id, label: `${c.nome} (${c.taxa_padrao}%)` }))}
@@ -176,7 +176,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
           />
           <Input label="Data da venda" type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Forma de pagamento" value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} placeholder="Pix, Cartão…" />
           <Input label="Cliente (opcional)" value={cliente} onChange={(e) => setCliente(e.target.value)} />
         </div>
@@ -186,7 +186,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
 
           {linhas.map((l, i) => (
             <div key={i} className="flex flex-col gap-2 p-3 border border-line rounded-lg">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                 <Select
                   label="Tipo"
                   options={[{ value: 'produto', label: 'Produto (frasco cheio)' }, { value: 'decant', label: 'Decant' }]}
@@ -205,7 +205,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
               </div>
 
               {l.tipo === 'produto' ? (
-                <div className="grid grid-cols-[1fr_70px_110px] gap-2 items-end">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_70px_110px] gap-2 items-end">
                   <Select
                     label="Produto"
                     options={produtos.map(p => ({ value: p.id, label: p.nome }))}
@@ -219,7 +219,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
                   <Input label="Preço un." type="number" step="0.01" min="0" value={l.preco} onChange={(e) => setLinha(i, { preco: e.target.value })} />
                 </div>
               ) : (
-                <div className="grid grid-cols-[1fr_60px_70px_100px] gap-2 items-end">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_60px_70px_100px] gap-2 items-end">
                   <Select
                     label="Frasco aberto"
                     options={frascos.map(f => ({ value: f.id, label: `${f.produtos?.nome} (${f.ml_restante}ml)` }))}
@@ -249,7 +249,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Taxa do pedido (R$)" type="number" step="0.01" min="0" value={taxa} onChange={(e) => setTaxa(e.target.value)} />
           <Input label="Frete absorvido (R$)" type="number" step="0.01" min="0" value={frete} onChange={(e) => setFrete(e.target.value)} />
         </div>
@@ -271,7 +271,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
           <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">{erro}</div>
         )}
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={submitting}>{submitting ? 'Registrando...' : 'Registrar venda'}</Button>
         </div>

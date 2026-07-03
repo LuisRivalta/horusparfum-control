@@ -97,7 +97,7 @@ export function ImageCropper({ open, imageSrc, onCancel, onConfirm, aspect = 1 }
           <span className="text-xs text-muted font-mono w-10 text-right">{zoom.toFixed(2)}x</span>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
           <Button type="button" onClick={handleConfirm} disabled={loading}>
             {loading ? 'Processando...' : 'Aplicar'}
