@@ -2,6 +2,50 @@
 
 ---
 
+## 2026-07-06 - Sessao 52: Revisão e Atualização do PRD
+
+**Responsavel:** Antigravity + Luis
+
+### O que foi feito
+- Leitura e revisão geral da documentação na pasta `docs/`.
+- Atualização do arquivo `PRD.md` para alinhar com o estado atual (Sessão 51):
+  - Remoção da funcionalidade antiga de "Movimentações".
+  - Inclusão e detalhamento de "Estoque / Operações", cobrindo Pedidos, Vendas e Decants na tabela de funcionalidades.
+  - Atualização nas Regras de Negócios para listar a nova importação de pedidos via PDF com fuzzy matching.
+- Atualização da versão/sessão em `HANDOFF_IA.md`.
+
+---
+
+## 2026-07-03 - Sessao 51: Documentação rica e interconectada do sistema
+
+**Responsavel:** Antigravity + Luis
+
+### O que foi feito
+- Criada a documentação detalhada e conectada para todos os módulos e features do sistema:
+  - `docs/features/FINANCEIRO.md` — controle financeiro, KPI cards, seletor de períodos e gráficos.
+  - `docs/features/ESTOQUE.md` — controle de estoque, badges de situação, e stubs/ações rápidas.
+  - `docs/features/VENDAS.md` — fluxo de vendas, cálculo de ROI e margens, canais de vendas.
+  - `docs/features/PEDIDOS.md` — pedidos de compras, conferência física de recebimento, divergências e importação de PDF.
+  - `docs/features/DECANTS.md` — fracionamento de frascos originais, visualizador 3D, consumo não faturável.
+  - `docs/features/AUTENTICACAO.md` — auth via Supabase, tokens JWT, RLS e CORS.
+  - `docs/features/RELATORIOS.md` — relatórios financeiros calculados no backend com precisão Decimal e relatórios de giro.
+  - `docs/features/METAS.md` — metas com cálculo automatizado via backend (monetária vs manual).
+- Criados os guias globais de infraestrutura e arquitetura em `docs/`:
+  - `docs/API.md` — documentação detalhada dos endpoints completos e stubs do backend FastAPI.
+  - `docs/REGRAS_NEGOCIO.md` — consolidação de todas as regras comerciais, operacionais e financeiras do ERP.
+  - `docs/DEPLOY.md` — detalhes de build (Vercel), variáveis de ambiente e banco de dados (Supabase).
+  - `docs/DESIGN_SYSTEM.md` — tipografia, paleta de cores (variáveis CSS), Three.js e responsividade.
+  - `docs/GLOSSARIO.md` — termos de domínio da perfumaria autoral e definições do ERP.
+  - `docs/FLUXOS.md` — fluxogramas de jornadas chave (Login, Venda, Compra, Decant) e diagramas de sequência em Mermaid.
+- Atualizado o índice central `docs/00-INDEX.md` para integrar e conectar todos os novos arquivos no formato de wiki links do Obsidian (`[[Nome do Arquivo]]`).
+
+### Verificacao
+- Frontend completo: `npm run test:run` - 178 testes passando.
+- Frontend build: `npm run build` - executado com sucesso.
+- Verificação de arquivos criados no workspace.
+
+---
+
 ## 2026-07-03 - Sessao 50: Responsividade mobile 360px
 
 **Responsavel:** Codex + Luis

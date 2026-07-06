@@ -23,24 +23,26 @@ Sistema administrativo interno da **Horus Parfum**, empresa de perfumaria artesa
 | Relatórios | Análise por período, agrupado por categoria, exportável em PDF |
 | Metas | Metas financeiras trimestrais com barra de progresso |
 
-### Estoque
+### Estoque / Operações
 
 | Tela | Funcionalidade |
 |------|---------------|
-| Produtos | Catálogo com foto, nome, volume (ml), categoria, fornecedor |
-| Movimentações | Entradas e saídas com data, responsável, motivo, saldo resultante |
-| Categorias | Agrupamento de produtos (Masculino, Feminino, Unissex, Árabes, etc.) |
-| Fornecedores | Cadastro com contato, itens fornecidos, última compra, status |
-| Relatório de giro | Produtos mais vendidos, giro por categoria, dias em estoque |
+| Estoque | Visão geral dos produtos em estoque físico e alertas de quantidade |
+| Cadastros | Gestão centralizada de Produtos, Categorias, Marcas e Fornecedores |
+| Pedidos | Compras com fornecedores, recebimento em PDF, divergências e custo médio |
+| Vendas | Registro de saídas (frascos e decants) com baixa de estoque e entrada financeira |
+| Decants | Fracionamento de perfumes, consumo não-faturável e frascos abertos |
+| Relatórios | Giro de estoque, produtos mais vendidos e dashboard de rentabilidade (ROI) |
 
 ## Regras de negócio
 
 1. **Integração via Vendas** — o módulo de Vendas vincula Estoque e Financeiro: registrar uma venda baixa o estoque (frasco cheio ou ml de decant) e lança automaticamente no caixa (receita + taxa + frete). Lançamentos manuais no Financeiro (compra de insumos, infraestrutura) continuam independentes.
 2. **Consumo não-faturável via Decants** — a página de Decants registra consumo que **não gera receita**: perda, brinde, amostra, marketing/sorteio, uso interno ou outro. Cada consumo calcula um custo gerencial (custo do perfume proporcionalmente ao ml + custo de embalagem, exceto para `perda` que não inclui embalagem) e lança automaticamente uma **despesa** em `transacoes` (`origem='decant'`). Vender um decant é feito exclusivamente pela página de **Vendas**.
-3. **PDF obrigatório em relatórios** — relatórios financeiros e de giro devem poder ser exportados
-4. **Estoque mínimo** — produtos mantêm `estoque_minimo` para análise e relatórios; não há tela dedicada de Alertas no app
-5. **Multiusuário** — cada ação registra o responsável (nome do usuário logado)
-6. **Dados em Real (BRL)** — toda formatação monetária em R$ com 2 casas decimais
+3. **PDF obrigatório em relatórios** — relatórios financeiros e de giro devem poder ser exportados.
+4. **Estoque mínimo** — produtos mantêm `estoque_minimo` para análise e relatórios; não há tela dedicada de Alertas no app.
+5. **Multiusuário** — cada ação registra o responsável (nome do usuário logado).
+6. **Dados em Real (BRL)** — toda formatação monetária em R$ com 2 casas decimais.
+7. **Importação via PDF** — leitura inteligente de notas e pedidos de compra em PDF para preenchimento de itens e quantidades, com fuzzy matching.
 
 ## Fora de escopo (por enquanto)
 

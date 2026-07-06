@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-03 (Sessão 50)
+> Última atualização: 2026-07-06 (Sessão 52)
 
 ## O que já foi feito
 
@@ -259,7 +259,13 @@
     - Plano: `docs/superpowers/plans/2026-07-03-mobile-responsivo-360.md`
     - Testes: frontend completo 178/178 e build frontend passando
 
-
+51. **Documentação rica e interconectada (Sessão 51)**
+    - Criação de documentação detalhada por módulo no diretório `docs/features/`: `FINANCEIRO.md`, `ESTOQUE.md`, `VENDAS.md`, `PEDIDOS.md`, `DECANTS.md` e `AUTENTICACAO.md`.
+    - Criação de guias globais do sistema: `API.md` (especificação de endpoints e stubs), `REGRAS_NEGOCIO.md` (regras e validações consolidadas), `DEPLOY.md` (Vercel, Supabase, RLS, storage), `DESIGN_SYSTEM.md` (tipografia, paletas de cores, Three.js) e `GLOSSARIO.md` (termos técnicos e de domínio).
+    - Criação de `FLUXOS.md` mapeando todas as principais rotinas (Login, Venda, Pedido, Decant, Relatórios, etc.) usando fluxogramas e diagramas de sequência em Mermaid.
+    - Todos os arquivos utilizam links no formato wiki link do Obsidian (`[[Nome do Arquivo]]`) para interconexão e navegação suave no Obsidian.
+    - O arquivo `00-INDEX.md` foi atualizado para atuar como o painel central (MOC) de navegação da documentação.
+    - Testes frontend revalidados com sucesso (178/178 passando).
 
 41. **Importação de PDF com parser robusto e match inteligente (Sessão 36)**
     - Parser backend de pedidos agora ignora cabeçalho/cliente/rodapé e começa a leitura na tabela de itens
