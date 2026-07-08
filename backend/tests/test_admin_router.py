@@ -109,3 +109,25 @@ class AdminRouterUsersTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class AdminRouterEntitiesTest(unittest.TestCase):
+    def setUp(self):
+        app.dependency_overrides[get_admin_user] = lambda: {'sub': 'admin-id', 'email': ADMIN_EMAIL}
+        self.client = TestClient(app)
+
+    def tearDown(self):
+        app.dependency_overrides.clear()
+
+    def test_list_entity_returns_items(self):
+        with patch('app.routers.admin.get_supabase', return_value=object()), patch('app.routers.admin.admin_service.list_admin_entities', return_value=[{'id': 'p1', 'nome': 'Perfume'}]) as service:
+            response = self.client.get('/api/admin/produtos?search=Perf')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'items': [{'id': 'p1', 'nome': 'Perfume'}]})
+        self.assertEqual(service.call_args.args[1:], ('produtos', 'Perf'))
+
+    def test_delete_entity_returns_summary(self):
+        with patch('app.routers.admin.get_supabase', return_value=object()), patch('app.routers.admin.admin_service.delete_admin_entity', return_value={'metas': 1}) as service:
+            response = self.client.delete('/api/admin/metas/m1')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'deleted': {'metas': 1}})
+        self.assertEqual(service.call_args.args[1:], ('metas', 'm1'))

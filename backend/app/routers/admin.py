@@ -38,3 +38,26 @@ def remover_usuario_admin(
 ):
     deleted = delete_auth_user(get_supabase(), user_id, admin.get('email') or '')
     return {'deleted': deleted}
+
+
+from app.services import admin as admin_service
+
+
+@router.get('/{entity}')
+def listar_entidade_admin(
+    entity: str,
+    search: str | None = None,
+    _admin: dict = Depends(get_admin_user),
+):
+    items = admin_service.list_admin_entities(get_supabase(), entity, search)
+    return {'items': items}
+
+
+@router.delete('/{entity}/{item_id}')
+def remover_entidade_admin(
+    entity: str,
+    item_id: str,
+    _admin: dict = Depends(get_admin_user),
+):
+    deleted = admin_service.delete_admin_entity(get_supabase(), entity, item_id)
+    return {'deleted': deleted}
