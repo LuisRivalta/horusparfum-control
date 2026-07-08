@@ -57,6 +57,7 @@
   max-width: 200px;
 }
 
+.user-menu-admin,
 .user-menu-logout {
   display: flex;
   align-items: center;
@@ -65,12 +66,21 @@
   padding: 8px 10px;
   border: none;
   background: transparent;
-  color: var(--color-down);
+  color: var(--color-text-2);
   font-size: 13px;
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s ease;
+}
+
+.user-menu-admin:hover {
+  color: var(--color-gold);
+  background: var(--color-gold-dim);
+}
+
+.user-menu-logout {
+  color: var(--color-down);
 }
 
 .user-menu-logout:hover {

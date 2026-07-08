@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import './UserMenu.css'
+import { Icon } from '@/components/shared/Icon'
 
 interface UserMenuProps {
   initials: string
   userEmail?: string
   onSignOut: () => void
+  showAdminLink?: boolean
+  onAdminClick?: () => void
 }
 
-export function UserMenu({ initials, userEmail, onSignOut }: UserMenuProps) {
+export function UserMenu({ initials, userEmail, onSignOut, showAdminLink = false, onAdminClick }: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -37,6 +40,12 @@ export function UserMenu({ initials, userEmail, onSignOut }: UserMenuProps) {
             <div className="user-menu-info">
               <div className="user-menu-email" title={userEmail}>{userEmail}</div>
             </div>
+          )}
+          {showAdminLink && (
+            <button className="user-menu-admin" onClick={() => { setOpen(false); onAdminClick?.() }}>
+              <Icon name="dashboard" size={16} />
+              <span>Painel admin</span>
+            </button>
           )}
           <button className="user-menu-logout" onClick={() => { setOpen(false); onSignOut() }}>
             <svg viewBox="0 0 512 512" width="16" height="16">

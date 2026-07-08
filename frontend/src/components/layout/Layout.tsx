@@ -18,6 +18,8 @@ const FIN_NAV = [
   { id: 'metas', label: 'Metas', icon: 'goal', path: '/financeiro/metas' },
 ]
 
+const ADMIN_EMAIL = 'byhorusco@gmail.com'
+
 const EST_NAV = [
   { id: 'estoque', label: 'Estoque', icon: 'box', path: '/estoque' },
   { id: 'vendas', label: 'Vendas', icon: 'cart', path: '/estoque/vendas' },
@@ -37,6 +39,7 @@ export function Layout() {
 
   const isFin = location.pathname.startsWith('/financeiro')
   const nav = isFin ? FIN_NAV : EST_NAV
+  const isAdmin = user?.email === ADMIN_EMAIL
 
   // Fecha o drawer mobile ao navegar
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
@@ -189,7 +192,13 @@ export function Layout() {
           <button className="hidden sm:flex w-9 h-9 items-center justify-center rounded-lg border border-line bg-surface-2 text-text-2 hover:text-gold hover:border-gold-line hover:shadow-[0_0_14px_rgba(201,168,76,0.18)] cursor-pointer transition-all">
             <Icon name="bell" size={18} />
           </button>
-          <UserMenu initials={initials} userEmail={user?.email} onSignOut={signOut} />
+          <UserMenu
+            initials={initials}
+            userEmail={user?.email}
+            onSignOut={signOut}
+            showAdminLink={isAdmin}
+            onAdminClick={() => navigate('/admin')}
+          />
         </header>
 
         <SmoothScrollArea resetKey={location.pathname} className="flex-1 overflow-auto p-4 sm:p-7 relative">
