@@ -28,3 +28,12 @@
 
 ## Commit
 - `fix: corrige lucro do dashboard financeiro`
+
+## Review follow-up
+- Finding 1: rejection real do `Promise.all` agora cai em `.catch(...)` e sempre encerra `loading` em `.finally(...)`.
+- Finding 2: o teste anual agora valida lucro `R$ 1.180,00`, garantindo o desconto do custo vendido no periodo anual.
+
+### Comandos e resultados
+- `npm run test:run -- src/pages/financeiro/__tests__/Dashboard.test.tsx` (RED) -> 1 falha esperada: sem tratamento de rejection, a UI ficou em loading e nao exibiu erro.
+- `npm run test:run -- src/pages/financeiro/__tests__/Dashboard.test.tsx` (GREEN) -> 5/5 testes passando.
+- Hash da correcao desta rodada: pendente ate o commit desta atualizacao.

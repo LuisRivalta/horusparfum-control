@@ -54,16 +54,22 @@ export function FinDashboard() {
     Promise.all([
       supabase.from('transacoes').select('*'),
       supabase.from('vendas').select('data_venda,status,total_custo'),
-    ]).then(([transacoesResult, vendasResult]) => {
-      if (transacoesResult.error || vendasResult.error) {
-        setErro(transacoesResult.error?.message ?? vendasResult.error?.message ?? 'Erro ao carregar dashboard')
-      } else {
+    ])
+      .then(([transacoesResult, vendasResult]) => {
+        if (transacoesResult.error || vendasResult.error) {
+          setErro(transacoesResult.error?.message ?? vendasResult.error?.message ?? 'Erro ao carregar dashboard')
+          return
+        }
+
         setTransacoes((transacoesResult.data as Transacao[]) || [])
         setVendas((vendasResult.data as VendaFinanceira[]) || [])
-      }
-
-      setLoading(false)
-    })
+      })
+      .catch((error: unknown) => {
+        setErro(error instanceof Error ? error.message : 'Erro ao carregar dashboard')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [])
 
   const saldo = calcularSaldoHistorico(transacoes)
