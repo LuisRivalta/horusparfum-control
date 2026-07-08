@@ -36,4 +36,4 @@
 ### Comandos e resultados
 - `npm run test:run -- src/pages/financeiro/__tests__/Dashboard.test.tsx` (RED) -> 1 falha esperada: sem tratamento de rejection, a UI ficou em loading e nao exibiu erro.
 - `npm run test:run -- src/pages/financeiro/__tests__/Dashboard.test.tsx` (GREEN) -> 5/5 testes passando.
-- Hash da correcao desta rodada: pendente ate o commit desta atualizacao.
+- Hash da correcao desta rodada: `3a2f586`
