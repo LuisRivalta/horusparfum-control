@@ -1,7 +1,24 @@
-# Logs — Histórico de Sessões
+## 2026-07-08 - Sessao 55: Lucro real no Dashboard Financeiro
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Diagnosticada a divergencia entre o total exibido no painel (R$ 509,70) e o lucro correto (R$ 204,73).
+- Causa raiz: o Dashboard Financeiro ainda tratava custo de venda como saida ficticia, misturando logica gerencial com fluxo de caixa.
+- Corrigido o calculo para descontar `vendas.total_custo` apenas das vendas concluidas no periodo, ignorando vendas canceladas.
+- Mantido o fluxo de caixa intacto: saldo, receita e despesas continuam representando apenas as transacoes reais.
+- Registrados spec e plano em `docs/superpowers/specs/2026-07-08-lucro-dashboard-financeiro-*.md`.
+
+### Tratamento de falha
+- A anomalia foi tratada como erro de modelagem contabil, nao como problema de UI ou de dados.
+- O caso cancelado foi excluido do calculo do custo para evitar dupla contagem e saida fantasiosa no caixa.
+
+### Verificacao
+- Frontend completo: `npm run test:run` - 186 testes passando.
+- Frontend build: `npm run build` - passou.
+- Conferencia do dashboard validou o lucro real em R$ 204,73 para o periodo analisado.
 
 ---
-
 ## 2026-07-08 - Sessao 54: Painel administrativo simples
 
 **Responsavel:** Codex + Luis

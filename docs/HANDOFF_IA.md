@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-08 (Sessão 54)
+> Última atualização: 2026-07-08 (Sessão 55)
 
 ## O que já foi feito
 
@@ -382,7 +382,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 184 testes frontend passando; backend 45 testes passando
+- 186 testes frontend passando; backend 45 testes passando
 
 ## Próximos passos imediatos
 
