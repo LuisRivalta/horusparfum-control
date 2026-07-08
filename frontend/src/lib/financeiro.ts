@@ -21,6 +21,12 @@ export interface ResumoPeriodo {
   lucro: number
 }
 
+export interface VendaFinanceira {
+  data_venda: string
+  status: 'concluida' | 'cancelada'
+  total_custo: number
+}
+
 export interface FatiaCategoria {
   categoria: string
   total: number
@@ -97,11 +103,20 @@ export function calcularSaldoHistorico(transacoes: Transacao[]): number {
   return new Decimal(entradas).sub(saidas).toDecimalPlaces(2).toNumber()
 }
 
-export function resumoPeriodo(transacoes: Transacao[], periodo: Periodo): ResumoPeriodo {
+export function resumoPeriodo(
+  transacoes: Transacao[],
+  periodo: Periodo,
+  vendas: VendaFinanceira[] = []
+): ResumoPeriodo {
   const noPeriodo = transacoes.filter(t => dentroDoPeriodo(t, periodo))
   const receita = somar(noPeriodo.filter(t => t.tipo === 'entrada').map(t => t.valor))
   const despesa = somar(noPeriodo.filter(t => t.tipo === 'saida').map(t => t.valor))
-  const lucro = new Decimal(receita).sub(despesa).toDecimalPlaces(2).toNumber()
+  const custoVendido = somar(
+    vendas
+      .filter(v => v.status === 'concluida' && dentroDoPeriodo({ created_at: v.data_venda + 'T00:00:00', tipo: 'entrada' } as Transacao, periodo))
+      .map(v => v.total_custo)
+  )
+  const lucro = new Decimal(receita).sub(despesa).sub(custoVendido).toDecimalPlaces(2).toNumber()
   return { receita, despesa, lucro }
 }
 

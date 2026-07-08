@@ -89,6 +89,29 @@ describe('resumoPeriodo', () => {
     ]
     expect(resumoPeriodo(t, periodo).receita).toBe(15)
   })
+
+  it('desconta o custo de vendas concluidas no periodo', () => {
+    const transacoes = [tx({ tipo: 'entrada', valor: 509.7 })]
+    const vendas = [
+      { data_venda: '2026-06-10', status: 'concluida' as const, total_custo: 304.97 },
+    ]
+
+    expect(resumoPeriodo(transacoes, periodo, vendas)).toEqual({
+      receita: 509.7,
+      despesa: 0,
+      lucro: 204.73,
+    })
+  })
+
+  it('ignora custo de venda cancelada ou fora do periodo', () => {
+    const transacoes = [tx({ tipo: 'entrada', valor: 500 })]
+    const vendas = [
+      { data_venda: '2026-06-10', status: 'cancelada' as const, total_custo: 200 },
+      { data_venda: '2026-05-31', status: 'concluida' as const, total_custo: 100 },
+    ]
+
+    expect(resumoPeriodo(transacoes, periodo, vendas).lucro).toBe(500)
+  })
 })
 
 describe('agruparPorCategoria', () => {
