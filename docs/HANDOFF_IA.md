@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-06 (Sessão 52)
+> Última atualização: 2026-07-08 (Sessão 54)
 
 ## O que já foi feito
 
@@ -353,6 +353,23 @@
     - Migração: `supabase/migrations/20260615_decants.sql` — **aplicar no Supabase SQL Editor**
     - Spec: docs/superpowers/specs/2026-06-15-decants-design.md
 
+52. **Ajuste local do Codex CLI (Sessão 53)**
+    - Diagnosticado que codex update falhava no Windows ao baixar o instalador oficial, redirecionado para GitHub Releases, por erro TLS/revogacao CRYPT_E_NO_REVOCATION_CHECK e reset de conexao em github.com.
+    - Instalado @openai/codex@0.143.0 via npm install -g @openai/codex@latest, pois o registry npm estava acessivel.
+    - PATH do usuario ajustado para priorizar C:\Users\luisgfr\AppData\Roaming\npm antes do executavel standalone antigo em C:\Users\luisgfr\AppData\Local\Programs\OpenAI\Codex\bin.
+    - A sessao atual ainda pode enxergar codex-cli 0.142.5 por PATH ja carregado; abrir um novo terminal deve ativar codex-cli 0.143.0.
+
+53. **Painel administrativo simples (Sessão 54)**
+    - Acesso restrito no frontend e backend ao email `byhorusco@gmail.com`
+    - Gestão de logins Supabase Auth: listar, criar com email confirmado e remover usuários; o admin principal não pode ser removido
+    - Exclusões destrutivas por endpoints predefinidos para produtos, pedidos, vendas, transações, contas, metas, categorias, marcas, fornecedores, canais e embalagens
+    - Exclusões relacionadas de produtos, pedidos e vendas tratam os registros dependentes em ordem controlada
+    - Tela `/admin` com abas Logins e Exclusões, busca por entidade e confirmação obrigatória digitando `EXCLUIR`
+    - Link no menu do usuário exibido somente para o admin autorizado
+    - Specs: `docs/superpowers/specs/2026-07-08-admin-panel-design.md`
+    - Plano: `docs/superpowers/plans/2026-07-08-admin-panel.md`
+    - Testes: backend 45/45, frontend 184/184 e build passando
+
 ## Estado atual
 
 - **Deploy frontend produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
@@ -365,13 +382,14 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 178 testes frontend passando; backend 32 testes last known, sem alterações nesta sessão
+- 184 testes frontend passando; backend 45 testes passando
 
 ## Próximos passos imediatos
 
-1. Remover policies temporárias de `anon` (se foram criadas para testes)
-2. Dashboard estoque com dados reais (estoque baixo e reposição)
-3. Evolução da importação por PDF: OCR/LLM fallback para layouts diferentes, se necessário
+1. Publicar frontend/backend e executar smoke test do painel admin em produção
+2. Remover policies temporárias de `anon` (se foram criadas para testes)
+3. Dashboard estoque com dados reais (estoque baixo e reposição)
+4. Evolução da importação por PDF: OCR/LLM fallback para layouts diferentes, se necessário
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)

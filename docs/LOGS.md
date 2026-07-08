@@ -2,6 +2,48 @@
 
 ---
 
+## 2026-07-08 - Sessao 54: Painel administrativo simples
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Criado guard administrativo no FastAPI, liberando acesso somente para `byhorusco@gmail.com`.
+- Criados endpoints `/api/admin/users` para listar, criar e remover usuários do Supabase Auth, com bloqueio da remoção do admin principal.
+- Criados endpoints administrativos por entidade para listar registros e executar exclusões destrutivas predefinidas, sem aceitar SQL livre.
+- Implementadas exclusões relacionadas para produtos, pedidos e vendas, respeitando dependências conhecidas.
+- Criada página `/admin` com abas de logins e exclusões, busca e confirmação digitando `EXCLUIR`.
+- Adicionado acesso ao painel no menu do usuário, visível somente para o email administrador.
+- Criadas spec e plano em `docs/superpowers/`.
+
+### Verificacao
+- Backend completo: `python -m unittest discover -s tests` - 45 testes passando.
+- Frontend completo: `npm run test:run` - 184 testes passando.
+- Frontend build: `npm run build` - passou.
+- `git diff --check` - sem erros.
+- API administrativa do Supabase Python conferida na documentação oficial para `list_users`, `create_user`, `get_user_by_id` e `delete_user`.
+
+### Proximo
+- Publicar frontend/backend e validar em produção com o login `byhorusco@gmail.com`.
+
+---
+
+## 2026-07-08 - Sessao 53: Ajuste local do Codex CLI
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Diagnosticada a falha de instalacao/atualizacao do Codex: codex update chama o instalador oficial, que redireciona para GitHub Releases, mas o Windows falha com CRYPT_E_NO_REVOCATION_CHECK e reset de conexao ao acessar github.com.
+- Confirmado ambiente local: Node v24.13.1, npm 11.8.0, Codex standalone 0.142.5 e pacote npm mais recente @openai/codex@0.143.0.
+- Instalado @openai/codex@0.143.0 via npm install -g @openai/codex@latest.
+- Ajustado o PATH persistente do usuario para colocar C:\Users\luisgfr\AppData\Roaming\npm antes de C:\Users\luisgfr\AppData\Local\Programs\OpenAI\Codex\bin.
+
+### Verificacao
+- C:\Users\luisgfr\AppData\Roaming\npm\codex.cmd --version retornou codex-cli 0.143.0.
+- npm list -g @openai/codex --depth=0 confirmou @openai/codex@0.143.0.
+- reg query HKCU\Environment /v Path confirmou a nova ordem do PATH.
+- Necessario abrir um novo terminal para codex --version resolver para a versao npm.
+
+---
 ## 2026-07-06 - Sessao 52: Revisão e Atualização do PRD
 
 **Responsavel:** Antigravity + Luis
