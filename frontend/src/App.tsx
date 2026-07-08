@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Home } from '@/pages/home/Home'
 import { Login } from '@/pages/auth/Login'
+import { Admin } from '@/pages/admin/Admin'
 import { Layout } from '@/components/layout/Layout'
 import { ProtectedRoute } from '@/components/shared/ProtectedRoute'
 import { FinDashboard } from '@/pages/financeiro/Dashboard'
@@ -34,6 +35,7 @@ export function App() {
         <Route path="/financeiro/contas-receber" element={<FinContas tipo="receber" />} />
         <Route path="/financeiro/relatorios" element={<FinRelatorios />} />
         <Route path="/financeiro/metas" element={<FinMetas />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="/estoque" element={<EstEstoque />} />
         <Route path="/estoque/vendas" element={<EstVendas />} />
         <Route path="/estoque/vendas/config" element={<VendasConfig />} />
