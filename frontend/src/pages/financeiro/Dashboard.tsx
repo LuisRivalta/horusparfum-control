@@ -10,6 +10,7 @@ import {
   periodoMes,
   type Transacao,
   type Periodo,
+  type VendaFinanceira,
 } from '@/lib/financeiro'
 import { PeriodSelector } from './dashboard/PeriodSelector'
 import { EvolucaoChart } from './dashboard/EvolucaoChart'
@@ -43,24 +44,30 @@ function StatCard({ label, icon, valor, negativo }: { label: string; icon: strin
 export function FinDashboard() {
   const hoje = new Date()
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
+  const [vendas, setVendas] = useState<VendaFinanceira[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [periodo, setPeriodo] = useState<Periodo>(periodoMes(hoje.getFullYear(), hoje.getMonth()))
   const [catTipo, setCatTipo] = useState<'entrada' | 'saida'>('saida')
 
   useEffect(() => {
-    supabase
-      .from('transacoes')
-      .select('*')
-      .then(({ data, error }) => {
-        if (error) setErro(error.message)
-        else setTransacoes((data as Transacao[]) || [])
-        setLoading(false)
-      })
+    Promise.all([
+      supabase.from('transacoes').select('*'),
+      supabase.from('vendas').select('data_venda,status,total_custo'),
+    ]).then(([transacoesResult, vendasResult]) => {
+      if (transacoesResult.error || vendasResult.error) {
+        setErro(transacoesResult.error?.message ?? vendasResult.error?.message ?? 'Erro ao carregar dashboard')
+      } else {
+        setTransacoes((transacoesResult.data as Transacao[]) || [])
+        setVendas((vendasResult.data as VendaFinanceira[]) || [])
+      }
+
+      setLoading(false)
+    })
   }, [])
 
   const saldo = calcularSaldoHistorico(transacoes)
-  const resumo = resumoPeriodo(transacoes, periodo)
+  const resumo = resumoPeriodo(transacoes, periodo, vendas)
   const evolucao = evolucaoMensal(transacoes, hoje, 6)
   const categorias = agruparPorCategoria(transacoes, periodo, catTipo)
 

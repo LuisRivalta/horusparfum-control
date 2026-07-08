@@ -11,17 +11,38 @@ vi.mock('../dashboard/CategoriaChart', () => ({
   CategoriaChart: () => <div data-testid="categoria-chart" />,
 }))
 
-const mockTransacoes = [
-  { id: 't1', descricao: 'Venda', tipo: 'entrada', valor: 500, categoria: 'Vendas', created_at: '2026-06-10T12:00:00' },
-  { id: 't2', descricao: 'Compra', tipo: 'saida', valor: 200, categoria: 'Fornecedores', created_at: '2026-06-12T12:00:00' },
-  { id: 't3', descricao: 'Venda antiga', tipo: 'entrada', valor: 1000, categoria: 'Vendas', created_at: '2026-03-01T12:00:00' },
-]
+const { mockSupabaseFrom } = vi.hoisted(() => {
+  const mockTransacoes = [
+    { id: 't1', descricao: 'Venda', tipo: 'entrada', valor: 500, categoria: 'Vendas', created_at: '2026-06-10T12:00:00' },
+    { id: 't2', descricao: 'Compra', tipo: 'saida', valor: 200, categoria: 'Fornecedores', created_at: '2026-06-12T12:00:00' },
+    { id: 't3', descricao: 'Venda antiga', tipo: 'entrada', valor: 1000, categoria: 'Vendas', created_at: '2026-03-01T12:00:00' },
+  ]
+
+  const mockVendas = [
+    { data_venda: '2026-06-10', status: 'concluida', total_custo: 120 },
+    { data_venda: '2026-06-11', status: 'cancelada', total_custo: 999 },
+  ]
+
+  const mockSupabaseFrom = vi.fn((table: string) => ({
+    select: vi.fn(() => {
+      if (table === 'transacoes') {
+        return Promise.resolve({ data: mockTransacoes, error: null })
+      }
+
+      if (table === 'vendas') {
+        return Promise.resolve({ data: mockVendas, error: null })
+      }
+
+      return Promise.resolve({ data: [], error: null })
+    }),
+  }))
+
+  return { mockSupabaseFrom }
+})
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => Promise.resolve({ data: mockTransacoes, error: null })),
-    })),
+    from: mockSupabaseFrom,
   },
 }))
 
@@ -46,7 +67,8 @@ describe('FinDashboard', () => {
     render(<FinDashboard />)
     await waitFor(() => expect(screen.getByText('R$ 500,00')).toBeInTheDocument()) // receita
     expect(screen.getByText('R$ 200,00')).toBeInTheDocument() // despesa
-    expect(screen.getByText('R$ 300,00')).toBeInTheDocument() // lucro
+    expect(screen.getByText('R$ 180,00')).toBeInTheDocument() // lucro com custo vendido
+    expect(mockSupabaseFrom).toHaveBeenCalledWith('vendas')
   })
 
   it('renderiza os dois gráficos', async () => {
