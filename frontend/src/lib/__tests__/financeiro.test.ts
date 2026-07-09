@@ -93,7 +93,7 @@ describe('resumoPeriodo', () => {
   it('desconta o custo de vendas concluidas no periodo', () => {
     const transacoes = [tx({ tipo: 'entrada', valor: 509.7 })]
     const vendas = [
-      { data_venda: '2026-06-10', status: 'concluida' as const, total_custo: 304.97 },
+      { id: 'v1', data_venda: '2026-06-10', status: 'concluida' as const, total_custo: 304.97 },
     ]
 
     expect(resumoPeriodo(transacoes, periodo, vendas)).toEqual({
@@ -106,11 +106,34 @@ describe('resumoPeriodo', () => {
   it('ignora custo de venda cancelada ou fora do periodo', () => {
     const transacoes = [tx({ tipo: 'entrada', valor: 500 })]
     const vendas = [
-      { data_venda: '2026-06-10', status: 'cancelada' as const, total_custo: 200 },
-      { data_venda: '2026-05-31', status: 'concluida' as const, total_custo: 100 },
+      { id: 'v1', data_venda: '2026-06-10', status: 'cancelada' as const, total_custo: 200 },
+      { id: 'v2', data_venda: '2026-05-31', status: 'concluida' as const, total_custo: 100 },
     ]
 
     expect(resumoPeriodo(transacoes, periodo, vendas).lucro).toBe(500)
+  })
+
+  it('usa data_venda para receita, taxa e frete de venda retroativa', () => {
+    const transacoes = [
+      tx({ venda_id: 'v1', tipo: 'entrada', valor: 500, created_at: '2026-07-05T12:00:00' }),
+      tx({ venda_id: 'v1', tipo: 'saida', valor: 50, created_at: '2026-07-05T12:00:00' }),
+      tx({ venda_id: 'v1', tipo: 'saida', valor: 20, created_at: '2026-07-05T12:00:00' }),
+      tx({ tipo: 'saida', valor: 30, created_at: '2026-07-05T12:00:00' }),
+    ]
+    const vendas = [
+      { id: 'v1', data_venda: '2026-06-10', status: 'concluida' as const, total_custo: 120 },
+    ]
+
+    expect(resumoPeriodo(transacoes, periodo, vendas)).toEqual({
+      receita: 500,
+      despesa: 70,
+      lucro: 310,
+    })
+    expect(resumoPeriodo(transacoes, periodoMes(2026, 6), vendas)).toEqual({
+      receita: 0,
+      despesa: 30,
+      lucro: -30,
+    })
   })
 })
 

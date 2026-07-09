@@ -7,6 +7,7 @@ export interface Transacao {
   valor: number
   categoria: string | null
   created_at: string
+  venda_id?: string | null
 }
 
 export interface Periodo {
@@ -22,6 +23,7 @@ export interface ResumoPeriodo {
 }
 
 export interface VendaFinanceira {
+  id: string
   data_venda: string
   status: 'concluida' | 'cancelada'
   total_custo: number
@@ -92,8 +94,12 @@ function somar(valores: number[]): number {
     .toNumber()
 }
 
-function dentroDoPeriodo(t: Transacao, periodo: Periodo): boolean {
-  const d = new Date(t.created_at)
+function dataLocal(data: string): Date {
+  return new Date(data.length === 10 ? data + 'T00:00:00' : data)
+}
+
+function dentroDoPeriodo(data: string, periodo: Periodo): boolean {
+  const d = dataLocal(data)
   return d >= periodo.inicio && d <= periodo.fim
 }
 
@@ -108,12 +114,16 @@ export function resumoPeriodo(
   periodo: Periodo,
   vendas: VendaFinanceira[] = []
 ): ResumoPeriodo {
-  const noPeriodo = transacoes.filter(t => dentroDoPeriodo(t, periodo))
+  const vendasPorId = new Map(vendas.map(v => [v.id, v]))
+  const noPeriodo = transacoes.filter(t => {
+    const dataVenda = t.venda_id ? vendasPorId.get(t.venda_id)?.data_venda : undefined
+    return dentroDoPeriodo(dataVenda ?? t.created_at, periodo)
+  })
   const receita = somar(noPeriodo.filter(t => t.tipo === 'entrada').map(t => t.valor))
   const despesa = somar(noPeriodo.filter(t => t.tipo === 'saida').map(t => t.valor))
   const custoVendido = somar(
     vendas
-      .filter(v => v.status === 'concluida' && dentroDoPeriodo({ created_at: v.data_venda + 'T00:00:00', tipo: 'entrada' } as Transacao, periodo))
+      .filter(v => v.status === 'concluida' && dentroDoPeriodo(v.data_venda, periodo))
       .map(v => v.total_custo)
   )
   const lucro = new Decimal(receita).sub(despesa).sub(custoVendido).toDecimalPlaces(2).toNumber()
@@ -125,7 +135,7 @@ export function agruparPorCategoria(
   periodo: Periodo,
   tipo: 'entrada' | 'saida'
 ): FatiaCategoria[] {
-  const filtradas = transacoes.filter(t => t.tipo === tipo && dentroDoPeriodo(t, periodo))
+  const filtradas = transacoes.filter(t => t.tipo === tipo && dentroDoPeriodo(t.created_at, periodo))
   const mapa = new Map<string, number[]>()
   for (const t of filtradas) {
     const cat = t.categoria?.trim() || 'Sem categoria'

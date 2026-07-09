@@ -41,6 +41,32 @@ function StatCard({ label, icon, valor, negativo }: { label: string; icon: strin
   )
 }
 
+const VENDAS_PAGE_SIZE = 1000
+
+async function carregarTodasVendas(): Promise<VendaFinanceira[]> {
+  const vendas: VendaFinanceira[] = []
+  let inicio = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('id,data_venda,status,total_custo')
+      .range(inicio, inicio + VENDAS_PAGE_SIZE - 1)
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    const pagina = (data as VendaFinanceira[]) || []
+    vendas.push(...pagina)
+    if (pagina.length < VENDAS_PAGE_SIZE) {
+      return vendas
+    }
+
+    inicio += VENDAS_PAGE_SIZE
+  }
+}
+
 export function FinDashboard() {
   const hoje = new Date()
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
@@ -53,16 +79,16 @@ export function FinDashboard() {
   useEffect(() => {
     Promise.all([
       supabase.from('transacoes').select('*'),
-      supabase.from('vendas').select('data_venda,status,total_custo'),
+      carregarTodasVendas(),
     ])
-      .then(([transacoesResult, vendasResult]) => {
-        if (transacoesResult.error || vendasResult.error) {
-          setErro(transacoesResult.error?.message ?? vendasResult.error?.message ?? 'Erro ao carregar dashboard')
+      .then(([transacoesResult, vendasData]) => {
+        if (transacoesResult.error) {
+          setErro(transacoesResult.error.message)
           return
         }
 
         setTransacoes((transacoesResult.data as Transacao[]) || [])
-        setVendas((vendasResult.data as VendaFinanceira[]) || [])
+        setVendas(vendasData)
       })
       .catch((error: unknown) => {
         setErro(error instanceof Error ? error.message : 'Erro ao carregar dashboard')
@@ -91,7 +117,7 @@ export function FinDashboard() {
 
       {erro && (
         <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">
-          Erro ao carregar transações: {erro}
+          Erro ao carregar dados financeiros: {erro}
         </div>
       )}
 

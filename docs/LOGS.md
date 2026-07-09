@@ -1,17 +1,36 @@
+## 2026-07-09 - Sessao 56: Findings finais do Dashboard Financeiro
+
+**Responsavel:** Codex
+
+### O que foi feito
+- Corrigido o mock do Supabase que causava TS2554 no build.
+- Lancamentos vinculados a venda passaram a usar vendas.data_venda no resumo do periodo; transacoes manuais continuam usando created_at.
+- A leitura de vendas no Dashboard passou a paginar explicitamente em lotes de 1.000 ate receber uma pagina incompleta.
+- A mensagem de falha do Dashboard agora se refere ao carregamento de dados financeiros.
+- Adicionados testes de regressao para venda retroativa e paginacao de vendas.
+
+### Verificacao
+- RED venda retroativa: o resumo de junho retornou receita/despesa zeradas e apenas o custo da venda.
+- RED paginacao: o mock de range recebeu 0 chamadas antes da implementacao.
+- Focados: financeiro.test.ts com 14/14 e Dashboard.test.tsx com 6/6.
+- Frontend completo: npm test -- --run - 189 testes passando em 31 arquivos.
+- Frontend build: npm run build - passou.
+
+---
 ## 2026-07-08 - Sessao 55: Lucro real no Dashboard Financeiro
 
 **Responsavel:** Codex + Luis
 
 ### O que foi feito
 - Diagnosticada a divergencia entre o total exibido no painel (R$ 509,70) e o lucro correto (R$ 204,73).
-- Causa raiz: o Dashboard Financeiro ainda tratava custo de venda como saida ficticia, misturando logica gerencial com fluxo de caixa.
+- Causa raiz: o Dashboard Financeiro nao descontava o custo gerencial da venda no lucro; nenhuma saida ficticia foi criada no fluxo de caixa.
 - Corrigido o calculo para descontar `vendas.total_custo` apenas das vendas concluidas no periodo, ignorando vendas canceladas.
 - Mantido o fluxo de caixa intacto: saldo, receita e despesas continuam representando apenas as transacoes reais.
 - Registrados spec e plano em `docs/superpowers/specs/2026-07-08-lucro-dashboard-financeiro-*.md`.
 
 ### Tratamento de falha
 - A anomalia foi tratada como erro de modelagem contabil, nao como problema de UI ou de dados.
-- O caso cancelado foi excluido do calculo do custo para evitar dupla contagem e saida fantasiosa no caixa.
+- O caso cancelado foi excluido do calculo do custo para evitar dupla contagem; o ajuste nao criou lancamento de saida no caixa.
 
 ### Verificacao
 - Frontend completo: `npm run test:run` - 186 testes passando.

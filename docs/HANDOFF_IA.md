@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-08 (Sessão 55)
+> Última atualização: 2026-07-09 (Sessão 56)
 
 ## O que já foi feito
 
@@ -370,6 +370,12 @@
     - Plano: `docs/superpowers/plans/2026-07-08-admin-panel.md`
     - Testes: backend 45/45, frontend 184/184 e build passando
 
+54. **Correções finais do Dashboard Financeiro (Sessão 56)**
+    - resumoPeriodo usa data_venda para receita, taxa e frete vinculados a uma venda, mantendo created_at para transações manuais
+    - Vendas são carregadas com paginação explícita em lotes de 1.000, sem truncamento na primeira página do Supabase
+    - Mensagem de erro abrange todos os dados financeiros carregados pelo Dashboard
+    - Testes TDD cobrem venda retroativa e paginação; frontend completo com 189/189 testes e build passando
+
 ## Estado atual
 
 - **Deploy frontend produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
@@ -382,7 +388,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 186 testes frontend passando; backend 45 testes passando
+- 189 testes frontend passando; backend 45 testes passando
 
 ## Próximos passos imediatos
 
