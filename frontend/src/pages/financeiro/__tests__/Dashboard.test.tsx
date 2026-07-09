@@ -1,18 +1,23 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { type Transacao } from '@/lib/financeiro'
 import { FinDashboard } from '../Dashboard'
 
 // Mockar os gráficos: em jsdom o ResponsiveContainer não tem largura.
 // O foco do teste são os cards e o seletor.
 vi.mock('../dashboard/EvolucaoChart', () => ({
-  EvolucaoChart: () => <div data-testid="evolucao-chart" />,
+  EvolucaoChart: ({ data }: { data: unknown }) => (
+    <div data-testid="evolucao-chart">{JSON.stringify(data)}</div>
+  ),
 }))
 vi.mock('../dashboard/CategoriaChart', () => ({
-  CategoriaChart: () => <div data-testid="categoria-chart" />,
+  CategoriaChart: ({ data }: { data: unknown }) => (
+    <div data-testid="categoria-chart">{JSON.stringify(data)}</div>
+  ),
 }))
 
-const { mockSupabaseFrom, mockSelectByTable, mockVendasRange } = vi.hoisted(() => {
-  const mockTransacoes = [
+const { mockSupabaseFrom, mockSelectByTable, mockVendasOrder, mockVendasRange } = vi.hoisted(() => {
+  const mockTransacoes: Transacao[] = [
     { id: 't1', descricao: 'Venda', tipo: 'entrada', valor: 500, categoria: 'Vendas', created_at: '2026-06-10T12:00:00' },
     { id: 't2', descricao: 'Compra', tipo: 'saida', valor: 200, categoria: 'Fornecedores', created_at: '2026-06-12T12:00:00' },
     { id: 't3', descricao: 'Venda antiga', tipo: 'entrada', valor: 1000, categoria: 'Vendas', created_at: '2026-03-01T12:00:00' },
@@ -24,12 +29,13 @@ const { mockSupabaseFrom, mockSelectByTable, mockVendasRange } = vi.hoisted(() =
   ]
 
   const mockSelectByTable = {
-    transacoes: vi.fn((_query?: string) => Promise.resolve({ data: mockTransacoes, error: null })),
-    vendas: vi.fn((_query?: string) => Promise.resolve({ data: mockVendas, error: null })),
+    transacoes: vi.fn(() => Promise.resolve({ data: mockTransacoes, error: null })),
+    vendas: vi.fn(),
   }
-  const mockVendasRange = vi.fn((_from: number, _to: number) =>
+  const mockVendasRange = vi.fn(() =>
     Promise.resolve({ data: mockVendas, error: null })
   )
+  const mockVendasOrder = vi.fn(() => ({ range: mockVendasRange }))
 
   const mockSupabaseFrom = vi.fn((table: string) => ({
     select: vi.fn((query?: string) => {
@@ -38,12 +44,16 @@ const { mockSupabaseFrom, mockSelectByTable, mockVendasRange } = vi.hoisted(() =
         return Promise.resolve({ data: [], error: null })
       }
 
-      const result = handler(query)
-      return table === 'vendas' ? Object.assign(result, { range: mockVendasRange }) : result
+      if (table === 'vendas') {
+        handler(query)
+        return { order: mockVendasOrder }
+      }
+
+      return handler(query)
     }),
   }))
 
-  return { mockSupabaseFrom, mockSelectByTable, mockVendasRange }
+  return { mockSupabaseFrom, mockSelectByTable, mockVendasOrder, mockVendasRange }
 })
 
 vi.mock('@/lib/supabase', () => ({
@@ -133,8 +143,52 @@ describe('FinDashboard', () => {
 
     await waitFor(() => expect(mockVendasRange).toHaveBeenCalledTimes(2))
     expect(screen.getByText('R$ 275,00')).toBeInTheDocument()
+    expect(mockVendasOrder).toHaveBeenCalledWith('id', { ascending: true })
     expect(mockVendasRange).toHaveBeenNthCalledWith(1, 0, 999)
     expect(mockVendasRange).toHaveBeenNthCalledWith(2, 1000, 1999)
+  })
+
+  it('alinha graficos e categorias pela data da venda retroativa', async () => {
+    mockSelectByTable.transacoes.mockResolvedValue({
+      data: [
+        {
+          id: 't1',
+          venda_id: 'v1',
+          descricao: 'Venda retroativa',
+          tipo: 'entrada',
+          valor: 500,
+          categoria: 'Vendas',
+          created_at: '2026-07-05T12:00:00',
+        },
+        {
+          id: 't2',
+          venda_id: 'v1',
+          descricao: 'Taxa retroativa',
+          tipo: 'saida',
+          valor: 25,
+          categoria: 'Taxas',
+          created_at: '2026-07-05T12:00:00',
+        },
+      ],
+      error: null,
+    })
+    mockVendasRange.mockResolvedValue({
+      data: [
+        { id: 'v1', data_venda: '2026-06-10', status: 'concluida', total_custo: 100 },
+      ],
+      error: null,
+    })
+
+    render(<FinDashboard />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('evolucao-chart')).toHaveTextContent(
+        '{"mes":"jun","receita":500,"despesa":25}'
+      )
+    })
+    expect(screen.getByTestId('categoria-chart')).toHaveTextContent(
+      '[{"categoria":"Taxas","total":25}]'
+    )
   })
 
   it('encerra loading e mostra erro quando uma consulta rejeita de verdade', async () => {

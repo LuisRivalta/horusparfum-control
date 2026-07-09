@@ -103,6 +103,17 @@ function dentroDoPeriodo(data: string, periodo: Periodo): boolean {
   return d >= periodo.inicio && d <= periodo.fim
 }
 
+function dataEfetivaTransacao(
+  transacao: Transacao,
+  vendasPorId: Map<string, VendaFinanceira>
+): string {
+  if (!transacao.venda_id) {
+    return transacao.created_at
+  }
+
+  return vendasPorId.get(transacao.venda_id)?.data_venda ?? transacao.created_at
+}
+
 export function calcularSaldoHistorico(transacoes: Transacao[]): number {
   const entradas = somar(transacoes.filter(t => t.tipo === 'entrada').map(t => t.valor))
   const saidas = somar(transacoes.filter(t => t.tipo === 'saida').map(t => t.valor))
@@ -115,10 +126,9 @@ export function resumoPeriodo(
   vendas: VendaFinanceira[] = []
 ): ResumoPeriodo {
   const vendasPorId = new Map(vendas.map(v => [v.id, v]))
-  const noPeriodo = transacoes.filter(t => {
-    const dataVenda = t.venda_id ? vendasPorId.get(t.venda_id)?.data_venda : undefined
-    return dentroDoPeriodo(dataVenda ?? t.created_at, periodo)
-  })
+  const noPeriodo = transacoes.filter(t =>
+    dentroDoPeriodo(dataEfetivaTransacao(t, vendasPorId), periodo)
+  )
   const receita = somar(noPeriodo.filter(t => t.tipo === 'entrada').map(t => t.valor))
   const despesa = somar(noPeriodo.filter(t => t.tipo === 'saida').map(t => t.valor))
   const custoVendido = somar(
@@ -133,9 +143,13 @@ export function resumoPeriodo(
 export function agruparPorCategoria(
   transacoes: Transacao[],
   periodo: Periodo,
-  tipo: 'entrada' | 'saida'
+  tipo: 'entrada' | 'saida',
+  vendas: VendaFinanceira[] = []
 ): FatiaCategoria[] {
-  const filtradas = transacoes.filter(t => t.tipo === tipo && dentroDoPeriodo(t.created_at, periodo))
+  const vendasPorId = new Map(vendas.map(v => [v.id, v]))
+  const filtradas = transacoes.filter(t =>
+    t.tipo === tipo && dentroDoPeriodo(dataEfetivaTransacao(t, vendasPorId), periodo)
+  )
   const mapa = new Map<string, number[]>()
   for (const t of filtradas) {
     const cat = t.categoria?.trim() || 'Sem categoria'
@@ -151,13 +165,14 @@ export function agruparPorCategoria(
 export function evolucaoMensal(
   transacoes: Transacao[],
   referencia: Date,
-  nMeses = 6
+  nMeses = 6,
+  vendas: VendaFinanceira[] = []
 ): PontoEvolucao[] {
   const pontos: PontoEvolucao[] = []
   for (let i = nMeses - 1; i >= 0; i--) {
     const d = new Date(referencia.getFullYear(), referencia.getMonth() - i, 1)
     const periodo = periodoMes(d.getFullYear(), d.getMonth())
-    const r = resumoPeriodo(transacoes, periodo)
+    const r = resumoPeriodo(transacoes, periodo, vendas)
     pontos.push({ mes: MESES_CURTOS[d.getMonth()], receita: r.receita, despesa: r.despesa })
   }
   return pontos

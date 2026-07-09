@@ -158,6 +158,25 @@ describe('agruparPorCategoria', () => {
       { categoria: 'Sem categoria', total: 10 },
     ])
   })
+
+  it('usa data_venda para agrupar transacao de venda retroativa', () => {
+    const t = [
+      tx({
+        venda_id: 'v1',
+        tipo: 'saida',
+        valor: 25,
+        categoria: 'Taxas',
+        created_at: '2026-07-05T12:00:00',
+      }),
+    ]
+    const vendas = [
+      { id: 'v1', data_venda: '2026-06-10', status: 'concluida' as const, total_custo: 100 },
+    ]
+
+    expect(agruparPorCategoria(t, periodo, 'saida', vendas)).toEqual([
+      { categoria: 'Taxas', total: 25 },
+    ])
+  })
 })
 
 describe('evolucaoMensal', () => {
@@ -172,5 +191,30 @@ describe('evolucaoMensal', () => {
     expect(r[0]).toEqual({ mes: 'jan', receita: 0, despesa: 0 })
     expect(r[3]).toEqual({ mes: 'abr', receita: 70, despesa: 0 })
     expect(r[5]).toEqual({ mes: 'jun', receita: 100, despesa: 40 })
+  })
+
+  it('usa data_venda na evolucao de venda retroativa', () => {
+    const t = [
+      tx({
+        venda_id: 'v1',
+        tipo: 'entrada',
+        valor: 500,
+        created_at: '2026-07-05T12:00:00',
+      }),
+      tx({
+        venda_id: 'v1',
+        tipo: 'saida',
+        valor: 25,
+        created_at: '2026-07-05T12:00:00',
+      }),
+    ]
+    const vendas = [
+      { id: 'v1', data_venda: '2026-06-10', status: 'concluida' as const, total_custo: 100 },
+    ]
+
+    expect(evolucaoMensal(t, new Date(2026, 6, 15), 2, vendas)).toEqual([
+      { mes: 'jun', receita: 500, despesa: 25 },
+      { mes: 'jul', receita: 0, despesa: 0 },
+    ])
   })
 })

@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-09 (Sessão 56)
+> Última atualização: 2026-07-09 (Sessão 57)
 
 ## O que já foi feito
 
@@ -374,7 +374,14 @@
     - resumoPeriodo usa data_venda para receita, taxa e frete vinculados a uma venda, mantendo created_at para transações manuais
     - Vendas são carregadas com paginação explícita em lotes de 1.000, sem truncamento na primeira página do Supabase
     - Mensagem de erro abrange todos os dados financeiros carregados pelo Dashboard
-    - Testes TDD cobrem venda retroativa e paginação; frontend completo com 189/189 testes e build passando
+    - Testes TDD cobrem venda retroativa e paginação; suíte e build passaram na sessão
+
+55. **Alinhamento temporal e paginação estável do Dashboard Financeiro (Sessão 57)**
+    - Resumo, categorias e evolução mensal usam `vendas.data_venda` para transações com `venda_id`; transações manuais mantêm `created_at`
+    - `agruparPorCategoria` e `evolucaoMensal` aceitam vendas como parâmetro opcional, preservando compatibilidade
+    - Dashboard passa vendas aos dois gráficos e pagina vendas com ordenação ascendente estável por `id` antes de cada `range`
+    - Mocks dos testes não mantêm parâmetros ociosos e passam no ESLint sem desabilitar regras
+    - Frontend completo com 192/192 testes e build passando
 
 ## Estado atual
 
@@ -388,7 +395,7 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 189 testes frontend passando; backend 45 testes passando
+- 192 testes frontend passando; backend 45 testes passando
 
 ## Próximos passos imediatos
 

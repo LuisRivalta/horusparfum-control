@@ -1,3 +1,23 @@
+## 2026-07-09 - Sessao 57: Alinhamento temporal do Dashboard Financeiro
+
+Revisao dos calculos e da paginacao do Dashboard Financeiro.
+
+### O que foi feito
+
+- `agruparPorCategoria` e `evolucaoMensal` passaram a aceitar vendas opcionalmente e a usar `data_venda` para transacoes vinculadas por `venda_id`.
+- O Dashboard passou as vendas para resumo, categorias e evolucao, mantendo `created_at` para transacoes manuais.
+- A paginacao de vendas passou a ordenar por `id` ascendente antes de aplicar cada `range` de 1.000 registros.
+- Os mocks do Dashboard foram ajustados sem parametros ociosos e agora validam a cadeia `order().range()`.
+- A spec documenta `id`/`venda_id`, fallback temporal e fronteiras da paginacao.
+
+### Verificacao
+
+- RED focado: 8 falhas esperadas antes da implementacao, incluindo as duas regressoes puras de venda retroativa.
+- GREEN focado: 23/23 testes passando em 2 arquivos.
+- ESLint focado: 4 arquivos sem erros ou avisos.
+- Frontend completo: 192/192 testes passando em 31 arquivos.
+- Build de producao: `tsc -b && vite build` passando.
+
 ## 2026-07-09 - Sessao 56: Findings finais do Dashboard Financeiro
 
 **Responsavel:** Codex

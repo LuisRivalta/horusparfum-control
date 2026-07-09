@@ -51,6 +51,7 @@ async function carregarTodasVendas(): Promise<VendaFinanceira[]> {
     const { data, error } = await supabase
       .from('vendas')
       .select('id,data_venda,status,total_custo')
+      .order('id', { ascending: true })
       .range(inicio, inicio + VENDAS_PAGE_SIZE - 1)
 
     if (error) {
@@ -100,8 +101,8 @@ export function FinDashboard() {
 
   const saldo = calcularSaldoHistorico(transacoes)
   const resumo = resumoPeriodo(transacoes, periodo, vendas)
-  const evolucao = evolucaoMensal(transacoes, hoje, 6)
-  const categorias = agruparPorCategoria(transacoes, periodo, catTipo)
+  const evolucao = evolucaoMensal(transacoes, hoje, 6, vendas)
+  const categorias = agruparPorCategoria(transacoes, periodo, catTipo, vendas)
 
   const cardValor = (n: number) => (loading ? '—' : formatBRL(n))
 
