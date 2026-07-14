@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-09 (Sessão 57)
+> Última atualização: 2026-07-14 (Sessão 58)
 
 ## O que já foi feito
 
@@ -383,6 +383,18 @@
     - Mocks dos testes não mantêm parâmetros ociosos e passam no ESLint sem desabilitar regras
     - Frontend completo com 192/192 testes e build passando
 
+56. **Correcao unificada de transacoes - fundacao de banco (Sessao 58)**
+    - Definida a decisao de produto: a aba Financeiro > Transacoes sera o ponto visual unico para corrigir lancamentos, mas mantendo modais e regras diferentes por origem.
+    - Transacoes manuais poderao ser editadas/excluidas diretamente com confirmacao.
+    - Transacoes de venda devem abrir edicao da venda no mesmo contexto visual; a regra precisa recomputar estoque, itens, ROI/lucro e lancamentos financeiros de forma atomica.
+    - Transacoes de decant devem usar correcao/reversao propria, preservando ml e custo gerencial.
+    - Criada spec em docs/superpowers/specs/2026-07-13-transacoes-correcao-unificada-design.md.
+    - Criado plano em docs/superpowers/plans/2026-07-13-transacoes-correcao-unificada.md.
+    - Criada migration supabase/migrations/20260713_correcao_unificada_transacoes.sql com transacoes.decant_id, RPC editar_venda e RPC corrigir_consumo_decant.
+    - Criado teste estatico backend/tests/test_correcao_transacoes_migration.py para proteger a migration.
+    - Commit ja existente: 6866eb4 feat: adiciona correcao atomica de transacoes.
+    - A migration ainda nao foi aplicada no Supabase de producao.
+
 ## Estado atual
 
 - **Deploy frontend produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
@@ -395,14 +407,20 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 192 testes frontend passando; backend 45 testes passando
+- 192 testes frontend passando; backend 49 testes passando na ultima verificacao completa conhecida
+- Ha trabalho de implementacao parcial em andamento para a UI de edicao de vendas/transacoes; nao considerar concluido ate nova validacao e commit proprios
 
 ## Próximos passos imediatos
 
-1. Publicar frontend/backend e executar smoke test do painel admin em produção
-2. Remover policies temporárias de `anon` (se foram criadas para testes)
-3. Dashboard estoque com dados reais (estoque baixo e reposição)
-4. Evolução da importação por PDF: OCR/LLM fallback para layouts diferentes, se necessário
+1. Concluir a UI de correcao unificada em Financeiro > Transacoes:
+   - editar/excluir transacoes manuais com confirmacao;
+   - abrir edicao de venda a partir de transacoes de venda;
+   - abrir correcao/reversao propria para transacoes de decant.
+2. Revalidar frontend/backend e aplicar supabase/migrations/20260713_correcao_unificada_transacoes.sql no Supabase SQL Editor antes de usar a feature em producao.
+3. Publicar frontend/backend e executar smoke test do painel admin em producao.
+4. Remover policies temporarias de anon (se foram criadas para testes).
+5. Dashboard estoque com dados reais (estoque baixo e reposicao).
+6. Evolucao da importacao por PDF: OCR/LLM fallback para layouts diferentes, se necessario.
 
 ### Melhorias futuras conhecidas (dashboard financeiro)
 - `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
@@ -411,7 +429,7 @@
 
 ## Decisões pendentes
 
-- Nenhuma decisão pendente registrada no momento.
+- Definir o momento de aplicar a migration 20260713_correcao_unificada_transacoes.sql no Supabase de producao.
 
 ## Para a IA
 

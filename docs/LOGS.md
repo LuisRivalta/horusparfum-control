@@ -1,3 +1,22 @@
+## 2026-07-14 - Sessao 58: Documentacao da correcao unificada de transacoes
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Registrada a decisao de produto para centralizar visualmente as correcoes na aba Financeiro > Transacoes.
+- Documentado que transacoes manuais, vendas e decants devem compartilhar a pagina, mas manter modais e regras de negocio separados.
+- Registrado o estado da fundacao tecnica ja commitada: migration 20260713_correcao_unificada_transacoes.sql, FK transacoes.decant_id, RPC editar_venda, RPC corrigir_consumo_decant e teste estatico da migration.
+- Incluido no repositorio o plano de execucao docs/superpowers/plans/2026-07-13-transacoes-correcao-unificada.md.
+- Atualizado docs/HANDOFF_IA.md com proximos passos e pendencia de aplicar a migration no Supabase.
+
+### Verificacao
+- Escopo desta sessao foi documental.
+- git diff --check sem erros nos arquivos de documentacao.
+- Arquivos de implementacao parcial ficaram fora do commit documental.
+
+### Proximo
+- Concluir a UI de edicao/correcao na aba Transacoes e revalidar frontend/backend antes de aplicar a migration em producao.
+
 ## 2026-07-09 - Sessao 57: Alinhamento temporal do Dashboard Financeiro
 
 Revisao dos calculos e da paginacao do Dashboard Financeiro.
