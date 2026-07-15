@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-14 (Sessão 58)
+> Última atualização: 2026-07-15 (Sessão 59)
 
 ## O que já foi feito
 
@@ -395,6 +395,14 @@
     - Commit ja existente: 6866eb4 feat: adiciona correcao atomica de transacoes.
     - A migration ainda nao foi aplicada no Supabase de producao.
 
+57. **Relatorio financeiro alinhado ao lucro real (Sessao 59)**
+    - `GET /api/financeiro/relatorios` passou a descontar do lucro o `total_custo` das vendas concluidas no periodo, sem criar saida ficticia nem alterar o saldo historico.
+    - Lancamentos vinculados a venda usam `vendas.data_venda` como data efetiva; transacoes manuais continuam usando `transacoes.created_at`.
+    - Transacoes e vendas sao consultadas com paginacao deterministica em lotes de 1.000, ordenados por `id`, evitando truncamento do Supabase.
+    - Falhas em qualquer uma das duas consultas retornam HTTP 502 identificando a tabela afetada.
+    - Suite backend completa validada com 50/50 testes passando.
+    - A UI de edicao de vendas continua parcial e fora deste commit: os 2 testes focados de `VendaFormModal.test.tsx` ainda falham por ausencia do carregamento da venda e da chamada `editar_venda`.
+
 ## Estado atual
 
 - **Deploy frontend produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
@@ -407,8 +415,9 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- 192 testes frontend passando; backend 49 testes passando na ultima verificacao completa conhecida
-- Ha trabalho de implementacao parcial em andamento para a UI de edicao de vendas/transacoes; nao considerar concluido ate nova validacao e commit proprios
+- Ultima verificacao frontend completa conhecida: 192/192 testes e build passando antes do trabalho parcial atual
+- Backend completo: 50/50 testes passando em 2026-07-15
+- Ha trabalho de implementacao parcial e nao versionado para a UI de edicao de vendas/transacoes; os 2 testes focados atuais falham e a feature nao deve ser considerada concluida
 
 ## Próximos passos imediatos
 

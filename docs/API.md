@@ -148,13 +148,13 @@ Retorna relatório financeiro consolidado para o período especificado, com cál
 
 | Parâmetro | Tipo | Obrigatório | Formato | Descrição |
 |---|---|:---:|---|---|
-| `inicio` | `string` | ✅ | `YYYY-MM-DD` | Data de início do período |
-| `fim` | `string` | ✅ | `YYYY-MM-DD` | Data final do período |
+| `inicio` | `string` | ✅ | ISO-8601 | Início do período; aceita data ou datetime com fuso |
+| `fim` | `string` | ✅ | ISO-8601 | Fim do período; aceita data ou datetime com fuso |
 
 #### Validações
 
 - Ambos os parâmetros `inicio` e `fim` são obrigatórios
-- O formato deve ser `YYYY-MM-DD` (ISO 8601 date)
+- Os valores devem ser datas ou datetimes ISO-8601 válidos
 - `inicio` não pode ser posterior a `fim`
 
 #### Resposta de Sucesso — `200 OK`
@@ -162,48 +162,35 @@ Retorna relatório financeiro consolidado para o período especificado, com cál
 ```json
 {
   "periodo": {
-    "inicio": "2025-01-01",
-    "fim": "2025-01-31"
+    "inicio": "2026-07-01T03:00:00+00:00",
+    "fim": "2026-08-01T02:59:59+00:00"
   },
   "resumo": {
-    "total_receitas": "5240.50",
-    "total_despesas": "2130.00",
-    "saldo_periodo": "3110.50",
-    "saldo_historico": "15420.75",
-    "total_transacoes": 47
+    "receita": 5240.5,
+    "despesa": 2130.0,
+    "lucro": 1710.5,
+    "saldo_historico": 15420.75
   },
-  "por_categoria": [
-    {
-      "categoria": "vendas",
-      "tipo": "entrada",
-      "total": "4800.00",
-      "quantidade": 32
-    },
-    {
-      "categoria": "compras",
-      "tipo": "saida",
-      "total": "1800.00",
-      "quantidade": 8
-    }
-  ],
-  "evolucao_mensal": [
-    {
-      "mes": "2025-01",
-      "receitas": "5240.50",
-      "despesas": "2130.00",
-      "saldo": "3110.50"
-    }
-  ]
+  "categorias": {
+    "receitas": [{"categoria": "Vendas", "total": 4800.0}],
+    "despesas": [{"categoria": "Compras", "total": 1800.0}]
+  },
+  "origens": [{"origem": "Venda", "qtd": 32}],
+  "maiores": {"receitas": [], "despesas": []},
+  "transacoes": [],
+  "total_lancamentos": 47
 }
 ```
 
 #### Regras de Negócio Aplicadas
 
 - Todos os valores monetários são calculados com `Decimal` no backend para evitar erros de ponto flutuante
-- Valores retornados como strings para preservar precisão decimal
 - `saldo_historico` = soma acumulada de **todas** as entradas - **todas** as saídas desde o início do sistema (não apenas do período)
-- `saldo_periodo` = receitas - despesas apenas do período filtrado
-- Transações de vendas canceladas são **excluídas** do cálculo
+- `lucro` = receitas - despesas - `total_custo` das vendas concluídas no período
+- O custo vendido é gerencial: não cria saída financeira e não altera `saldo_historico`
+- Transações com `venda_id` usam `vendas.data_venda`; transações manuais usam `transacoes.created_at`
+- Vendas canceladas não entram no custo vendido
+- As consultas a `transacoes` e `vendas` são paginadas em lotes de 1.000 e ordenadas por `id`
 - Categorização automática por tipo de origem da transação
 
 #### Respostas de Erro
@@ -214,7 +201,8 @@ Retorna relatório financeiro consolidado para o período especificado, com cál
 | `400` | `inicio` > `fim` | `{"detail": "Periodo invalido"}` |
 | `400` | Formato de data inválido | `{"detail": "Periodo invalido"}` |
 | `401` | Token inválido/ausente | `{"detail": "Token invalido"}` |
-| `502` | Falha na consulta ao Supabase | `{"detail": "Erro ao consultar Supabase"}` |
+| `502` | Falha ao consultar transações | `{"detail": "Erro ao consultar transacoes: ..."}` |
+| `502` | Falha ao consultar vendas | `{"detail": "Erro ao consultar vendas: ..."}` |
 
 ---
 

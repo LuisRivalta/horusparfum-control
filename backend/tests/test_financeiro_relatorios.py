@@ -7,6 +7,38 @@ from app.services.financeiro_relatorios import (
 
 
 class RelatorioFinanceiroTest(unittest.TestCase):
+    def test_desconta_custo_vendido_do_lucro_sem_alterar_saldo_historico(self):
+        transacoes = [
+            {"id": "receita-julho", "descricao": "Receitas de julho", "tipo": "entrada", "valor": "761.21", "origem": "venda", "venda_id": "venda-julho", "created_at": "2026-07-15T12:00:00+00:00"},
+            {"id": "despesas-julho", "descricao": "Despesas de julho", "tipo": "saida", "valor": "308.85", "origem": "manual", "venda_id": None, "created_at": "2026-07-16T12:00:00+00:00"},
+        ]
+        vendas = [
+            {"id": "venda-julho", "data_venda": "2026-07-10", "status": "concluida", "total_custo": "304.97"},
+            {"id": "venda-cancelada", "data_venda": "2026-07-11", "status": "cancelada", "total_custo": "999.99"},
+        ]
+        relatorio = montar_relatorio_financeiro(
+            transacoes, parse_iso_datetime("2026-07-01T00:00:00-03:00"),
+            parse_iso_datetime("2026-07-31T23:59:59-03:00"), vendas,
+        )
+        self.assertEqual(relatorio["resumo"]["receita"], 761.21)
+        self.assertEqual(relatorio["resumo"]["despesa"], 308.85)
+        self.assertEqual(relatorio["resumo"]["saldo_historico"], 452.36)
+        self.assertEqual(relatorio["resumo"]["lucro"], 147.39)
+
+    def test_usa_data_venda_para_transacoes_vinculadas_e_created_at_para_manuais(self):
+        transacoes = [
+            {"id": "retroativa", "descricao": "Venda retroativa", "tipo": "entrada", "valor": "100.00", "origem": "venda", "venda_id": "venda-retroativa", "created_at": "2026-08-02T12:00:00+00:00"},
+            {"id": "manual-agosto", "descricao": "Entrada manual de agosto", "tipo": "entrada", "valor": "50.00", "origem": "manual", "venda_id": None, "created_at": "2026-08-02T12:00:00+00:00"},
+        ]
+        vendas = [{"id": "venda-retroativa", "data_venda": "2026-07-31", "status": "concluida", "total_custo": "40.00"}]
+        relatorio = montar_relatorio_financeiro(
+            transacoes, parse_iso_datetime("2026-07-01T00:00:00-03:00"),
+            parse_iso_datetime("2026-07-31T23:59:59-03:00"), vendas,
+        )
+        self.assertEqual(relatorio["resumo"]["receita"], 100.00)
+        self.assertEqual(relatorio["resumo"]["lucro"], 60.00)
+        self.assertEqual(relatorio["resumo"]["saldo_historico"], 100.00)
+        self.assertEqual([t["descricao"] for t in relatorio["transacoes"]], ["Venda retroativa"])
     def test_monta_relatorio_por_periodo_com_decimal_e_saldo_historico(self):
         transacoes = [
             {

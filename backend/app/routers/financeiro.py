@@ -9,6 +9,27 @@ from app.services.financeiro_relatorios import (
 from app.services.financeiro_metas import montar_metas_financeiras
 
 router = APIRouter()
+PAGE_SIZE = 1000
+
+
+def _consultar_paginado(supabase, tabela: str, colunas: str) -> list[dict]:
+    rows: list[dict] = []
+    inicio = 0
+    while True:
+        pagina = (
+            supabase
+            .table(tabela)
+            .select(colunas)
+            .order("id", desc=False)
+            .range(inicio, inicio + PAGE_SIZE - 1)
+            .execute()
+            .data
+            or []
+        )
+        rows.extend(pagina)
+        if len(pagina) < PAGE_SIZE:
+            return rows
+        inicio += PAGE_SIZE
 
 
 @router.get("/transacoes")
@@ -43,13 +64,11 @@ def relatorios(
         )
 
     try:
-        result = (
-            get_supabase()
-            .table("transacoes")
-            .select("id, descricao, tipo, valor, categoria, forma_pagamento, responsavel, origem, created_at")
-            .lte("created_at", fim_dt.isoformat())
-            .order("created_at", desc=True)
-            .execute()
+        supabase = get_supabase()
+        transacoes = _consultar_paginado(
+            supabase,
+            "transacoes",
+            "id, descricao, tipo, valor, categoria, forma_pagamento, responsavel, origem, venda_id, created_at",
         )
     except Exception as exc:
         raise HTTPException(
@@ -57,7 +76,19 @@ def relatorios(
             detail=f"Erro ao consultar transacoes: {exc}",
         )
 
-    return montar_relatorio_financeiro(result.data or [], inicio_dt, fim_dt)
+    try:
+        vendas = _consultar_paginado(
+            supabase,
+            "vendas",
+            "id, data_venda, status, total_custo",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erro ao consultar vendas: {exc}",
+        )
+
+    return montar_relatorio_financeiro(transacoes, inicio_dt, fim_dt, vendas)
 
 
 @router.get("/metas")

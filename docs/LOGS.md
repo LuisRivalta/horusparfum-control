@@ -1,3 +1,27 @@
+## 2026-07-15 - Sessao 59: Relatorio financeiro com lucro real
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- O endpoint `GET /api/financeiro/relatorios` passou a consultar `transacoes` e `vendas` com paginacao deterministica em lotes de 1.000, ordenados por `id`.
+- O lucro do relatorio passou a descontar o custo das vendas concluidas no periodo, sem criar lancamento financeiro adicional nem alterar o saldo historico.
+- Transacoes vinculadas a uma venda passaram a usar `vendas.data_venda` como data efetiva; lancamentos manuais continuam usando `transacoes.created_at`.
+- Erros nas consultas ao Supabase retornam HTTP 502 identificando se a falha ocorreu em `transacoes` ou `vendas`.
+- Atualizados `API.md`, `ARQUITETURA.md`, `features/FINANCEIRO.md` e `HANDOFF_IA.md` para refletir o comportamento atual.
+- Artefatos locais de agentes e bytecode temporario foram adicionados ao `.gitignore`.
+
+### Verificacao
+- Backend focado: 5/5 testes passando.
+- Backend completo: 50/50 testes passando.
+- `git diff --check` sem erros.
+- O teste frontend focado `VendaFormModal.test.tsx` permanece vermelho (2/2 falhas), confirmando que a UI de edicao de vendas esta parcial; esses arquivos ficaram fora do commit.
+
+### Proximo
+- Concluir a edicao de vendas, integrar os modais na lista de Vendas e em Financeiro > Transacoes, e entao revalidar frontend completo e build.
+- Aplicar `supabase/migrations/20260713_correcao_unificada_transacoes.sql` antes de liberar a correcao unificada em producao.
+
+---
+
 ## 2026-07-14 - Sessao 58: Documentacao da correcao unificada de transacoes
 
 **Responsavel:** Codex + Luis

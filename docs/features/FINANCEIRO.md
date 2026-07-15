@@ -183,24 +183,31 @@ GET /api/financeiro/relatorios?inicio={data_inicio}&fim={data_fim}
 #### Validações
 
 - `inicio` ≤ `fim`
-- Ambas as datas devem ser strings válidas no formato **ISO-8601** (`YYYY-MM-DD`)
+- Ambas as datas devem ser strings **ISO-8601** válidas; o frontend envia datetimes com fuso para preservar os limites locais do período
 - Em caso de erro, retorna HTTP 400 com mensagem descritiva
 
 #### Dados Retornados
 
-O backend calcula todos os valores com precisão **Decimal.js**:
+O backend calcula todos os valores com precisão **Decimal** do Python:
 
 | Campo | Cálculo |
 |-------|---------|
 | `receita` | Soma de todas as transações do tipo `entrada` no período |
 | `despesa` | Soma de todas as transações do tipo `saída` no período |
-| `lucro` | `receita - despesa` |
+| `lucro` | `receita - despesa - custo das vendas concluídas no período` |
 | `saldo_historico` | Saldo acumulado desde o início até a data `fim` |
 | `por_categoria_receitas` | Agrupamento de receitas por categoria |
 | `por_categoria_despesas` | Agrupamento de despesas por categoria |
 | `por_origem` | Contagem de transações por origem (Manual / Venda / Decant) |
 | `top5_receitas` | As 5 maiores receitas no período |
 | `top5_despesas` | As 5 maiores despesas no período |
+
+#### Regras temporais e de consulta
+
+- Transações vinculadas por `venda_id` usam `vendas.data_venda` para entrar no período; lançamentos manuais usam `transacoes.created_at`.
+- O custo vendido considera somente vendas com `status = 'concluida'`; vendas canceladas não reduzem o lucro.
+- O custo é gerencial e não gera uma nova saída no caixa. Por isso, o `saldo_historico` continua sendo apenas entradas menos saídas reais.
+- O backend pagina `transacoes` e `vendas` em lotes de 1.000, com ordem estável por `id`.
 
 #### Exportação
 

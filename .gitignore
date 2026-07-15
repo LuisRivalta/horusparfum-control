@@ -23,6 +23,10 @@ Thumbs.db
 
 # Python
 *.pyc
+*.pyc.*
 *.pyo
 .vercel
 supabase/.temp/
+
+# Local agent workflow artifacts
+.superpowers/

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
@@ -24,6 +24,22 @@ def _to_float(value: Decimal) -> float:
 
 def _created_at(row: dict[str, Any]) -> datetime:
     return parse_iso_datetime(str(row["created_at"]))
+
+
+def _data_venda(row: dict[str, Any]) -> datetime:
+    value = str(row["data_venda"])
+    if len(value) == 10:
+        return datetime.combine(datetime.fromisoformat(value).date(), time(12), timezone.utc)
+    return parse_iso_datetime(value)
+
+
+def _data_efetiva(
+    row: dict[str, Any],
+    vendas_por_id: dict[str, dict[str, Any]],
+) -> datetime:
+    venda_id = row.get("venda_id")
+    venda = vendas_por_id.get(str(venda_id)) if venda_id else None
+    return _data_venda(venda) if venda else _created_at(row)
 
 
 def _categoria(row: dict[str, Any]) -> str:
@@ -75,15 +91,27 @@ def montar_relatorio_financeiro(
     transacoes: list[dict[str, Any]],
     inicio: datetime,
     fim: datetime,
+    vendas: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if inicio > fim:
         raise ValueError("Periodo invalido")
 
-    ate_fim = [row for row in transacoes if _created_at(row) <= fim]
-    no_periodo = [row for row in ate_fim if inicio <= _created_at(row) <= fim]
+    vendas = vendas or []
+    vendas_por_id = {str(venda["id"]): venda for venda in vendas}
+    data_efetiva = lambda row: _data_efetiva(row, vendas_por_id)
+    ate_fim = [row for row in transacoes if data_efetiva(row) <= fim]
+    no_periodo = [row for row in ate_fim if inicio <= data_efetiva(row)]
 
     receita = sum((_money(row.get("valor")) for row in no_periodo if row.get("tipo") == "entrada"), Decimal(0))
     despesa = sum((_money(row.get("valor")) for row in no_periodo if row.get("tipo") == "saida"), Decimal(0))
+    custo_vendido = sum(
+        (
+            _money(venda.get("total_custo"))
+            for venda in vendas
+            if venda.get("status") == "concluida" and inicio <= _data_venda(venda) <= fim
+        ),
+        Decimal(0),
+    )
     saldo_entradas = sum((_money(row.get("valor")) for row in ate_fim if row.get("tipo") == "entrada"), Decimal(0))
     saldo_saidas = sum((_money(row.get("valor")) for row in ate_fim if row.get("tipo") == "saida"), Decimal(0))
 
@@ -103,17 +131,14 @@ def montar_relatorio_financeiro(
         key=lambda row: _money(row.get("valor")),
         reverse=True,
     )[:5]
-    transacoes_ordenadas = sorted(no_periodo, key=_created_at, reverse=True)
+    transacoes_ordenadas = sorted(no_periodo, key=data_efetiva, reverse=True)
 
     return {
-        "periodo": {
-            "inicio": inicio.isoformat(),
-            "fim": fim.isoformat(),
-        },
+        "periodo": {"inicio": inicio.isoformat(), "fim": fim.isoformat()},
         "resumo": {
             "receita": _to_float(receita),
             "despesa": _to_float(despesa),
-            "lucro": _to_float(receita - despesa),
+            "lucro": _to_float(receita - despesa - custo_vendido),
             "saldo_historico": _to_float(saldo_entradas - saldo_saidas),
         },
         "categorias": {
