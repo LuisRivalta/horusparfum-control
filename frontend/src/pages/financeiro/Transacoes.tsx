@@ -28,6 +28,7 @@ export function FinTransacoes() {
 
   const [editandoManual, setEditandoManual] = useState<Transacao | null>(null)
   const [excluindoTransacao, setExcluindoTransacao] = useState<Transacao | null>(null)
+  const [visualizandoTransacao, setVisualizandoTransacao] = useState<Transacao | null>(null)
   const [editandoVendaId, setEditandoVendaId] = useState<string | null>(null)
   const [corrigindoDecant, setCorrigindoDecant] = useState<Transacao | null>(null)
 
@@ -152,7 +153,7 @@ export function FinTransacoes() {
               <tr><td colSpan={7} className="px-4 py-8 text-center text-muted">Nenhuma transação registrada</td></tr>
             ) : (
               transacoes.map((t) => (
-                <tr key={t.id} className="border-b border-line last:border-0 hover:bg-surface-2/50">
+                <tr key={t.id} onClick={() => setVisualizandoTransacao(t)} className="border-b border-line last:border-0 hover:bg-surface-2/50 cursor-pointer">
                   <td className="px-4 py-3 text-text-2 text-xs">{formatDate(t.created_at)}</td>
                   <td className="px-4 py-3 font-medium">
                     {t.descricao}
@@ -180,21 +181,21 @@ export function FinTransacoes() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
                       {(!t.origem || t.origem === 'manual') && (
-                        <Button size="sm" variant="ghost" aria-label={`Editar transação ${t.descricao}`} title="Editar transação" onClick={() => handleEdit(t)}>
+                        <Button size="sm" variant="ghost" aria-label={`Editar transação ${t.descricao}`} title="Editar transação" onClick={(e) => { e.stopPropagation(); handleEdit(t); }}>
                           <Icon name="edit" size={14} />
                         </Button>
                       )}
                       {t.origem === 'venda' && (
-                        <Button size="sm" variant="ghost" aria-label={`Corrigir ${t.descricao.match(/Venda #\d+/)?.[0] || 'venda'}`} title="Corrigir venda" onClick={() => setEditandoVendaId(t.venda_id || '')}>
+                        <Button size="sm" variant="ghost" aria-label={`Corrigir ${t.descricao.match(/Venda #\d+/)?.[0] || 'venda'}`} title="Corrigir venda" onClick={(e) => { e.stopPropagation(); setEditandoVendaId(t.venda_id || ''); }}>
                           <Icon name="edit" size={14} />
                         </Button>
                       )}
                       {t.origem === 'decant' && (
-                        <Button size="sm" variant="ghost" aria-label={`Corrigir consumo ${t.descricao}`} title="Corrigir consumo" onClick={() => setCorrigindoDecant(t)}>
+                        <Button size="sm" variant="ghost" aria-label={`Corrigir consumo ${t.descricao}`} title="Corrigir consumo" onClick={(e) => { e.stopPropagation(); setCorrigindoDecant(t); }}>
                           <Icon name="edit" size={14} />
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" aria-label={`Excluir transação ${t.descricao}`} title="Excluir transação" onClick={() => setExcluindoTransacao(t)}>
+                      <Button size="sm" variant="ghost" aria-label={`Excluir transação ${t.descricao}`} title="Excluir transação" onClick={(e) => { e.stopPropagation(); setExcluindoTransacao(t); }}>
                         <Icon name="trash" size={14} />
                       </Button>
                     </div>
@@ -267,6 +268,52 @@ export function FinTransacoes() {
         onClose={() => setCorrigindoDecant(null)}
         onSaved={() => { setCorrigindoDecant(null); fetchData() }}
       />
+
+      <Modal open={!!visualizandoTransacao} onClose={() => setVisualizandoTransacao(null)} title="Detalhes da Transação">
+        {visualizandoTransacao && (
+          <div className="flex flex-col gap-5 text-sm">
+            <div className="flex flex-col gap-1 border-b border-line pb-4">
+              <span className="text-[0.65rem] text-muted uppercase tracking-wider font-semibold">Descrição</span>
+              <span className="font-medium text-lg text-text">{visualizandoTransacao.descricao}</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-y-5 gap-x-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-muted uppercase tracking-wider font-semibold">Valor</span>
+                <span className={`font-mono text-base font-medium ${visualizandoTransacao.tipo === 'entrada' ? 'text-up' : 'text-down'}`}>
+                  {visualizandoTransacao.tipo === 'saida' ? '- ' : ''}{formatBRL(visualizandoTransacao.valor)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-muted uppercase tracking-wider font-semibold">Data</span>
+                <span className="text-text-2">{formatDate(visualizandoTransacao.created_at)}</span>
+              </div>
+              
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-muted uppercase tracking-wider font-semibold">Categoria</span>
+                <span className="text-text-2">{visualizandoTransacao.categoria || '—'}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-muted uppercase tracking-wider font-semibold">Pagamento</span>
+                <span className="text-text-2">{visualizandoTransacao.forma_pagamento || '—'}</span>
+              </div>
+              
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-muted uppercase tracking-wider font-semibold">Origem</span>
+                <span className="capitalize text-text-2">{visualizandoTransacao.origem || 'manual'}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] text-muted uppercase tracking-wider font-semibold">Responsável</span>
+                <span className="text-text-2">{visualizandoTransacao.responsavel || '—'}</span>
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-2 pt-4 border-t border-line">
+              <Button type="button" onClick={() => setVisualizandoTransacao(null)}>Fechar</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
