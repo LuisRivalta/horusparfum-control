@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Icon } from '@/components/shared/Icon'
 import { Modal } from '@/components/shared/Modal'
+import { EditarVendaModal } from '@/pages/estoque/vendas/EditarVendaModal'
+import { CorrigirConsumoDecantModal } from '@/pages/estoque/decants/CorrigirConsumoDecantModal'
 import { Button, Input, Select } from '@/components/shared/FormControls'
 import { formatBRL } from '@/lib/utils'
 
@@ -15,12 +17,19 @@ interface Transacao {
   responsavel: string | null
   created_at: string
   origem?: string
+  venda_id?: string | null
+  decant_id?: string | null
 }
 
 export function FinTransacoes() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  const [editandoManual, setEditandoManual] = useState<Transacao | null>(null)
+  const [excluindoManual, setExcluindoManual] = useState<Transacao | null>(null)
+  const [editandoVendaId, setEditandoVendaId] = useState<string | null>(null)
+  const [corrigindoDecant, setCorrigindoDecant] = useState<Transacao | null>(null)
 
   const [form, setForm] = useState({
     descricao: '',
@@ -42,16 +51,43 @@ export function FinTransacoes() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    await supabase.from('transacoes').insert({
+    const payload = {
       descricao: form.descricao,
       tipo: form.tipo,
       valor: Number(form.valor),
       categoria: form.categoria || null,
       forma_pagamento: form.forma_pagamento || null,
       responsavel: form.responsavel || null,
-    })
+    }
+
+    if (editandoManual) {
+      await supabase.from('transacoes').update(payload).eq('id', editandoManual.id).eq('origem', 'manual')
+      setEditandoManual(null)
+    } else {
+      await supabase.from('transacoes').insert(payload)
+      setModalOpen(false)
+    }
+    
     setForm({ descricao: '', tipo: 'entrada', valor: '', categoria: '', forma_pagamento: '', responsavel: '' })
-    setModalOpen(false)
+    fetchData()
+  }
+
+  function handleEdit(t: Transacao) {
+    setEditandoManual(t)
+    setForm({
+      descricao: t.descricao,
+      tipo: t.tipo,
+      valor: t.valor.toString(),
+      categoria: t.categoria || '',
+      forma_pagamento: t.forma_pagamento || '',
+      responsavel: t.responsavel || '',
+    })
+  }
+
+  async function handleDelete() {
+    if (!excluindoManual) return
+    await supabase.from('transacoes').delete().eq('id', excluindoManual.id).eq('origem', 'manual')
+    setExcluindoManual(null)
     fetchData()
   }
 
@@ -100,13 +136,14 @@ export function FinTransacoes() {
               <th className="text-right px-4 py-3 text-text-2 font-medium">Valor</th>
               <th className="text-left px-4 py-3 text-text-2 font-medium">Categoria</th>
               <th className="text-left px-4 py-3 text-text-2 font-medium">Pagamento</th>
+              <th className="text-right px-4 py-3 text-text-2 font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted">Carregando...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted">Carregando...</td></tr>
             ) : transacoes.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted">Nenhuma transação registrada</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted">Nenhuma transação registrada</td></tr>
             ) : (
               transacoes.map((t) => (
                 <tr key={t.id} className="border-b border-line last:border-0 hover:bg-surface-2/50">
@@ -134,6 +171,32 @@ export function FinTransacoes() {
                   </td>
                   <td className="px-4 py-3 text-text-2">{t.categoria || '—'}</td>
                   <td className="px-4 py-3 text-text-2">{t.forma_pagamento || '—'}</td>
+                  <td className="px-4 py-3 text-right">
+                    {(!t.origem || t.origem === 'manual') && (
+                      <div className="flex justify-end gap-1">
+                        <Button size="sm" variant="ghost" aria-label={`Editar transação ${t.descricao}`} title="Editar transação" onClick={() => handleEdit(t)}>
+                          <Icon name="edit" size={14} />
+                        </Button>
+                        <Button size="sm" variant="ghost" aria-label={`Excluir transação ${t.descricao}`} title="Excluir transação" onClick={() => setExcluindoManual(t)}>
+                          <Icon name="trash" size={14} />
+                        </Button>
+                      </div>
+                    )}
+                    {t.origem === 'venda' && (
+                      <div className="flex justify-end gap-1">
+                        <Button size="sm" variant="ghost" aria-label={`Corrigir ${t.descricao.match(/Venda #\d+/)?.[0] || 'venda'}`} title="Corrigir venda" onClick={() => setEditandoVendaId(t.venda_id || '')}>
+                          <Icon name="edit" size={14} />
+                        </Button>
+                      </div>
+                    )}
+                    {t.origem === 'decant' && (
+                      <div className="flex justify-end gap-1">
+                        <Button size="sm" variant="ghost" aria-label={`Corrigir consumo ${t.descricao}`} title="Corrigir consumo" onClick={() => setCorrigindoDecant(t)}>
+                          <Icon name="edit" size={14} />
+                        </Button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -142,7 +205,7 @@ export function FinTransacoes() {
         </div>
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova transação">
+      <Modal open={modalOpen || !!editandoManual} onClose={() => { setModalOpen(false); setEditandoManual(null) }} title={editandoManual ? "Editar transação" : "Nova transação"}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input label="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} required placeholder="Descrição da transação" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -155,11 +218,41 @@ export function FinTransacoes() {
           </div>
           <Input label="Responsável" value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} />
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
-            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button type="button" variant="secondary" onClick={() => { setModalOpen(false); setEditandoManual(null) }}>Cancelar</Button>
             <Button type="submit">Salvar</Button>
           </div>
         </form>
       </Modal>
+
+      <Modal open={!!excluindoManual} onClose={() => setExcluindoManual(null)} title="Excluir transação">
+        <div className="flex flex-col gap-4">
+          <p className="text-text-2">
+            Tem certeza que deseja excluir a transação <strong>{excluindoManual?.descricao}</strong>?
+            <br />
+            Esta ação não pode ser desfeita.
+          </p>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
+            <Button type="button" variant="secondary" onClick={() => setExcluindoManual(null)}>Cancelar</Button>
+            <Button type="button" onClick={handleDelete} className="bg-down text-surface border-transparent hover:bg-down/90">
+              Excluir
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <EditarVendaModal
+        open={!!editandoVendaId}
+        vendaId={editandoVendaId ?? ''}
+        onClose={() => setEditandoVendaId(null)}
+        onSaved={() => { setEditandoVendaId(null); fetchData() }}
+      />
+
+      <CorrigirConsumoDecantModal
+        open={!!corrigindoDecant}
+        transacao={corrigindoDecant as any}
+        onClose={() => setCorrigindoDecant(null)}
+        onSaved={() => { setCorrigindoDecant(null); fetchData() }}
+      />
     </div>
   )
 }

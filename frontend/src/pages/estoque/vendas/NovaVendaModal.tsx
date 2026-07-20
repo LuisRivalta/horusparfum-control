@@ -22,8 +22,33 @@ interface LinhaForm {
   custo_embalagem: string
 }
 
+interface VendaExistente {
+  id: string
+  numero: number
+  canal_id: string
+  data_venda: string
+  forma_pagamento: string | null
+  cliente: string | null
+  taxa_total: number
+  frete: number
+  responsavel: string | null
+  observacao: string | null
+}
+
+interface VendaItemExistente {
+  id: string
+  tipo: 'produto' | 'decant'
+  produto_id: string | null
+  frasco_id: string | null
+  ml: number | null
+  quantidade: number
+  preco_unitario: number
+  custo_embalagem: number | null
+}
+
 interface Props {
   open: boolean
+  vendaId?: string
   onClose: () => void
   onSaved: () => void
 }
@@ -32,7 +57,8 @@ const LINHA_VAZIA: LinhaForm = {
   tipo: 'produto', produto_id: '', frasco_id: '', ml: '5', quantidade: '1', preco: '', custo_embalagem: '0',
 }
 
-export function NovaVendaModal({ open, onClose, onSaved }: Props) {
+export function NovaVendaModal({ open, vendaId, onClose, onSaved }: Props) {
+  const editando = Boolean(vendaId)
   const { user } = useAuth()
   const [canais, setCanais] = useState<Canal[]>([])
   const [produtos, setProdutos] = useState<ProdutoOpt[]>([])
@@ -45,9 +71,13 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
   const [cliente, setCliente] = useState('')
   const [taxa, setTaxa] = useState('')
   const [frete, setFrete] = useState('')
+  const [responsavel, setResponsavel] = useState('')
+  const [observacao, setObservacao] = useState('')
+  const [numeroVenda, setNumeroVenda] = useState<number | null>(null)
   const [linhas, setLinhas] = useState<LinhaForm[]>([{ ...LINHA_VAZIA }])
   const [submitting, setSubmitting] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [carregando, setCarregando] = useState(Boolean(vendaId))
 
   useEffect(() => {
     if (!open) return

@@ -1,6 +1,26 @@
-## 2026-07-15 - Sessao 59: Relatorio financeiro com lucro real
+## 2026-07-20 - Sessao 60: UI de correcao unificada em Transacoes (Etapa 5 parcial)
 
 **Responsavel:** Codex + Luis
+
+### O que foi feito
+- Implementada a UI de edicao/correcao centralizada na aba Financeiro > Transacoes (Task 5 do plano).
+- Transacoes manuais ganharam botoes Editar e Excluir com logicas protegidas (`.eq('origem', 'manual')`) via Supabase e confirmacao de exclusao em modal.
+- Transacoes de venda ganharam botao "Corrigir venda", que abre o `EditarVendaModal`.
+- Transacoes de decant ganharam botao "Corrigir consumo", que abre o `CorrigirConsumoDecantModal`.
+- Criado um "stub" (modal temporario) para `CorrigirConsumoDecantModal` para manter a interface utilizavel e orientar o usuario de que o estorno de decant (Task 4) esta em desenvolvimento.
+- Adicionadas propriedades `venda_id` e `decant_id` na tipagem da interface de `Transacao`.
+
+### Verificacao
+- Testes frontend executados em background (`npm run test:run`); as mudancas em `Transacoes.tsx` mostraram-se seguras, com falhas ocorrendo apenas em arquivos pre-existentes parciais (`VendaFormModal.test.tsx`) ou por timeout (`Marcas.test.tsx`, `Produtos.test.tsx`).
+
+### Proximo
+- Concluir a implementacao completa do fluxo reverso de correcao de decants no backend e frontend (`CorrigirConsumoDecantModal` - Task 4).
+- Finalizar a logica e interface de `EditarVendaModal` que se encontra em estagio parcial.
+- Revalidar todo o frontend e aplicar a migration `supabase/migrations/20260713_correcao_unificada_transacoes.sql` no Supabase antes de deploy em producao.
+
+---
+
+## 2026-07-15 - Sessao 59: Relatorio financeiro com lucro real**Responsavel:** Codex + Luis
 
 ### O que foi feito
 - O endpoint `GET /api/financeiro/relatorios` passou a consultar `transacoes` e `vendas` com paginacao deterministica em lotes de 1.000, ordenados por `id`.

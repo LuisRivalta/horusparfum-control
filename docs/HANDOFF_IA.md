@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-15 (Sessão 59)
+> Última atualização: 2026-07-20 (Sessão 60)
 
 ## O que já foi feito
 
@@ -403,6 +403,13 @@
     - Suite backend completa validada com 50/50 testes passando.
     - A UI de edicao de vendas continua parcial e fora deste commit: os 2 testes focados de `VendaFormModal.test.tsx` ainda falham por ausencia do carregamento da venda e da chamada `editar_venda`.
 
+58. **UI de correção unificada em Transações (Sessão 60)**
+    - Implementada a UI de edição/correção centralizada na aba Financeiro > Transações (Task 5 parcial).
+    - Transações manuais ganharam botões Editar e Excluir protegidos (`origem='manual'`).
+    - Transações de venda ganharam botão "Corrigir venda", que abre o `EditarVendaModal` já com o ID.
+    - Transações de decant ganharam botão "Corrigir consumo", que abre o stub do `CorrigirConsumoDecantModal`.
+    - As transações automáticas não exibem ações de exclusão manual, reforçando a atomicidade exigida pela arquitetura (PRD).
+
 ## Estado atual
 
 - **Deploy frontend produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
@@ -418,21 +425,6 @@
 - Ultima verificacao frontend completa conhecida: 192/192 testes e build passando antes do trabalho parcial atual
 - Backend completo: 50/50 testes passando em 2026-07-15
 - Ha trabalho de implementacao parcial e nao versionado para a UI de edicao de vendas/transacoes; os 2 testes focados atuais falham e a feature nao deve ser considerada concluida
-
-## Próximos passos imediatos
-
-1. Concluir a UI de correcao unificada em Financeiro > Transacoes:
-   - editar/excluir transacoes manuais com confirmacao;
-   - abrir edicao de venda a partir de transacoes de venda;
-   - abrir correcao/reversao propria para transacoes de decant.
-2. Revalidar frontend/backend e aplicar supabase/migrations/20260713_correcao_unificada_transacoes.sql no Supabase SQL Editor antes de usar a feature em producao.
-3. Publicar frontend/backend e executar smoke test do painel admin em producao.
-4. Remover policies temporarias de anon (se foram criadas para testes).
-5. Dashboard estoque com dados reais (estoque baixo e reposicao).
-6. Evolucao da importacao por PDF: OCR/LLM fallback para layouts diferentes, se necessario.
-
-### Melhorias futuras conhecidas (dashboard financeiro)
-- `Dashboard.tsx`: query `transacoes` sem `.limit()` — pode truncar em 1.000 linhas se o histórico crescer muito (migrar para agregação SQL)
 - `PeriodSelector`: período personalizado não valida `início <= fim` (resultado zera silenciosamente)
 - Bundle do recharts é pesado (~445 kB gzip) — considerar code splitting
 
