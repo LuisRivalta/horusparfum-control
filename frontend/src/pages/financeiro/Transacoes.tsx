@@ -27,7 +27,7 @@ export function FinTransacoes() {
   const [loading, setLoading] = useState(true)
 
   const [editandoManual, setEditandoManual] = useState<Transacao | null>(null)
-  const [excluindoManual, setExcluindoManual] = useState<Transacao | null>(null)
+  const [excluindoTransacao, setExcluindoTransacao] = useState<Transacao | null>(null)
   const [editandoVendaId, setEditandoVendaId] = useState<string | null>(null)
   const [corrigindoDecant, setCorrigindoDecant] = useState<Transacao | null>(null)
 
@@ -85,9 +85,15 @@ export function FinTransacoes() {
   }
 
   async function handleDelete() {
-    if (!excluindoManual) return
-    await supabase.from('transacoes').delete().eq('id', excluindoManual.id).eq('origem', 'manual')
-    setExcluindoManual(null)
+    if (!excluindoTransacao) return
+    if (excluindoTransacao.origem === 'venda' && excluindoTransacao.venda_id) {
+      await supabase.rpc('cancelar_venda', { p_venda_id: excluindoTransacao.venda_id })
+    } else if (excluindoTransacao.origem === 'decant' && excluindoTransacao.decant_id) {
+      await supabase.rpc('cancelar_consumo_decant', { p_decant_id: excluindoTransacao.decant_id })
+    } else {
+      await supabase.from('transacoes').delete().eq('id', excluindoTransacao.id)
+    }
+    setExcluindoTransacao(null)
     fetchData()
   }
 
@@ -172,30 +178,26 @@ export function FinTransacoes() {
                   <td className="px-4 py-3 text-text-2">{t.categoria || '—'}</td>
                   <td className="px-4 py-3 text-text-2">{t.forma_pagamento || '—'}</td>
                   <td className="px-4 py-3 text-right">
-                    {(!t.origem || t.origem === 'manual') && (
-                      <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-1">
+                      {(!t.origem || t.origem === 'manual') && (
                         <Button size="sm" variant="ghost" aria-label={`Editar transação ${t.descricao}`} title="Editar transação" onClick={() => handleEdit(t)}>
                           <Icon name="edit" size={14} />
                         </Button>
-                        <Button size="sm" variant="ghost" aria-label={`Excluir transação ${t.descricao}`} title="Excluir transação" onClick={() => setExcluindoManual(t)}>
-                          <Icon name="trash" size={14} />
-                        </Button>
-                      </div>
-                    )}
-                    {t.origem === 'venda' && (
-                      <div className="flex justify-end gap-1">
+                      )}
+                      {t.origem === 'venda' && (
                         <Button size="sm" variant="ghost" aria-label={`Corrigir ${t.descricao.match(/Venda #\d+/)?.[0] || 'venda'}`} title="Corrigir venda" onClick={() => setEditandoVendaId(t.venda_id || '')}>
                           <Icon name="edit" size={14} />
                         </Button>
-                      </div>
-                    )}
-                    {t.origem === 'decant' && (
-                      <div className="flex justify-end gap-1">
+                      )}
+                      {t.origem === 'decant' && (
                         <Button size="sm" variant="ghost" aria-label={`Corrigir consumo ${t.descricao}`} title="Corrigir consumo" onClick={() => setCorrigindoDecant(t)}>
                           <Icon name="edit" size={14} />
                         </Button>
-                      </div>
-                    )}
+                      )}
+                      <Button size="sm" variant="ghost" aria-label={`Excluir transação ${t.descricao}`} title="Excluir transação" onClick={() => setExcluindoTransacao(t)}>
+                        <Icon name="trash" size={14} />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -224,15 +226,27 @@ export function FinTransacoes() {
         </form>
       </Modal>
 
-      <Modal open={!!excluindoManual} onClose={() => setExcluindoManual(null)} title="Excluir transação">
+      <Modal open={!!excluindoTransacao} onClose={() => setExcluindoTransacao(null)} title="Excluir transação">
         <div className="flex flex-col gap-4">
           <p className="text-text-2">
-            Tem certeza que deseja excluir a transação <strong>{excluindoManual?.descricao}</strong>?
-            <br />
-            Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir a transação <strong>{excluindoTransacao?.descricao}</strong>?
+            <br /><br />
+            {excluindoTransacao?.origem === 'venda' && (
+              <span className="text-down text-sm">
+                <strong>Atenção:</strong> Isso estornará toda a Venda vinculada, devolvendo os produtos ao estoque e removendo todas as outras transações financeiras geradas por ela.
+              </span>
+            )}
+            {excluindoTransacao?.origem === 'decant' && (
+              <span className="text-down text-sm">
+                <strong>Atenção:</strong> Isso devolverá o líquido do consumo ao frasco original.
+              </span>
+            )}
+            {(!excluindoTransacao?.origem || excluindoTransacao.origem === 'manual') && (
+              <span>Esta ação não pode ser desfeita.</span>
+            )}
           </p>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
-            <Button type="button" variant="secondary" onClick={() => setExcluindoManual(null)}>Cancelar</Button>
+            <Button type="button" variant="secondary" onClick={() => setExcluindoTransacao(null)}>Cancelar</Button>
             <Button type="button" onClick={handleDelete} className="bg-down text-surface border-transparent hover:bg-down/90">
               Excluir
             </Button>
