@@ -153,7 +153,7 @@ def vendas_dashboard(
         vendas_result = (
             supabase
             .table("vendas")
-            .select("id, numero, status, data_venda, total_bruto, total_custo, lucro_bruto, taxa_total, frete, canal_id, created_at")
+            .select("id, numero, titulo, status, data_venda, total_bruto, total_custo, lucro_bruto, taxa_total, frete, canal_id, created_at")
             .gte("data_venda", inicio_dt.date().isoformat())
             .lte("data_venda", fim_dt.date().isoformat())
             .execute()

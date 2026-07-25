@@ -6,6 +6,7 @@ import { formatBRL } from '@/lib/utils'
 export interface VendaResumo {
   id: string
   numero: number
+  titulo: string | null
   total_bruto: number
   total_custo: number
   lucro_bruto: number
@@ -48,7 +49,7 @@ export function VendaDetalheModal({ venda, onClose }: Props) {
   }, [venda])
 
   return (
-    <Modal open={!!venda} onClose={onClose} title={venda ? `Venda #${venda.numero}` : ''} size="lg">
+    <Modal open={!!venda} onClose={onClose} title={venda ? (venda.titulo || `Venda #${venda.numero}`) : ''} size="lg">
       {loading ? (
         <p className="py-8 text-center text-muted">Carregando...</p>
       ) : (

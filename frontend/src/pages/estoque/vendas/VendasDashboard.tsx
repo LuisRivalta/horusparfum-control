@@ -56,6 +56,7 @@ interface RankingCanal {
 interface VendaPeriodo {
   id: string
   numero: number
+  titulo?: string | null
   data_venda: string
   canal: string
   itens: number
@@ -272,7 +273,7 @@ function VendasPeriodoTable({ vendas }: { vendas: VendaPeriodo[] }) {
               <tr><td colSpan={8} className="px-4 py-8 text-center text-muted">Nenhuma venda concluida no periodo</td></tr>
             ) : vendas.map((venda) => (
               <tr key={venda.id} className="border-b border-line last:border-0 hover:bg-surface-2/50">
-                <td className="px-4 py-3 font-mono text-muted">#{venda.numero}</td>
+                <td className="px-4 py-3 font-mono text-muted">{venda.titulo || `#${venda.numero}`}</td>
                 <td className="px-4 py-3 text-text-2 text-xs">{formatDate(venda.data_venda)}</td>
                 <td className="px-4 py-3 font-medium">{venda.canal}</td>
                 <td className="px-4 py-3 text-right font-mono">{venda.itens}</td>

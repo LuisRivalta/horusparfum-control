@@ -67,24 +67,21 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
   const [frascos, setFrascos] = useState<FrascoOpt[]>([])
   const [embalagens, setEmbalagens] = useState<Embalagem[]>([])
 
+  const [titulo, setTitulo] = useState('')
   const [canalId, setCanalId] = useState('')
   const [dataVenda, setDataVenda] = useState('')
   const [formaPagamento, setFormaPagamento] = useState('')
   const [cliente, setCliente] = useState('')
   const [taxa, setTaxa] = useState('')
   const [frete, setFrete] = useState('')
-  // const [responsavel, setResponsavel] = useState('')
-  // const [observacao, setObservacao] = useState('')
-  // const [numeroVenda, setNumeroVenda] = useState<number | null>(null)
   const [linhas, setLinhas] = useState<LinhaForm[]>([{ ...LINHA_VAZIA }])
   const [submitting, setSubmitting] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
-  // const [carregando, setCarregando] = useState(Boolean(vendaId))
 
   useEffect(() => {
     if (!open) return
     setErro(null)
-    setCanalId(''); setDataVenda(''); setFormaPagamento(''); setCliente('')
+    setTitulo(''); setCanalId(''); setDataVenda(''); setFormaPagamento(''); setCliente('')
     setTaxa(''); setFrete(''); setLinhas([{ ...LINHA_VAZIA }])
     Promise.all([
       supabase.from('canais').select('id, nome, taxa_padrao').eq('ativo', true).order('nome'),
@@ -188,6 +185,7 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
       p_responsavel: user?.email || null,
       p_observacao: null,
       p_itens: itens,
+      p_titulo: titulo || null,
     })
     setSubmitting(false)
     if (error) { setErro(error.message); return }
@@ -199,6 +197,10 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
     <Modal open={open} onClose={onClose} title="Nova venda" size="lg">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input label="Nome da venda (opcional)" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Venda para Gustavo" />
+          <Input label="Data da venda" type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
             label="Canal"
             options={canais.map(c => ({ value: c.id, label: `${c.nome} (${c.taxa_padrao}%)` }))}
@@ -206,11 +208,10 @@ export function NovaVendaModal({ open, onClose, onSaved }: Props) {
             onChange={(e) => onCanalChange(e.target.value)}
             required
           />
-          <Input label="Data da venda" type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} />
+          <Input label="Cliente (opcional)" value={cliente} onChange={(e) => setCliente(e.target.value)} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Forma de pagamento" value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} placeholder="Pix, Cartão…" />
-          <Input label="Cliente (opcional)" value={cliente} onChange={(e) => setCliente(e.target.value)} />
         </div>
 
         <div className="flex flex-col gap-2">

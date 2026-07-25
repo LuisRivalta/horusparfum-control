@@ -1,3 +1,24 @@
+## 2026-07-25 - Sessao 61: Nome customizavel para vendas (Title)
+
+**Responsavel:** Codex + Luis
+
+### O que foi feito
+- Adicionado suporte a `titulo` customizado para Vendas, conforme requisitado (ex: `"Venda para Gustavo"`).
+- Adicionada migration `20260725105200_vendas_titulo.sql` com a nova coluna e override da RPC `registrar_venda`.
+- Adicionada migration `20260725110500_vendas_titulo_editar.sql` com override da RPC `editar_venda` para suportar `p_titulo`.
+- Atualizado `NovaVendaModal.tsx` com input 'Nome da venda (opcional)'.
+- O titulo customizado passa a aparecer automaticamente na listagem principal de `Vendas`, no `VendasDashboard`, no `VendaDetalheModal` e na pagina de `Transacoes` (onde a descricao assume o titulo ou cai em fallback).
+
+### Verificacao
+- O frontend compila corretamente.
+- As operacoes do backend que constroem a interface para dashboards retornam o atributo `titulo` devidamente mapeado.
+
+### Proximo
+- Aplicar as duas novas migrations pendentes no Supabase em producao/ambiente principal.
+- Executar e revalidar os testes automatizados frontend (`npm run test`).
+
+---
+
 ## 2026-07-20 - Sessao 60: UI de correcao unificada em Transacoes (Etapa 5 parcial)
 
 **Responsavel:** Codex + Luis

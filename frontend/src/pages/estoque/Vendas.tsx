@@ -12,6 +12,7 @@ import { VendasDashboard } from './vendas/VendasDashboard'
 export interface VendaRow {
   id: string
   numero: number
+  titulo: string | null
   status: 'concluida' | 'cancelada'
   data_venda: string
   total_bruto: number
@@ -73,7 +74,7 @@ export function EstVendas() {
     setLoading(true)
     const { data, error } = await supabase
       .from('vendas')
-      .select('id, numero, status, data_venda, total_bruto, total_custo, lucro_bruto, canal_id, canais(nome), venda_itens(id)')
+      .select('id, numero, titulo, status, data_venda, total_bruto, total_custo, lucro_bruto, canal_id, canais(nome), venda_itens(id)')
       .order('created_at', { ascending: false })
     if (error) console.error('Erro ao carregar vendas:', error)
     setVendas((data as unknown as VendaRow[]) || [])
@@ -167,7 +168,9 @@ export function EstVendas() {
                         className="border-b border-line last:border-0 hover:bg-surface-2/50 cursor-pointer"
                         onClick={() => setDetalhe(v)}
                       >
-                        <td className="px-4 py-3 font-mono text-muted">#{v.numero}</td>
+                        <td className="px-4 py-3 font-mono text-muted">
+                          {v.titulo || `#${v.numero}`}
+                        </td>
                         <td className="px-4 py-3 text-text-2 text-xs">{formatDate(v.data_venda)}</td>
                         <td className="px-4 py-3 font-medium">{v.canais?.nome || '—'}</td>
                         <td className="px-4 py-3 text-right font-mono">{v.venda_itens.length}</td>
