@@ -197,7 +197,7 @@ class VendasDashboardServiceTest(unittest.TestCase):
         self.assertEqual([v['numero'] for v in dashboard['vendas']], [11, 10, 12])
         self.assertEqual(dashboard['vendas'][0]['canal'], 'Loja fisica')
         self.assertEqual([v['itens'] for v in dashboard['vendas']], [2, 2, 1])
-        self.assertEqual(set(dashboard['vendas'][0].keys()), {'id', 'numero', 'data_venda', 'canal', 'itens', 'faturamento_bruto', 'total_custo', 'lucro_bruto', 'margem', 'roi'})
+        self.assertEqual(set(dashboard['vendas'][0].keys()), {'id', 'numero', 'titulo', 'data_venda', 'canal', 'itens', 'faturamento_bruto', 'total_custo', 'lucro_bruto', 'margem', 'roi'})
 
     def test_evolucao_preenche_meses_sem_vendas_com_zero(self):
         vendas = [

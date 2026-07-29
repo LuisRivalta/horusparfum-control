@@ -1,3 +1,23 @@
+## 2026-07-29 - Sessao 62: Opção de excluir vendas com confirmação
+
+**Responsavel:** Antigravity + Luis
+
+### O que foi feito
+- Adicionada opção de excluir vendas na listagem (`Vendas.tsx`) e dentro do modal de detalhes (`VendaDetalheModal.tsx`).
+- Criado modal de confirmação de exclusão com alerta contextual (explicita o estorno automático de estoque/decants se a venda estiver concluída).
+- Criada migration SQL `supabase/migrations/20260729_excluir_venda.sql` com RPC `excluir_venda` atômica.
+- Implementado fallback client-side para garantia de funcionamento em qualquer ambiente.
+- Adicionados testes unitários cobrindo abertura da confirmação e exclusão em `Vendas.test.tsx`.
+
+### Verificacao
+- Testes frontend em `Vendas.test.tsx`: 5/5 passando.
+- Testes backend: 50/50 passando.
+
+### Proximo
+- Aplicar a migration `supabase/migrations/20260729_excluir_venda.sql` no Supabase SQL Editor em produção.
+
+---
+
 ## 2026-07-25 - Sessao 61: Nome customizavel para vendas (Title)
 
 **Responsavel:** Codex + Luis

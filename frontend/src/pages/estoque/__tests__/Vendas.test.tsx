@@ -8,7 +8,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 }))
 
 vi.mock('@/components/shared/Modal', () => ({
-  Modal: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Modal: ({ open, children }: { open: boolean; children: React.ReactNode }) => (open ? <div>{children}</div> : null),
 }))
 
 vi.mock('../vendas/VendasDashboard', () => ({
@@ -75,5 +75,24 @@ describe('EstVendas (lista)', () => {
 
     expect(screen.getByText('Dashboard analitico de vendas')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^dashboard$/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('exibe modal de confirmação e exclui venda ao confirmar', async () => {
+    const { supabase } = await import('@/lib/supabase')
+    render(<MemoryRouter><EstVendas /></MemoryRouter>)
+
+    await waitFor(() => expect(screen.getByText('Shopee')).toBeInTheDocument())
+
+    const btnExcluir = screen.getByRole('button', { name: /excluir venda #1/i })
+    fireEvent.click(btnExcluir)
+
+    expect(screen.getByText((_, element) => element?.tagName.toLowerCase() === 'p' && (element?.textContent?.includes('deseja excluir a venda #1') ?? false))).toBeInTheDocument()
+
+    const btnConfirmar = screen.getByRole('button', { name: /^excluir venda$/i })
+    fireEvent.click(btnConfirmar)
+
+    await waitFor(() => {
+      expect(supabase.rpc).toHaveBeenCalledWith('excluir_venda', { p_venda_id: 'v1' })
+    })
   })
 })

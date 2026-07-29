@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-20 (Sessão 60)
+> Última atualização: 2026-07-29 (Sessão 62)
 
 ## O que já foi feito
 
@@ -409,6 +409,13 @@
     - Transações de venda ganharam botão "Corrigir venda", que abre o `EditarVendaModal` já com o ID.
     - Transações de decant ganharam botão "Corrigir consumo", que abre o stub do `CorrigirConsumoDecantModal`.
     - As transações automáticas não exibem ações de exclusão manual, reforçando a atomicidade exigida pela arquitetura (PRD).
+
+59. **Exclusão de vendas com confirmação (Sessão 62)**
+    - Opção de exclusão adicionada na listagem de vendas (`Vendas.tsx`) e no modal de detalhes (`VendaDetalheModal.tsx`).
+    - Modal de confirmação explicita que se a venda estiver concluída, estoque de produtos e decants serão estornados antes de apagar os registros.
+    - Migration SQL `supabase/migrations/20260729_excluir_venda.sql` criada com RPC `excluir_venda` atômica.
+    - Fallback client-side adicionado no frontend para resiliência de ambiente.
+    - Testes unitários frontend e backend 100% passando.
 
 ## Estado atual
 

@@ -67,6 +67,8 @@ export function EstVendas() {
   const [detalhe, setDetalhe] = useState<VendaRow | null>(null)
   const [cancelando, setCancelando] = useState<VendaRow | null>(null)
   const [cancelSubmitting, setCancelSubmitting] = useState(false)
+  const [excluindo, setExcluindo] = useState<VendaRow | null>(null)
+  const [excluirSubmitting, setExcluirSubmitting] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [aba, setAba] = useState<AbaVendas>('lista')
 
@@ -95,6 +97,41 @@ export function EstVendas() {
     setCancelSubmitting(false)
     if (error) { setErro(error.message); return }
     setCancelando(null)
+    fetchData()
+  }
+
+  async function confirmarExclusao() {
+    if (!excluindo || excluirSubmitting) return
+    setExcluirSubmitting(true)
+    setErro(null)
+    const { error: rpcError } = await supabase.rpc('excluir_venda', { p_venda_id: excluindo.id })
+    if (rpcError) {
+      try {
+        if (excluindo.status === 'concluida') {
+          const { error: cancelErr } = await supabase.rpc('cancelar_venda', { p_venda_id: excluindo.id })
+          if (cancelErr) throw cancelErr
+        }
+        await supabase.from('transacoes').delete().eq('venda_id', excluindo.id)
+        const { data: itens } = await supabase.from('venda_itens').select('decant_id').eq('venda_id', excluindo.id)
+        if (itens && itens.length > 0) {
+          const decantIds = itens.map((i) => i.decant_id).filter(Boolean) as string[]
+          if (decantIds.length > 0) {
+            await supabase.from('venda_itens').update({ decant_id: null }).eq('venda_id', excluindo.id)
+            await supabase.from('decants').delete().in('id', decantIds)
+          }
+        }
+        await supabase.from('venda_itens').delete().eq('venda_id', excluindo.id)
+        const { error: delErr } = await supabase.from('vendas').delete().eq('id', excluindo.id)
+        if (delErr) throw delErr
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : (e as { message?: string })?.message || 'Erro ao excluir venda'
+        setErro(msg)
+        setExcluirSubmitting(false)
+        return
+      }
+    }
+    setExcluirSubmitting(false)
+    setExcluindo(null)
     fetchData()
   }
 
@@ -185,11 +222,23 @@ export function EstVendas() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                          {v.status === 'concluida' && (
-                            <Button size="sm" variant="ghost" onClick={() => setCancelando(v)}>
-                              Cancelar
+                          <div className="flex items-center justify-end gap-1">
+                            {v.status === 'concluida' && (
+                              <Button size="sm" variant="ghost" onClick={() => setCancelando(v)}>
+                                Cancelar
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-down hover:bg-down/10"
+                              aria-label={`Excluir venda ${v.titulo || `#${v.numero}`}`}
+                              title="Excluir venda"
+                              onClick={() => setExcluindo(v)}
+                            >
+                              <Icon name="trash" size={14} />
                             </Button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -201,7 +250,14 @@ export function EstVendas() {
           </div>
 
           <NovaVendaModal open={novoOpen} onClose={() => setNovoOpen(false)} onSaved={fetchData} />
-          <VendaDetalheModal venda={detalhe} onClose={() => setDetalhe(null)} />
+          <VendaDetalheModal
+            venda={detalhe}
+            onClose={() => setDetalhe(null)}
+            onDelete={(v) => {
+              setDetalhe(null)
+              setExcluindo(v as VendaRow)
+            }}
+          />
 
           <Modal open={!!cancelando} onClose={() => setCancelando(null)} title="Cancelar venda" size="sm">
             <div className="flex flex-col gap-4">
@@ -213,6 +269,24 @@ export function EstVendas() {
                 <Button variant="secondary" onClick={() => setCancelando(null)}>Voltar</Button>
                 <Button variant="danger" disabled={cancelSubmitting} onClick={confirmarCancelamento}>
                   {cancelSubmitting ? 'Cancelando...' : 'Cancelar venda'}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+
+          <Modal open={!!excluindo} onClose={() => setExcluindo(null)} title="Excluir venda" size="sm">
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-text-2">
+                Tem certeza que deseja excluir a venda{' '}
+                <span className="font-mono">{excluindo?.titulo || `#${excluindo?.numero}`}</span>?
+                {excluindo?.status === 'concluida'
+                  ? ' Como a venda está concluída, o estoque dos produtos e os decants serão estornados antes da exclusão. Esta ação é permanente e não poderá ser desfeita.'
+                  : ' Esta ação removerá permanentemente o registro da venda e não poderá ser desfeita.'}
+              </p>
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <Button variant="secondary" onClick={() => setExcluindo(null)}>Voltar</Button>
+                <Button variant="danger" disabled={excluirSubmitting} onClick={confirmarExclusao}>
+                  {excluirSubmitting ? 'Excluindo...' : 'Excluir venda'}
                 </Button>
               </div>
             </div>

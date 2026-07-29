@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { Icon } from '@/components/shared/Icon'
+import { Button } from '@/components/shared/FormControls'
 import { Modal } from '@/components/shared/Modal'
 import { formatBRL } from '@/lib/utils'
 
@@ -29,9 +31,10 @@ interface ItemDetalhe {
 interface Props {
   venda: VendaResumo | null
   onClose: () => void
+  onDelete?: (venda: VendaResumo) => void
 }
 
-export function VendaDetalheModal({ venda, onClose }: Props) {
+export function VendaDetalheModal({ venda, onClose, onDelete }: Props) {
   const [itens, setItens] = useState<ItemDetalhe[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -87,13 +90,27 @@ export function VendaDetalheModal({ venda, onClose }: Props) {
           </div>
 
           {venda && (
-            <div className="flex flex-col gap-1.5 text-sm">
-              <div className="flex justify-between"><span className="text-muted">Bruto</span><span className="font-mono">{formatBRL(venda.total_bruto)}</span></div>
-              <div className="flex justify-between"><span className="text-muted">Custo</span><span className="font-mono">{formatBRL(venda.total_custo)}</span></div>
-              <div className="flex justify-between text-base">
-                <span>Lucro</span>
-                <span className={`font-mono ${venda.lucro_bruto < 0 ? 'text-down' : 'text-up'}`}>{formatBRL(venda.lucro_bruto)}</span>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5 text-sm">
+                <div className="flex justify-between"><span className="text-muted">Bruto</span><span className="font-mono">{formatBRL(venda.total_bruto)}</span></div>
+                <div className="flex justify-between"><span className="text-muted">Custo</span><span className="font-mono">{formatBRL(venda.total_custo)}</span></div>
+                <div className="flex justify-between text-base">
+                  <span>Lucro</span>
+                  <span className={`font-mono ${venda.lucro_bruto < 0 ? 'text-down' : 'text-up'}`}>{formatBRL(venda.lucro_bruto)}</span>
+                </div>
               </div>
+              {onDelete && (
+                <div className="flex justify-end pt-3 border-t border-line">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => onDelete(venda)}
+                  >
+                    <Icon name="trash" size={14} />
+                    Excluir venda
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
