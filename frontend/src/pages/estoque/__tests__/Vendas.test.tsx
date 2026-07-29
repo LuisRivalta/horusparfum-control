@@ -17,13 +17,13 @@ vi.mock('../vendas/VendasDashboard', () => ({
 
 const mockVendas: VendaRow[] = [
   {
-    id: 'v1', numero: 1, status: 'concluida', data_venda: '2026-06-16',
+    id: 'v1', numero: 1, titulo: null, status: 'concluida', data_venda: '2026-06-16',
     total_bruto: 240, total_custo: 132, lucro_bruto: 78,
     canal_id: 'c1', canais: { nome: 'Shopee' },
     venda_itens: [{ id: 'it1' }, { id: 'it2' }],
   },
   {
-    id: 'v2', numero: 2, status: 'cancelada', data_venda: '2026-06-15',
+    id: 'v2', numero: 2, titulo: null, status: 'cancelada', data_venda: '2026-06-15',
     total_bruto: 100, total_custo: 60, lucro_bruto: 40,
     canal_id: 'c2', canais: { nome: 'Loja física' },
     venda_itens: [{ id: 'it3' }],
