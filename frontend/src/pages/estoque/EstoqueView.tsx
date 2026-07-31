@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/shared/Icon'
@@ -6,6 +6,7 @@ import { Button, Select } from '@/components/shared/FormControls'
 import { ProductDetailsModal } from '@/components/shared/ProductDetailsModal'
 import { SaidaRapidaModal } from '@/components/shared/SaidaRapidaModal'
 import { EntradaRapidaModal } from '@/components/shared/EntradaRapidaModal'
+import { EstoqueDashboard } from './EstoqueDashboard'
 import { situacaoEstoque, ordenarProdutos, type OrdemEstoque, type SituacaoEstoque } from '@/lib/estoque'
 
 interface Produto {
@@ -17,6 +18,7 @@ interface Produto {
   marca_id: string | null
   estoque_atual: number
   estoque_minimo: number
+  custo_medio: number | null
   foto_url: string | null
   preco_referencia: number | null
   created_at: string
@@ -24,6 +26,8 @@ interface Produto {
   fornecedores?: { nome: string } | null
   marcas?: { nome: string } | null
 }
+
+type AbaEstoque = 'visao' | 'dashboard'
 
 interface Categoria { id: string; nome: string }
 interface Fornecedor { id: string; nome: string }
@@ -33,6 +37,30 @@ const BADGE_CLASSES: Record<SituacaoEstoque, string> = {
   ok: 'bg-gold text-[#1A1407]',
   baixo: 'bg-orange-400 text-white',
   critico: 'bg-down text-white',
+}
+
+function TabButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean
+  children: ReactNode
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+        active ? 'bg-gold text-[#1A1407]' : 'text-muted hover:text-text'
+      )}
+    >
+      {children}
+    </button>
+  )
 }
 
 export function EstEstoque() {
@@ -52,6 +80,7 @@ export function EstEstoque() {
   const [saidaProdutoId, setSaidaProdutoId] = useState<string | undefined>(undefined)
   const [entradaOpen, setEntradaOpen] = useState(false)
   const [entradaProdutoId, setEntradaProdutoId] = useState<string | undefined>(undefined)
+  const [aba, setAba] = useState<AbaEstoque>('visao')
 
   async function carregar() {
     setLoading(true)
@@ -84,7 +113,9 @@ export function EstEstoque() {
   )
 
   const temFiltros = !!(search || filterCategoria || filterFornecedor || filterMarca)
-  const totalUnidades = filtrados.reduce((soma, p) => soma + p.estoque_atual, 0)
+  // O dashboard sempre olha o estoque inteiro, então o cabeçalho ignora filtros nessa aba.
+  const visiveis = aba === 'dashboard' ? produtos : filtrados
+  const totalUnidades = visiveis.reduce((soma, p) => soma + p.estoque_atual, 0)
 
   return (
     <>
@@ -96,16 +127,16 @@ export function EstEstoque() {
             </p>
             <h1 className="text-3xl font-medium tracking-tight mt-1">Estoque</h1>
             <p className="text-muted text-sm mt-1">
-              {filtrados.length === produtos.length
+              {visiveis.length === produtos.length
                 ? `${produtos.length} produto${produtos.length !== 1 ? 's' : ''} em estoque`
-                : `${filtrados.length} de ${produtos.length} produtos`}
+                : `${visiveis.length} de ${produtos.length} produtos`}
               {' · '}
               <span className="text-text-2 font-mono tabular-nums">{totalUnidades}</span>
               {` unidade${totalUnidades !== 1 ? 's' : ''}`}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {temFiltros && (
+            {temFiltros && aba === 'visao' && (
               <button
                 type="button"
                 onClick={() => {
@@ -135,6 +166,30 @@ export function EstEstoque() {
           </div>
         </div>
 
+        <div className="inline-flex self-start items-center gap-1 p-0.5 border border-line-2 rounded-xl bg-surface-2">
+          <TabButton active={aba === 'visao'} onClick={() => setAba('visao')}>
+            Visão
+          </TabButton>
+          <TabButton active={aba === 'dashboard'} onClick={() => setAba('dashboard')}>
+            Dashboard
+          </TabButton>
+        </div>
+
+        {erro && (
+          <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">
+            Erro ao carregar: {erro}
+          </div>
+        )}
+
+        {aba === 'dashboard' ? (
+          <EstoqueDashboard
+            produtos={produtos}
+            categorias={categorias}
+            marcas={marcas}
+            loading={loading}
+          />
+        ) : (
+          <>
         {/* Filtros */}
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
           <div className="flex-1 max-w-md relative">
@@ -194,12 +249,6 @@ export function EstEstoque() {
           />
         </div>
 
-        {erro && (
-          <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">
-            Erro ao carregar: {erro}
-          </div>
-        )}
-
         {loading ? (
           <div className="py-12 text-center text-muted">Carregando...</div>
         ) : filtrados.length === 0 ? (
@@ -257,6 +306,8 @@ export function EstEstoque() {
               )
             })}
           </div>
+        )}
+          </>
         )}
       </div>
 

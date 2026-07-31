@@ -1,3 +1,28 @@
+## 2026-07-31 - Sessao 64: Aba Dashboard no Estoque
+
+**Responsavel:** Claude + Luis
+
+### O que foi feito
+- Criado `frontend/src/lib/estoqueDashboard.ts` com lógica pura TDD: `resumoEstoque`, `agruparEstoque` (dimensão genérica) e `topProdutosPorValor`, usando `decimal.js` para valores.
+- Criado `frontend/src/pages/estoque/EstoqueDashboard.tsx`: 4 cards (valor em estoque, produtos/unidades, precisam de atenção, custo médio por unidade) e 3 tabelas (por categoria, por marca, top 5 produtos por valor com barra de participação).
+- `EstoqueView.tsx` ganhou abas `Visão` e `Dashboard` no padrão de `Vendas.tsx` (estado local + `TabButton`), sem nova rota nem item de sidebar.
+- Dashboard sempre considera o estoque inteiro; os filtros da aba Visão não afetam os números, e o cabeçalho reflete isso ao trocar de aba.
+- Críticos/baixos reusam `situacaoEstoque` de `lib/estoque.ts`; produtos sem `custo_medio` contam como zero no valor e aparecem como aviso no card.
+- Frontend-only; sem backend e sem migração de banco.
+
+### Verificacao
+- `estoqueDashboard.test.ts`: 16/16; `EstoqueView.test.tsx`: 8/8.
+- Suite frontend completa: 213/215 — as 2 falhas restantes são as de `VendaFormModal.test.tsx`, registradas desde a Sessão 59.
+- `npm run build` passando; `tsc --noEmit` limpo.
+- ESLint: os arquivos novos passam limpos. `EstoqueView.tsx` mantém 1 erro pré-existente (`react-hooks/set-state-in-effect` no `useEffect(() => { carregar() }, [])`), confirmado presente no HEAD anterior.
+- Não houve validação visual no navegador nesta sessão.
+
+### Proximo
+- O spec `docs/superpowers/specs/2026-07-01-dashboard-estoque-real-design.md` (dashboard de risco com backend, cobertura por vendas e pedidos pendentes) continua não implementado; este dashboard é o recorte básico e não o substitui.
+- Corrigir o erro pré-existente de ESLint em `EstoqueView.tsx`.
+
+---
+
 ## 2026-07-31 - Sessao 63: Total de unidades no cabeçalho do Estoque
 
 **Responsavel:** Claude + Luis

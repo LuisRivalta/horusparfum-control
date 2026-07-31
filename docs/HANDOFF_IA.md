@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-31 (Sessão 63)
+> Última atualização: 2026-07-31 (Sessão 64)
 
 ## O que já foi feito
 
@@ -424,6 +424,17 @@
     - Frascos abertos para decant ficam fora da soma, pois a abertura já decrementa `estoque_atual` e o volume passa a viver em `frascos_abertos`
     - Frontend-only; sem migração de banco
     - Testes: `EstoqueView.test.tsx` 4/4; suite frontend 193/195 (as 2 falhas de `VendaFormModal.test.tsx` são pré-existentes)
+
+61. **Aba Dashboard no Estoque (Sessão 64)**
+    - `/estoque` ganhou abas `Visão` (grid operacional) e `Dashboard`, no mesmo padrão de `Vendas.tsx`: estado local + `TabButton`, sem nova rota e sem item novo na sidebar
+    - `lib/estoqueDashboard.ts` (lógica pura TDD, `decimal.js`): `resumoEstoque`, `agruparEstoque` (recebe a dimensão como função, serve categoria/marca/qualquer outra) e `topProdutosPorValor`
+    - `EstoqueDashboard.tsx`: cards de valor em estoque, produtos/unidades, produtos que precisam de atenção e custo médio por unidade; tabelas por categoria, por marca e top 5 produtos por valor com barra de participação
+    - Números sempre sobre o estoque inteiro (`estoque_atual > 0`), independentes dos filtros da aba Visão; o cabeçalho troca o texto conforme a aba para não conflitar
+    - Críticos/baixos reusam `situacaoEstoque` de `lib/estoque.ts`; produto sem `custo_medio` vale zero e é sinalizado como aviso no card, em vez de sumir da conta silenciosamente
+    - Participação do top 5 é sobre o valor total do estoque, não sobre o subtotal do top
+    - Frontend-only; sem backend e sem migração de banco
+    - Não substitui o spec `2026-07-01-dashboard-estoque-real-design.md` (dashboard de risco com backend, cobertura por vendas e pedidos pendentes), que segue não implementado
+    - Testes: `estoqueDashboard.test.ts` 16/16, `EstoqueView.test.tsx` 8/8, suite 213/215 (2 falhas pré-existentes de `VendaFormModal`), build passando
 
 ## Estado atual
 
