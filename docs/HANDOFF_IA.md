@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-29 (Sessão 62)
+> Última atualização: 2026-07-31 (Sessão 63)
 
 ## O que já foi feito
 
@@ -416,6 +416,14 @@
     - Migration SQL `supabase/migrations/20260729_excluir_venda.sql` criada com RPC `excluir_venda` atômica.
     - Fallback client-side adicionado no frontend para resiliência de ambiente.
     - Testes unitários frontend e backend 100% passando.
+
+60. **Total de unidades no cabeçalho do Estoque (Sessão 63)**
+    - `EstoqueView.tsx` passou a exibir a soma de `estoque_atual` ao lado do contador de produtos: `"42 produtos em estoque · 87 unidades"`
+    - O contador de produtos continua sendo tipos distintos (`produtos` com `estoque_atual > 0`); o novo número é o total de unidades físicas
+    - A soma acompanha os filtros ativos (busca, categoria, fornecedor, marca), refletindo só os produtos visíveis
+    - Frascos abertos para decant ficam fora da soma, pois a abertura já decrementa `estoque_atual` e o volume passa a viver em `frascos_abertos`
+    - Frontend-only; sem migração de banco
+    - Testes: `EstoqueView.test.tsx` 4/4; suite frontend 193/195 (as 2 falhas de `VendaFormModal.test.tsx` são pré-existentes)
 
 ## Estado atual
 

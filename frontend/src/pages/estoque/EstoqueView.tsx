@@ -84,6 +84,7 @@ export function EstEstoque() {
   )
 
   const temFiltros = !!(search || filterCategoria || filterFornecedor || filterMarca)
+  const totalUnidades = filtrados.reduce((soma, p) => soma + p.estoque_atual, 0)
 
   return (
     <>
@@ -98,6 +99,9 @@ export function EstEstoque() {
               {filtrados.length === produtos.length
                 ? `${produtos.length} produto${produtos.length !== 1 ? 's' : ''} em estoque`
                 : `${filtrados.length} de ${produtos.length} produtos`}
+              {' · '}
+              <span className="text-text-2 font-mono tabular-nums">{totalUnidades}</span>
+              {` unidade${totalUnidades !== 1 ? 's' : ''}`}
             </p>
           </div>
           <div className="flex items-center gap-2">

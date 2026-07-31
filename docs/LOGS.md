@@ -1,3 +1,22 @@
+## 2026-07-31 - Sessao 63: Total de unidades no cabeçalho do Estoque
+
+**Responsavel:** Claude + Luis
+
+### O que foi feito
+- Investigadas as fontes de dados do relatório de giro (`Relatorios.tsx`): frontend-only, consulta direta `produtos`, `movimentacoes`, `frascos_abertos` e `decants`; `produtos` vem sem filtro algum.
+- Esclarecido que o contador do cabeçalho de `/estoque` conta tipos de produto (linhas com `estoque_atual > 0`), não unidades físicas.
+- `EstoqueView.tsx`: adicionado `totalUnidades` (soma de `estoque_atual` dos produtos visíveis) exibido ao lado do contador de produtos — `"42 produtos em estoque · 87 unidades"`.
+- O total acompanha os filtros ativos, refletindo apenas os produtos listados.
+
+### Verificacao
+- `EstoqueView.test.tsx`: 4/4 passando.
+- Suite frontend completa: 193/195 — as 2 falhas são as de `VendaFormModal.test.tsx` já registradas na Sessão 59, sem relação com esta mudança.
+
+### Proximo
+- Frascos abertos para decant não entram na soma de unidades (o `estoque_atual` já foi decrementado na abertura). Avaliar se vale exibir ml em aberto como métrica separada.
+
+---
+
 ## 2026-07-29 - Sessao 62: Opção de excluir vendas com confirmação
 
 **Responsavel:** Antigravity + Luis
