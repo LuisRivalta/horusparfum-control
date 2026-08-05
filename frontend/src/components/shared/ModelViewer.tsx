@@ -45,7 +45,7 @@ export function ModelViewer({
     controls.enableZoom = false
     controls.autoRotate = autoRotate
     controls.autoRotateSpeed = autoRotateSpeed
-    controls.target.set(0, offsetY, 0)
+    controls.target.set(0, 0, 0)
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.9)
     scene.add(ambientLight)

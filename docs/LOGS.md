@@ -5,7 +5,7 @@
 ### O que foi feito
 - Copiado o modelo 3D `olho-de-horus.glb` da raiz do projeto (`C:\Horus\olho-de-horus.glb`) para a pasta de arquivos estáticos públicos do frontend (`frontend/public/olho-de-horus.glb`).
 - Atualizado o componente `frontend/src/components/shared/ModelViewer.tsx`:
-  - Centralizado o modelo 3D no centro da cena e adicionado um offset vertical (`offsetY = 0.35`) ajustando a posição e o alvo da câmera/órbita para centralizar perfeitamente o Olho de Horus no meio do painel.
+  - Corrigido o alvo dos OrbitControls em `(0,0,0)` enquanto o modelo 3D recebe o deslocamento vertical `offsetY = 0.35`. Anteriormente, ao alterar o alvo para acompanhar a posição do modelo, os OrbitControls recentravam a câmera no modelo anulando o deslocamento. Agora o Olho de Horus sobe visivelmente no viewport.
   - Desabilitado zoom via scroll do mouse/touch (`controls.enableZoom = false`), mantendo o controle de rotação manual (drag) e rotação automática ativos (`autoRotate`).
   - Fallback gracioso com a esfera dourada retido em caso de falhas de carregamento.
 - Atualizada a página de início/login (`frontend/src/pages/auth/Login.tsx`):
