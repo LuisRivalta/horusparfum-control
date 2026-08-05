@@ -12,7 +12,7 @@ interface ModelViewerProps {
 }
 
 export function ModelViewer({
-  modelUrl,
+  modelUrl = '/olho-de-horus.glb',
   className = '',
   style,
   autoRotate = true,
@@ -27,7 +27,7 @@ export function ModelViewer({
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
-    camera.position.set(0, 1.2, 3.5)
+    camera.position.set(0, 0, 3.5)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -40,20 +40,20 @@ export function ModelViewer({
     controls.enableDamping = true
     controls.dampingFactor = 0.05
     controls.enablePan = false
-    controls.minDistance = 2
+    controls.minDistance = 1.5
     controls.maxDistance = 8
     controls.autoRotate = autoRotate
     controls.autoRotateSpeed = autoRotateSpeed
-    controls.target.set(0, 0.5, 0)
+    controls.target.set(0, 0, 0)
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9)
     scene.add(ambientLight)
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.8)
     dirLight.position.set(3, 5, 4)
     scene.add(dirLight)
 
-    const rimLight = new THREE.DirectionalLight(0xc9a84c, 1)
+    const rimLight = new THREE.DirectionalLight(0xc9a84c, 1.2)
     rimLight.position.set(-3, 2, -2)
     scene.add(rimLight)
 
@@ -68,20 +68,7 @@ export function ModelViewer({
     scene.environment = envTexture
     pmremGenerator.dispose()
 
-    if (modelUrl) {
-      const loader = new GLTFLoader()
-      loader.load(modelUrl, (gltf) => {
-        const model = gltf.scene
-        const box = new THREE.Box3().setFromObject(model)
-        const center = box.getCenter(new THREE.Vector3())
-        model.position.sub(center)
-        const size = box.getSize(new THREE.Vector3())
-        const maxDim = Math.max(size.x, size.y, size.z)
-        model.scale.setScalar(2 / maxDim)
-        model.position.y += 0.5
-        scene.add(model)
-      })
-    } else {
+    function createFallbackSphere() {
       const sphereGeo = new THREE.SphereGeometry(0.7, 64, 64)
       const sphereMat = new THREE.MeshStandardMaterial({
         color: 0xc9a84c,
@@ -89,7 +76,7 @@ export function ModelViewer({
         roughness: 0.15,
       })
       const sphere = new THREE.Mesh(sphereGeo, sphereMat)
-      sphere.position.y = 1
+      sphere.position.y = 0.3
       scene.add(sphere)
 
       const baseGeo = new THREE.CylinderGeometry(1, 1.1, 0.15, 64)
@@ -99,7 +86,7 @@ export function ModelViewer({
         roughness: 0.3,
       })
       const base = new THREE.Mesh(baseGeo, baseMat)
-      base.position.y = 0.075
+      base.position.y = -0.65
       scene.add(base)
 
       const ringGeo = new THREE.TorusGeometry(1.05, 0.02, 16, 64)
@@ -110,8 +97,36 @@ export function ModelViewer({
       })
       const ring = new THREE.Mesh(ringGeo, ringMat)
       ring.rotation.x = Math.PI / 2
-      ring.position.y = 0.15
+      ring.position.y = -0.58
       scene.add(ring)
+    }
+
+    if (modelUrl) {
+      const loader = new GLTFLoader()
+      loader.load(
+        modelUrl,
+        (gltf) => {
+          const model = gltf.scene
+          const box = new THREE.Box3().setFromObject(model)
+          const center = box.getCenter(new THREE.Vector3())
+          model.position.sub(center)
+
+          const size = box.getSize(new THREE.Vector3())
+          const maxDim = Math.max(size.x, size.y, size.z)
+          if (maxDim > 0) {
+            model.scale.setScalar(2 / maxDim)
+          }
+
+          scene.add(model)
+        },
+        undefined,
+        (error) => {
+          console.warn('Erro ao carregar modelo GLB, usando fallback:', error)
+          createFallbackSphere()
+        }
+      )
+    } else {
+      createFallbackSphere()
     }
 
     const handleResize = () => {

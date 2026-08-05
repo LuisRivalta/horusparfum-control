@@ -1,3 +1,22 @@
+## 2026-08-05 - Sessao 65: Modelo 3D da Logo Olho de Horus
+
+**Responsavel:** Antigravity + Luis
+
+### O que foi feito
+- Copiado o modelo 3D `olho-de-horus.glb` da raiz do projeto (`C:\Horus\olho-de-horus.glb`) para a pasta de arquivos estáticos públicos do frontend (`frontend/public/olho-de-horus.glb`).
+- Atualizado o componente `frontend/src/components/shared/ModelViewer.tsx`:
+  - `modelUrl` passa a ter valor padrão `'/olho-de-horus.glb'`.
+  - O carregador Three.js (`GLTFLoader`) centraliza o modelo no ponto de origem `(0,0,0)` e escala de forma proporcional para se encaixar na viewport.
+  - Iluminação direcional + ambiente refinada com suporte a sombras e tom de iluminação Filmic ACES.
+  - Implementado fallback para rendering da esfera dourada caso o arquivo GLB não esteja presente ou ocorra erro de carregamento.
+- Atualizada a página de início/login (`frontend/src/pages/auth/Login.tsx`) para passar explicitamente `modelUrl="/olho-de-horus.glb"` no componente `ModelViewer`, substituindo a esfera dourada placeholder pelo modelo 3D da logo.
+
+### Verificacao
+- `npx vitest run`: 213/215 testes passando (mantendo apenas as 2 falhas pré-existentes em `VendaFormModal.test.tsx`).
+- `npm run build`: Build de produção Vite + TypeScript executado e concluído com sucesso (`dist/` gerado sem erros).
+
+---
+
 ## 2026-07-31 - Sessao 64: Aba Dashboard no Estoque
 
 **Responsavel:** Claude + Luis

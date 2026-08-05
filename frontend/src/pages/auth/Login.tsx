@@ -57,7 +57,7 @@ export function Login() {
             <Mark size={60} />
           </div>
           <div className="w-full h-full">
-            <ModelViewer autoRotate autoRotateSpeed={2} />
+            <ModelViewer modelUrl="/olho-de-horus.glb" autoRotate autoRotateSpeed={2} />
           </div>
           <p className="absolute bottom-4 text-xs text-muted hidden"></p>
         </div>

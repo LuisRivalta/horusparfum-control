@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-07-31 (Sessão 64)
+> Última atualização: 2026-08-05 (Sessão 65)
 
 ## O que já foi feito
 
@@ -435,6 +435,11 @@
     - Frontend-only; sem backend e sem migração de banco
     - Não substitui o spec `2026-07-01-dashboard-estoque-real-design.md` (dashboard de risco com backend, cobertura por vendas e pedidos pendentes), que segue não implementado
     - Testes: `estoqueDashboard.test.ts` 16/16, `EstoqueView.test.tsx` 8/8, suite 213/215 (2 falhas pré-existentes de `VendaFormModal`), build passando
+62. **Modelo 3D da logo (Sessão 65)**
+    - Copiado o arquivo `olho-de-horus.glb` para `frontend/public/olho-de-horus.glb`
+    - Atualizado o componente `ModelViewer.tsx` para carregar por padrão `/olho-de-horus.glb`, ajustando centralização, iluminação e fallback gracioso
+    - Atualizado `Login.tsx` para passar `modelUrl="/olho-de-horus.glb"`, substituindo a bola (esfera) placeholder do início/tela de login pelo modelo 3D oficial da logo
+    - Build de produção (`npm run build`) e suíte de testes validados com sucesso.
 
 ## Estado atual
 
