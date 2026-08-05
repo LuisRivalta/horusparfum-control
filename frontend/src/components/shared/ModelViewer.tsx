@@ -9,6 +9,7 @@ interface ModelViewerProps {
   style?: React.CSSProperties
   autoRotate?: boolean
   autoRotateSpeed?: number
+  offsetY?: number
 }
 
 export function ModelViewer({
@@ -17,6 +18,7 @@ export function ModelViewer({
   style,
   autoRotate = true,
   autoRotateSpeed = 2,
+  offsetY = 0.35,
 }: ModelViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -43,7 +45,7 @@ export function ModelViewer({
     controls.enableZoom = false
     controls.autoRotate = autoRotate
     controls.autoRotateSpeed = autoRotateSpeed
-    controls.target.set(0, 0, 0)
+    controls.target.set(0, offsetY, 0)
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.9)
     scene.add(ambientLight)
@@ -75,7 +77,7 @@ export function ModelViewer({
         roughness: 0.15,
       })
       const sphere = new THREE.Mesh(sphereGeo, sphereMat)
-      sphere.position.y = 0.3
+      sphere.position.y = offsetY + 0.3
       scene.add(sphere)
 
       const baseGeo = new THREE.CylinderGeometry(1, 1.1, 0.15, 64)
@@ -85,7 +87,7 @@ export function ModelViewer({
         roughness: 0.3,
       })
       const base = new THREE.Mesh(baseGeo, baseMat)
-      base.position.y = -0.65
+      base.position.y = offsetY - 0.65
       scene.add(base)
 
       const ringGeo = new THREE.TorusGeometry(1.05, 0.02, 16, 64)
@@ -96,7 +98,7 @@ export function ModelViewer({
       })
       const ring = new THREE.Mesh(ringGeo, ringMat)
       ring.rotation.x = Math.PI / 2
-      ring.position.y = -0.58
+      ring.position.y = offsetY - 0.58
       scene.add(ring)
     }
 
@@ -116,6 +118,7 @@ export function ModelViewer({
             model.scale.setScalar(1.6 / maxDim)
           }
 
+          model.position.y += offsetY
           scene.add(model)
         },
         undefined,
