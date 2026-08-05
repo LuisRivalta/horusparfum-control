@@ -1,15 +1,16 @@
-## 2026-08-05 - Sessao 65: Modelo 3D da Logo Olho de Horus
+## 2026-08-05 - Sessao 65: Modelo 3D da Logo Olho de Horus e Ajustes de Câmera/Fundo
 
 **Responsavel:** Antigravity + Luis
 
 ### O que foi feito
 - Copiado o modelo 3D `olho-de-horus.glb` da raiz do projeto (`C:\Horus\olho-de-horus.glb`) para a pasta de arquivos estáticos públicos do frontend (`frontend/public/olho-de-horus.glb`).
 - Atualizado o componente `frontend/src/components/shared/ModelViewer.tsx`:
-  - `modelUrl` passa a ter valor padrão `'/olho-de-horus.glb'`.
-  - O carregador Three.js (`GLTFLoader`) centraliza o modelo no ponto de origem `(0,0,0)` e escala de forma proporcional para se encaixar na viewport.
-  - Iluminação direcional + ambiente refinada com suporte a sombras e tom de iluminação Filmic ACES.
-  - Implementado fallback para rendering da esfera dourada caso o arquivo GLB não esteja presente ou ocorra erro de carregamento.
-- Atualizada a página de início/login (`frontend/src/pages/auth/Login.tsx`) para passar explicitamente `modelUrl="/olho-de-horus.glb"` no componente `ModelViewer`, substituindo a esfera dourada placeholder pelo modelo 3D da logo.
+  - Centralizado o modelo 3D no centro da cena e ajustada a posição da câmera (`camera.position.set(0, 0, 4.2)`) e escala para visualização mais distante e perfeitamente enquadrada.
+  - Desabilitado zoom via scroll do mouse/touch (`controls.enableZoom = false`), mantendo o controle de rotação manual (drag) e rotação automática ativos (`autoRotate`).
+  - Fallback gracioso com a esfera dourada retido em caso de falhas de carregamento.
+- Atualizada a página de início/login (`frontend/src/pages/auth/Login.tsx`):
+  - Passado `modelUrl="/olho-de-horus.glb"` explicitamente no `ModelViewer`.
+  - Adicionada classe `opacity-40` no container do `ColorBends`, reduzindo a opacidade do fundo animado para destacar o card principal e o modelo 3D.
 
 ### Verificacao
 - `npx vitest run`: 213/215 testes passando (mantendo apenas as 2 falhas pré-existentes em `VendaFormModal.test.tsx`).

@@ -27,7 +27,7 @@ export function ModelViewer({
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
-    camera.position.set(0, 0, 3.5)
+    camera.position.set(0, 0, 4.2)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -40,8 +40,7 @@ export function ModelViewer({
     controls.enableDamping = true
     controls.dampingFactor = 0.05
     controls.enablePan = false
-    controls.minDistance = 1.5
-    controls.maxDistance = 8
+    controls.enableZoom = false
     controls.autoRotate = autoRotate
     controls.autoRotateSpeed = autoRotateSpeed
     controls.target.set(0, 0, 0)
@@ -114,7 +113,7 @@ export function ModelViewer({
           const size = box.getSize(new THREE.Vector3())
           const maxDim = Math.max(size.x, size.y, size.z)
           if (maxDim > 0) {
-            model.scale.setScalar(2 / maxDim)
+            model.scale.setScalar(1.6 / maxDim)
           }
 
           scene.add(model)

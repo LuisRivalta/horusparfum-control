@@ -437,8 +437,8 @@
     - Testes: `estoqueDashboard.test.ts` 16/16, `EstoqueView.test.tsx` 8/8, suite 213/215 (2 falhas pré-existentes de `VendaFormModal`), build passando
 62. **Modelo 3D da logo (Sessão 65)**
     - Copiado o arquivo `olho-de-horus.glb` para `frontend/public/olho-de-horus.glb`
-    - Atualizado o componente `ModelViewer.tsx` para carregar por padrão `/olho-de-horus.glb`, ajustando centralização, iluminação e fallback gracioso
-    - Atualizado `Login.tsx` para passar `modelUrl="/olho-de-horus.glb"`, substituindo a bola (esfera) placeholder do início/tela de login pelo modelo 3D oficial da logo
+    - Atualizado o componente `ModelViewer.tsx` para carregar por padrão `/olho-de-horus.glb`, centralizando a visão, desabilitando o scroll/zoom (`enableZoom = false`), afastando a câmera (`camera.position.set(0, 0, 4.2)`) e mantendo a rotação manual e automática.
+    - Atualizado `Login.tsx` com `modelUrl="/olho-de-horus.glb"` e opacidade reduzida no fundo animado `ColorBends` (`opacity-40`).
     - Build de produção (`npm run build`) e suíte de testes validados com sucesso.
 
 ## Estado atual

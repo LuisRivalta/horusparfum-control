@@ -31,7 +31,7 @@ export function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
       {/* Fundo animado */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 opacity-40">
         <ColorBends
           colors={["#FFD700", "#F7A055", "#C9A84C"]}
           rotation={90}
