@@ -31,10 +31,11 @@ interface ItemDetalhe {
 interface Props {
   venda: VendaResumo | null
   onClose: () => void
+  onEdit?: (venda: VendaResumo) => void
   onDelete?: (venda: VendaResumo) => void
 }
 
-export function VendaDetalheModal({ venda, onClose, onDelete }: Props) {
+export function VendaDetalheModal({ venda, onClose, onEdit, onDelete }: Props) {
   const [itens, setItens] = useState<ItemDetalhe[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -99,16 +100,28 @@ export function VendaDetalheModal({ venda, onClose, onDelete }: Props) {
                   <span className={`font-mono ${venda.lucro_bruto < 0 ? 'text-down' : 'text-up'}`}>{formatBRL(venda.lucro_bruto)}</span>
                 </div>
               </div>
-              {onDelete && (
-                <div className="flex justify-end pt-3 border-t border-line">
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => onDelete(venda)}
-                  >
-                    <Icon name="trash" size={14} />
-                    Excluir venda
-                  </Button>
+              {(onEdit || onDelete) && (
+                <div className="flex justify-end gap-2 pt-3 border-t border-line">
+                  {onEdit && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onEdit(venda)}
+                    >
+                      <Icon name="edit" size={14} />
+                      Editar venda
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => onDelete(venda)}
+                    >
+                      <Icon name="trash" size={14} />
+                      Excluir venda
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

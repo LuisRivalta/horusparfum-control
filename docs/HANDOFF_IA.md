@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-08-05 (Sessão 65)
+> Última atualização: 2026-08-06 (Sessão 66)
 
 ## O que já foi feito
 
@@ -440,6 +440,14 @@
     - Corrigida a lógica de renderização 3D em `ModelViewer.tsx`: mantido o alvo da órbita em `(0,0,0)` enquanto o modelo é deslocado verticalmente (`offsetY = 0.35`), fazendo o modelo 3D subir efetivamente na tela e se alinhar ao centro visual do card de login.
     - Atualizado `Login.tsx` com `modelUrl="/olho-de-horus.glb"` e opacidade reduzida no fundo animado `ColorBends` (`opacity-40`).
     - Build de produção (`npm run build`) e suíte de testes validados com sucesso.
+63. **Edição de Vendas Completa (Sessão 66)**
+    - Implementado `VendaFormModal.tsx` unificando os modos `create` e `edit`.
+    - Modo `edit` pré-preenche campos e itens da venda (produtos e decants), inclui frascos abertos ativos ou esgotados vinculados à venda, e executa a RPC atômica `editar_venda`.
+    - `NovaVendaModal.tsx` e `EditarVendaModal.tsx` adaptados como wrappers de `VendaFormModal`.
+    - Opção de edição exposta em `Vendas.tsx` (lista operacional de vendas e modal de detalhes `VendaDetalheModal.tsx`) e em `Transacoes.tsx` ("Corrigir venda").
+    - Testes unitários do frontend (`VendaFormModal.test.tsx`, `Vendas.test.tsx`, etc.) 100% passando (215/215).
+    - Testes unitários do backend (`test_correcao_transacoes_migration.py`, etc.) 100% passando (50/50).
+    - Build de produção do frontend (`npm run build`) passando sem erros.
 
 ## Estado atual
 
@@ -453,9 +461,9 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- Ultima verificacao frontend completa conhecida: 192/192 testes e build passando antes do trabalho parcial atual
-- Backend completo: 50/50 testes passando em 2026-07-15
-- Ha trabalho de implementacao parcial e nao versionado para a UI de edicao de vendas/transacoes; os 2 testes focados atuais falham e a feature nao deve ser considerada concluida
+- Verificação frontend completa: **215/215 testes passando** (0 falhas) e build de produção sem erros
+- Backend completo: **50/50 testes passando**
+- Edição de vendas e correção de transações implementada com RPCs atômicas e interface completa no frontend
 - `PeriodSelector`: período personalizado não valida `início <= fim` (resultado zera silenciosamente)
 - Bundle do recharts é pesado (~445 kB gzip) — considerar code splitting
 

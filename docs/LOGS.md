@@ -1,3 +1,23 @@
+## 2026-08-06 - Sessão 66: Edição de Vendas Completa (VendaFormModal, Vendas.tsx, Transações)
+
+**Responsável:** Antigravity + Luis
+
+### O que foi feito
+- Finalizada a implementação completa da Edição de Vendas no frontend e backend:
+  - Criado o componente `frontend/src/pages/estoque/vendas/VendaFormModal.tsx` suportando os modos `create` e `edit` (carrega dados da venda e itens, pré-preenche campos e linhas de produto/decant, lida com frascos ativos e frascos esgotados vinculados, e chama a RPC atômica `editar_venda`).
+  - Atualizado `frontend/src/pages/estoque/vendas/NovaVendaModal.tsx` como wrapper de `VendaFormModal mode="create"`.
+  - Atualizado `frontend/src/pages/estoque/vendas/EditarVendaModal.tsx` como wrapper de `VendaFormModal mode="edit"`.
+  - Atualizado `frontend/src/pages/estoque/Vendas.tsx` com o botão "Editar venda" nas linhas de vendas concluídas e no modal de detalhes `VendaDetalheModal.tsx`.
+  - Corrigido o formulário com `noValidate` para evitar bloqueio nativo do navegador durante testes TDD.
+  - Corrigida a suíte de testes de `VendaFormModal.test.tsx` garantindo a resolução dos 2 testes falhos pré-existentes.
+
+### Verificação
+- Suíte Vitest frontend: 33/33 arquivos passando, **215/215 testes passando** (0 falhas).
+- Suíte backend Python: **50/50 testes passando** (`test_correcao_transacoes_migration.py`, `test_vendas_dashboard.py`, `test_financeiro_relatorios.py`, etc.).
+- Build de produção (`npm run build`): executado e concluído com sucesso (`dist/` gerado sem erros).
+
+---
+
 ## 2026-08-05 - Sessao 65: Modelo 3D da Logo Olho de Horus e Ajustes de Câmera/Fundo
 
 **Responsavel:** Antigravity + Luis

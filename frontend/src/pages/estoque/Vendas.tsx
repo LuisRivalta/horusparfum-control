@@ -6,6 +6,7 @@ import { Button } from '@/components/shared/FormControls'
 import { Modal } from '@/components/shared/Modal'
 import { cn, formatBRL } from '@/lib/utils'
 import { NovaVendaModal } from './vendas/NovaVendaModal'
+import { EditarVendaModal } from './vendas/EditarVendaModal'
 import { VendaDetalheModal } from './vendas/VendaDetalheModal'
 import { VendasDashboard } from './vendas/VendasDashboard'
 
@@ -64,6 +65,7 @@ export function EstVendas() {
   const [vendas, setVendas] = useState<VendaRow[]>([])
   const [loading, setLoading] = useState(true)
   const [novoOpen, setNovoOpen] = useState(false)
+  const [editando, setEditando] = useState<VendaRow | null>(null)
   const [detalhe, setDetalhe] = useState<VendaRow | null>(null)
   const [cancelando, setCancelando] = useState<VendaRow | null>(null)
   const [cancelSubmitting, setCancelSubmitting] = useState(false)
@@ -224,9 +226,20 @@ export function EstVendas() {
                         <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
                             {v.status === 'concluida' && (
-                              <Button size="sm" variant="ghost" onClick={() => setCancelando(v)}>
-                                Cancelar
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  aria-label={`Editar venda ${v.titulo || `#${v.numero}`}`}
+                                  title="Editar venda"
+                                  onClick={() => setEditando(v)}
+                                >
+                                  <Icon name="edit" size={14} />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setCancelando(v)}>
+                                  Cancelar
+                                </Button>
+                              </>
                             )}
                             <Button
                               size="sm"
@@ -250,9 +263,19 @@ export function EstVendas() {
           </div>
 
           <NovaVendaModal open={novoOpen} onClose={() => setNovoOpen(false)} onSaved={fetchData} />
+          <EditarVendaModal
+            open={!!editando}
+            vendaId={editando?.id ?? ''}
+            onClose={() => setEditando(null)}
+            onSaved={() => { setEditando(null); fetchData() }}
+          />
           <VendaDetalheModal
             venda={detalhe}
             onClose={() => setDetalhe(null)}
+            onEdit={(v) => {
+              setDetalhe(null)
+              setEditando(v as VendaRow)
+            }}
             onDelete={(v) => {
               setDetalhe(null)
               setExcluindo(v as VendaRow)

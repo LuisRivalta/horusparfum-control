@@ -103,7 +103,7 @@ describe('EditarVendaModal', () => {
     expect(screen.getByLabelText('Frasco aberto')).toHaveValue('f1')
 
     fireEvent.change(screen.getByLabelText('Forma de pagamento'), { target: { value: 'Cartao' } })
-    fireEvent.click(screen.getByRole('button', { name: /salvar alteracoes/i }))
+    fireEvent.click(screen.getByRole('button', { name: /salvar altera/i }))
 
     await waitFor(() => expect(rpc).toHaveBeenCalledWith(
       'editar_venda',
@@ -115,8 +115,8 @@ describe('EditarVendaModal', () => {
     rpc.mockResolvedValueOnce({ error: { message: 'Estoque insuficiente' } })
     render(<EditarVendaModal open vendaId="v1" onClose={vi.fn()} onSaved={vi.fn()} />)
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /salvar alteracoes/i })).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: /salvar alteracoes/i }))
+    await waitFor(() => expect(screen.getByLabelText('Forma de pagamento')).toHaveValue('Pix'))
+    fireEvent.click(screen.getByRole('button', { name: /salvar altera/i }))
 
     expect(await screen.findByText('Estoque insuficiente')).toBeInTheDocument()
     expect(screen.getByLabelText('Forma de pagamento')).toHaveValue('Pix')

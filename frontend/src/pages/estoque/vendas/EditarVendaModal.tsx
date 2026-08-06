@@ -1,12 +1,5 @@
-import { NovaVendaModal } from './NovaVendaModal'
+import { VendaFormModal, type VendaFormModalProps } from './VendaFormModal'
 
-interface Props {
-  open: boolean
-  vendaId: string
-  onClose: () => void
-  onSaved: () => void
-}
-
-export function EditarVendaModal({ open, vendaId, onClose, onSaved }: Props) {
-  return <NovaVendaModal open={open} vendaId={vendaId} onClose={onClose} onSaved={onSaved} />
+export function EditarVendaModal(props: Omit<VendaFormModalProps, 'mode'>) {
+  return <VendaFormModal {...props} mode="edit" />
 }
