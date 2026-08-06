@@ -51,6 +51,6 @@ describe('NovaVendaModal', () => {
     expect(canalGrid).toHaveClass('grid-cols-1')
     expect(canalGrid).toHaveClass('sm:grid-cols-2')
     expect(produtoGrid).toHaveClass('grid-cols-1')
-    expect(produtoGrid).toHaveClass('sm:grid-cols-[1fr_70px_110px]')
+    expect(produtoGrid).toHaveClass('sm:grid-cols-[1fr_65px_95px_95px]')
   })
 })
