@@ -196,7 +196,8 @@ create or replace function editar_venda(
   p_frete numeric,
   p_responsavel text,
   p_observacao text,
-  p_itens jsonb
+  p_itens jsonb,
+  p_titulo text default null
 ) returns jsonb
 language plpgsql
 set search_path = public
@@ -265,6 +266,7 @@ begin
     frete = coalesce(p_frete, 0),
     responsavel = p_responsavel,
     observacao = p_observacao,
+    titulo = p_titulo,
     total_bruto = 0,
     total_custo = 0,
     lucro_bruto = 0,

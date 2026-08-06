@@ -112,7 +112,12 @@ describe('EditarVendaModal', () => {
   })
 
   it('mantem o formulario aberto e mostra o erro da rpc', async () => {
-    rpc.mockResolvedValueOnce({ error: { message: 'Estoque insuficiente' } })
+    rpc.mockImplementation((fn: string) => {
+      if (fn === 'editar_venda') {
+        return Promise.resolve({ error: { message: 'Estoque insuficiente' } })
+      }
+      return Promise.resolve({ error: null })
+    })
     render(<EditarVendaModal open vendaId="v1" onClose={vi.fn()} onSaved={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByLabelText('Forma de pagamento')).toHaveValue('Pix'))

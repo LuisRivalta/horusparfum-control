@@ -250,7 +250,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
     setSubmitting(true)
     let res: { error: { message: string } | null }
 
-    if (mode === 'edit') {
+    if (mode === 'edit' && vendaId) {
       res = await supabase.rpc('editar_venda', {
         p_venda_id: vendaId,
         p_canal_id: canalId,
@@ -262,7 +262,189 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
         p_responsavel: user?.email || null,
         p_observacao: null,
         p_itens: itensPayload,
+        p_titulo: titulo || null,
       })
+
+      const isRpcMissing = Boolean(
+        res.error &&
+          (res.error.code === 'PGRST202' ||
+            res.error.message?.includes('Could not find') ||
+            res.error.message?.includes('function') ||
+            res.error.message?.includes('does not exist'))
+      )
+
+      if (isRpcMissing) {
+        try {
+          await supabase.rpc('cancelar_venda', { p_venda_id: vendaId })
+          await supabase.from('transacoes').delete().eq('venda_id', vendaId)
+
+          const { data: oldItens } = await supabase.from('venda_itens').select('decant_id').eq('venda_id', vendaId)
+          if (oldItens && oldItens.length > 0) {
+            const decantIds = oldItens.map((i) => i.decant_id).filter(Boolean) as string[]
+            if (decantIds.length > 0) {
+              await supabase.from('venda_itens').update({ decant_id: null }).eq('venda_id', vendaId)
+              await supabase.from('decants').delete().in('id', decantIds)
+            }
+          }
+          await supabase.from('venda_itens').delete().eq('venda_id', vendaId)
+
+          let totalBrutoAcc = 0
+          let totalCustoAcc = 0
+          const itemIds: string[] = []
+          const brutos: number[] = []
+
+          for (const item of itensPayload) {
+            let decantId: string | null = null
+            let custoUnit = item.custo_unitario || 0
+
+            if (item.tipo === 'produto' && item.produto_id) {
+              const { data: prod } = await supabase.from('produtos').select('estoque_atual, custo_medio').eq('id', item.produto_id).single()
+              if (prod) {
+                const novoEstoque = Math.max(0, (prod.estoque_atual || 0) - item.quantidade)
+                if (!item.custo_unitario) custoUnit = prod.custo_medio || 0
+                await supabase.from('produtos').update({ estoque_atual: novoEstoque }).eq('id', item.produto_id)
+                await supabase.from('movimentacoes').insert({
+                  produto_id: item.produto_id,
+                  tipo: 'saida',
+                  quantidade: item.quantidade,
+                  motivo: titulo || `Edição Venda #${vendaNumero || ''}`,
+                  responsavel: user?.email || null,
+                  saldo_resultante: novoEstoque,
+                })
+              }
+            } else if (item.tipo === 'decant' && item.frasco_id) {
+              const { data: frasco } = await supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, produtos(custo_medio)').eq('id', item.frasco_id).single()
+              if (frasco) {
+                const totalMlNeeded = (item.ml || 0) * item.quantidade
+                const novoMl = Math.max(0, (frasco.ml_restante || 0) - totalMlNeeded)
+                await supabase.from('frascos_abertos').update({
+                  ml_restante: novoMl,
+                  status: novoMl <= 0 ? 'esgotado' : 'ativo',
+                }).eq('id', item.frasco_id)
+
+                const { data: newDecant } = await supabase.from('decants').insert({
+                  frasco_id: item.frasco_id,
+                  produto_id: frasco.produto_id,
+                  ml: totalMlNeeded,
+                }).select('id').single()
+                if (newDecant) decantId = newDecant.id
+              }
+            }
+
+            const itemBruto = Number((item.preco_unitario * item.quantidade).toFixed(2))
+            const itemCusto = Number(((custoUnit + item.custo_embalagem) * item.quantidade).toFixed(2))
+            totalBrutoAcc += itemBruto
+            totalCustoAcc += itemCusto
+
+            const { data: insertedItem } = await supabase.from('venda_itens').insert({
+              venda_id: vendaId,
+              tipo: item.tipo,
+              produto_id: item.produto_id,
+              frasco_id: item.frasco_id,
+              decant_id: decantId,
+              ml: item.ml,
+              quantidade: item.quantidade,
+              preco_unitario: item.preco_unitario,
+              custo_unitario: custoUnit,
+              custo_embalagem: item.custo_embalagem,
+            }).select('id').single()
+
+            if (insertedItem) {
+              itemIds.push(insertedItem.id)
+              brutos.push(itemBruto)
+            }
+          }
+
+          const taxaVal = Number(taxa) || 0
+          const freteVal = Number(frete) || 0
+          let taxaAcc = 0
+          let freteAcc = 0
+
+          for (let idx = 0; idx < itemIds.length; idx++) {
+            let tRateada = 0
+            let fRateado = 0
+            if (idx < itemIds.length - 1) {
+              tRateada = totalBrutoAcc > 0 ? Number(((taxaVal * brutos[idx]) / totalBrutoAcc).toFixed(2)) : 0
+              fRateado = totalBrutoAcc > 0 ? Number(((freteVal * brutos[idx]) / totalBrutoAcc).toFixed(2)) : 0
+              taxaAcc += tRateada
+              freteAcc += fRateado
+            } else {
+              tRateada = Number((taxaVal - taxaAcc).toFixed(2))
+              fRateado = Number((freteVal - freteAcc).toFixed(2))
+            }
+
+            const { data: ci } = await supabase.from('venda_itens').select('custo_unitario, custo_embalagem, quantidade').eq('id', itemIds[idx]).single()
+            const cUnit = ci?.custo_unitario || 0
+            const cEmb = ci?.custo_embalagem || 0
+            const q = ci?.quantidade || 1
+            const itemLucro = Number((brutos[idx] - tRateada - fRateado - (cUnit + cEmb) * q).toFixed(2))
+
+            await supabase.from('venda_itens').update({
+              taxa_rateada: tRateada,
+              frete_rateado: fRateado,
+              lucro: itemLucro,
+            }).eq('id', itemIds[idx])
+          }
+
+          const lucroBrutoTotal = Number((totalBrutoAcc - taxaVal - freteVal - totalCustoAcc).toFixed(2))
+          await supabase.from('vendas').update({
+            canal_id: canalId,
+            data_venda: dataVenda || null,
+            forma_pagamento: formaPagamento || null,
+            cliente: cliente || null,
+            taxa_total: taxaVal,
+            frete: freteVal,
+            responsavel: user?.email || null,
+            observacao: null,
+            titulo: titulo || null,
+            total_bruto: totalBrutoAcc,
+            total_custo: totalCustoAcc,
+            lucro_bruto: lucroBrutoTotal,
+            status: 'concluida',
+          }).eq('id', vendaId)
+
+          const nomeVenda = titulo || `Venda #${vendaNumero || ''}`
+          await supabase.from('transacoes').insert({
+            descricao: nomeVenda,
+            tipo: 'entrada',
+            valor: totalBrutoAcc,
+            categoria: 'Vendas',
+            forma_pagamento: formaPagamento || null,
+            responsavel: user?.email || null,
+            origem: 'venda',
+            venda_id: vendaId,
+          })
+          if (taxaVal > 0) {
+            await supabase.from('transacoes').insert({
+              descricao: `Taxa — ${nomeVenda}`,
+              tipo: 'saida',
+              valor: taxaVal,
+              categoria: 'Taxas marketplace',
+              forma_pagamento: formaPagamento || null,
+              responsavel: user?.email || null,
+              origem: 'venda',
+              venda_id: vendaId,
+            })
+          }
+          if (freteVal > 0) {
+            await supabase.from('transacoes').insert({
+              descricao: `Frete — ${nomeVenda}`,
+              tipo: 'saida',
+              valor: freteVal,
+              categoria: 'Frete',
+              forma_pagamento: formaPagamento || null,
+              responsavel: user?.email || null,
+              origem: 'venda',
+              venda_id: vendaId,
+            })
+          }
+
+          res = { error: null }
+        } catch (fallbackErr: unknown) {
+          const msg = fallbackErr instanceof Error ? fallbackErr.message : 'Erro ao salvar venda'
+          res = { error: { message: msg } }
+        }
+      }
     } else {
       res = await supabase.rpc('registrar_venda', {
         p_canal_id: canalId,
