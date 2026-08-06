@@ -19,6 +19,7 @@ export interface LinhaForm {
   ml: string
   quantidade: string
   preco: string
+  custo_unitario: string
   custo_embalagem: string
 }
 
@@ -31,7 +32,7 @@ export interface VendaFormModalProps {
 }
 
 const LINHA_VAZIA: LinhaForm = {
-  tipo: 'produto', produto_id: '', frasco_id: '', ml: '5', quantidade: '1', preco: '', custo_embalagem: '0',
+  tipo: 'produto', produto_id: '', frasco_id: '', ml: '5', quantidade: '1', preco: '', custo_unitario: '', custo_embalagem: '0',
 }
 
 export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaFormModalProps) {
@@ -129,6 +130,8 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
         if (viItems.length > 0) {
           const novassLinhas: LinhaForm[] = viItems.map(item => {
             if (item.tipo === 'decant') {
+              const fObj = frascosData.find(fr => fr.id === item.frasco_id)
+              const fallbackCusto = fObj ? custoDecantUnitario(item.ml || 5, fObj.produtos?.custo_medio ?? 0, fObj.ml_total) : 0
               return {
                 tipo: 'decant',
                 produto_id: '',
@@ -136,9 +139,11 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                 ml: item.ml != null ? String(item.ml) : '5',
                 quantidade: item.quantidade != null ? String(item.quantidade) : '1',
                 preco: item.preco_unitario != null ? String(item.preco_unitario) : '',
+                custo_unitario: item.custo_unitario != null ? String(item.custo_unitario) : String(fallbackCusto),
                 custo_embalagem: item.custo_embalagem != null ? String(item.custo_embalagem) : '0',
               }
             } else {
+              const pObj = prodsData.find(pr => pr.id === item.produto_id)
               return {
                 tipo: 'produto',
                 produto_id: item.produto_id || '',
@@ -146,6 +151,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                 ml: '5',
                 quantidade: item.quantidade != null ? String(item.quantidade) : '1',
                 preco: item.preco_unitario != null ? String(item.preco_unitario) : '',
+                custo_unitario: item.custo_unitario != null ? String(item.custo_unitario) : (pObj?.custo_medio != null ? String(pObj.custo_medio) : '0'),
                 custo_embalagem: '0',
               }
             }
@@ -178,6 +184,9 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
   }
 
   function custoUnitarioDaLinha(l: LinhaForm): number {
+    if (l.custo_unitario !== '' && !isNaN(Number(l.custo_unitario)) && Number(l.custo_unitario) >= 0) {
+      return Number(l.custo_unitario)
+    }
     if (l.tipo === 'produto') {
       const p = produtos.find(x => x.id === l.produto_id)
       return p?.custo_medio ?? 0
@@ -234,6 +243,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
       ml: l.tipo === 'decant' ? Number(l.ml) : null,
       quantidade: Number(l.quantidade),
       preco_unitario: Number(l.preco) || 0,
+      custo_unitario: Number(l.custo_unitario) || 0,
       custo_embalagem: l.tipo === 'decant' ? (Number(l.custo_embalagem) || 0) : 0,
     }))
 
@@ -315,7 +325,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                     label="Tipo"
                     options={[{ value: 'produto', label: 'Produto (frasco cheio)' }, { value: 'decant', label: 'Decant' }]}
                     value={l.tipo}
-                    onChange={(e) => setLinha(i, { tipo: e.target.value as 'produto' | 'decant', produto_id: '', frasco_id: '' })}
+                    onChange={(e) => setLinha(i, { tipo: e.target.value as 'produto' | 'decant', produto_id: '', frasco_id: '', custo_unitario: '' })}
                   />
                   <span className="text-xs text-muted pb-2.5 ml-auto">{estoqueDisponivel(l)}</span>
                   <button
@@ -329,37 +339,54 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                 </div>
 
                 {l.tipo === 'produto' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_70px_110px] gap-2 items-end">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_65px_95px_95px] gap-2 items-end">
                     <Select
                       label="Produto"
                       options={produtos.map(p => ({ value: p.id, label: p.nome }))}
                       value={l.produto_id}
                       onChange={(e) => {
                         const p = produtos.find(x => x.id === e.target.value)
-                        setLinha(i, { produto_id: e.target.value, preco: l.preco || (p?.preco_referencia != null ? String(p.preco_referencia) : '') })
+                        setLinha(i, {
+                          produto_id: e.target.value,
+                          preco: l.preco || (p?.preco_referencia != null ? String(p.preco_referencia) : ''),
+                          custo_unitario: p?.custo_medio != null ? String(p.custo_medio) : (l.custo_unitario || '0'),
+                        })
                       }}
                     />
                     <Input label="Qtd" type="number" min="1" value={l.quantidade} onChange={(e) => setLinha(i, { quantidade: e.target.value })} />
-                    <Input label="Preço un." type="number" step="0.01" min="0" value={l.preco} onChange={(e) => setLinha(i, { preco: e.target.value })} />
+                    <Input label="Custo un." type="number" step="0.01" min="0" value={l.custo_unitario} onChange={(e) => setLinha(i, { custo_unitario: e.target.value })} placeholder="0.00" />
+                    <Input label="Preço un." type="number" step="0.01" min="0" value={l.preco} onChange={(e) => setLinha(i, { preco: e.target.value })} placeholder="0.00" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_60px_70px_100px] gap-2 items-end">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_50px_50px_85px_85px_75px] gap-2 items-end">
                     <Select
                       label="Frasco aberto"
                       options={frascos.map(f => ({ value: f.id, label: `${f.produtos?.nome} (${f.ml_restante}ml)` }))}
                       value={l.frasco_id}
-                      onChange={(e) => setLinha(i, { frasco_id: e.target.value })}
+                      onChange={(e) => {
+                        const f = frascos.find(x => x.id === e.target.value)
+                        const cUnit = f ? custoDecantUnitario(Number(l.ml) || 0, f.produtos?.custo_medio ?? 0, f.ml_total) : 0
+                        setLinha(i, { frasco_id: e.target.value, custo_unitario: String(cUnit) })
+                      }}
                     />
                     <Input
                       label="ml"
                       type="number" min="1"
                       value={l.ml}
                       onChange={(e) => {
+                        const f = frascos.find(x => x.id === l.frasco_id)
                         const emb = embalagens.find(x => x.tamanho_ml === Number(e.target.value))
-                        setLinha(i, { ml: e.target.value, custo_embalagem: emb ? String(emb.custo) : l.custo_embalagem })
+                        const cUnit = f ? custoDecantUnitario(Number(e.target.value) || 0, f.produtos?.custo_medio ?? 0, f.ml_total) : 0
+                        setLinha(i, {
+                          ml: e.target.value,
+                          custo_unitario: String(cUnit),
+                          custo_embalagem: emb ? String(emb.custo) : l.custo_embalagem,
+                        })
                       }}
                     />
-                    <Input label="Preço" type="number" step="0.01" min="0" value={l.preco} onChange={(e) => setLinha(i, { preco: e.target.value })} />
+                    <Input label="Qtd" type="number" min="1" value={l.quantidade} onChange={(e) => setLinha(i, { quantidade: e.target.value })} />
+                    <Input label="Custo un." type="number" step="0.01" min="0" value={l.custo_unitario} onChange={(e) => setLinha(i, { custo_unitario: e.target.value })} placeholder="0.00" />
+                    <Input label="Preço un." type="number" step="0.01" min="0" value={l.preco} onChange={(e) => setLinha(i, { preco: e.target.value })} placeholder="0.00" />
                     <Input label="Emb. (R$)" type="number" step="0.01" min="0" value={l.custo_embalagem} onChange={(e) => setLinha(i, { custo_embalagem: e.target.value })} />
                   </div>
                 )}
@@ -380,9 +407,9 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
 
           {/* Prévia ao vivo */}
           <div className="flex flex-col gap-1.5 border-t border-line pt-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted">Bruto</span><span className="font-mono">{formatBRL(resumo.totalBruto)}</span></div>
-            <div className="flex justify-between"><span className="text-muted">Custo</span><span className="font-mono">{formatBRL(resumo.totalCusto)}</span></div>
-            <div className="flex justify-between"><span className="text-muted">Receita líquida</span><span className="font-mono">{formatBRL(resumo.receitaLiquida)}</span></div>
+            <div className="flex justify-between"><span className="text-muted">Bruto (Receita total)</span><span className="font-mono">{formatBRL(resumo.totalBruto)}</span></div>
+            <div className="flex justify-between"><span className="text-muted">Custo (Produtos + Embalagens)</span><span className="font-mono">{formatBRL(resumo.totalCusto)}</span></div>
+            <div className="flex justify-between"><span className="text-muted">Receita líquida (após taxa e frete)</span><span className="font-mono">{formatBRL(resumo.receitaLiquida)}</span></div>
             <div className="flex justify-between text-base">
               <span>Lucro</span>
               <span className={`font-mono ${resumo.lucroBruto < 0 ? 'text-down' : 'text-up'}`}>
