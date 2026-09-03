@@ -1371,3 +1371,8 @@ Revisao dos calculos e da paginacao do Dashboard Financeiro.
 - Configurar Supabase (criar tabelas)
 - Implementar autenticação
 - Primeiro CRUD (transações financeiras)
+
+## Sessão — 03/09/2026
+
+### Feito
+- Revisão geral da documentação do projeto
