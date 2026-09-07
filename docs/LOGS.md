@@ -1376,3 +1376,8 @@ Revisao dos calculos e da paginacao do Dashboard Financeiro.
 
 ### Feito
 - Revisão geral da documentação do projeto
+
+## Sessão — 07/09/2026
+
+### Feito
+- Ajustes de consistência nos documentos de arquitetura
