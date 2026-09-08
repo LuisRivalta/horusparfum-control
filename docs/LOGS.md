@@ -1381,3 +1381,8 @@ Revisao dos calculos e da paginacao do Dashboard Financeiro.
 
 ### Feito
 - Ajustes de consistência nos documentos de arquitetura
+
+## Sessão — 08/09/2026
+
+### Feito
+- Atualização do índice de documentação
