@@ -248,7 +248,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
     }))
 
     setSubmitting(true)
-    let res: { error: { message: string } | null }
+    let res: { error: { message: string; code?: string } | null }
 
     if (mode === 'edit' && vendaId) {
       res = await supabase.rpc('editar_venda', {
