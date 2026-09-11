@@ -170,6 +170,67 @@ Os campos são idênticos aos de Contas a Pagar (veja acima).
 
 ---
 
+### 💳 Parcelamento e entrada (Contas a Pagar e a Receber)
+
+Ambas as telas usam o mesmo componente (`FinContas`) e suportam acordo parcelado, com ou
+sem entrada. Exemplo típico: pedido de R$ 500, cliente dá R$ 300 de entrada e paga o
+restante em 2x de R$ 100.
+
+#### Modelo
+
+Toda conta passa a ter linhas em `conta_parcelas` — conta à vista é simplesmente uma conta
+com 1 parcela. A entrada é a parcela de `numero = 0`.
+
+| Conceito | Onde vive |
+|----------|-----------|
+| Total do acordo | `contas.valor` |
+| Entrada | `contas.valor_entrada` + parcela `numero = 0` |
+| Parcelas do saldo | `conta_parcelas` com `numero` 1..N |
+| Situação de cada parcela | `conta_parcelas.status` |
+| Situação da conta | `contas.status`, derivado por trigger |
+
+> [!IMPORTANT]
+> `vencida` **não é armazenada** em `conta_parcelas.status`. A tela deriva de
+> `vencimento < hoje`, então uma parcela nunca fica com status vencido desatualizado.
+
+#### Divisão do valor
+
+O saldo (total − entrada) é dividido em N parcelas; o resto do arredondamento vai na
+**última**. R$ 100,00 em 3x vira 33,33 + 33,33 + 33,34. A regra está duplicada na RPC
+`criar_conta` e em `dividirParcelas()` (usada só para a prévia no modal) — as duas devem
+bater.
+
+Vencimentos: o 1º é informado e os demais seguem o intervalo escolhido (mensal, bimestral,
+trimestral, semestral ou anual). Dia inexistente no mês encaixa no último dia (31/01 + 1
+mês = 28/02).
+
+#### Integração com o financeiro
+
+Baixar uma parcela gera automaticamente uma transação com `origem = 'conta'`:
+
+| Tipo da conta | Transação gerada |
+|---------------|------------------|
+| `receber` | `entrada` |
+| `pagar` | `saida` |
+
+A transação entra no fluxo de caixa e nas metas na **data do recebimento/pagamento**
+(regime de caixa), não na data em que a conta foi cadastrada. Excluir essa transação pela
+tela de Transações estorna a parcela, que volta a aparecer como em aberto.
+
+#### RPCs
+
+| RPC | O que faz |
+|-----|-----------|
+| `criar_conta` | Cria a conta e todas as parcelas (e já baixa a entrada, se marcada como quitada) |
+| `baixar_parcela` | Marca a parcela como paga/recebida e gera a transação |
+| `estornar_parcela` | Desfaz a baixa e remove a transação |
+| `estornar_parcela_por_transacao` | Mesmo efeito, a partir do id da transação (usado na tela de Transações) |
+| `excluir_conta` | Remove a conta, suas parcelas e as transações que elas geraram |
+
+Migration: `supabase/migrations/20260911_contas_parceladas.sql`
+
+---
+
 ### 📈 Relatórios Financeiros (`/financeiro/relatorios`)
 
 Tela de geração de relatórios consolidados com dados calculados no backend para garantir precisão financeira.

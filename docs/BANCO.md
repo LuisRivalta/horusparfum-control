@@ -204,7 +204,8 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | forma_pagamento | text | "Pix", "Cartão", "Boleto", "Transferência" |
 | responsavel | text | Nome do usuário |
 | venda_id | uuid (FK → vendas) | Venda de origem (nullable; preenchido por RPCs de venda) |
-| origem | text | `"manual"` (padrão), `"venda"` (gerado pela RPC `registrar_venda`) ou `"decant"` (gerado pela RPC `registrar_consumo_decant` para consumo não-faturável) |
+| origem | text | `"manual"` (padrão), `"venda"` (gerado pela RPC `registrar_venda`), `"decant"` (gerado pela RPC `registrar_consumo_decant` para consumo não-faturável) ou `"conta"` (gerado pela RPC `baixar_parcela`) |
+| conta_parcela_id | uuid (FK → conta_parcelas) | Parcela de origem (nullable; preenchido por `baixar_parcela`) |
 | created_at | timestamptz | — |
 
 ### `contas`
@@ -215,10 +216,33 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | tipo | text | "pagar" ou "receber" |
 | entidade | text | Fornecedor ou cliente |
 | descricao | text | Detalhe da conta |
-| valor | numeric(12,2) | — |
-| vencimento | date | — |
-| status | text | "a_vencer", "vencida", "paga", "recebida" |
+| valor | numeric(12,2) | **Total do acordo** (entrada + parcelas) |
+| vencimento | date | Primeiro vencimento (referência) |
+| status | text | "a_vencer", "vencida", "paga", "recebida" — **derivado**, mantido pelo trigger `trg_sync_conta_status` a partir de `conta_parcelas` |
+| valor_entrada | numeric(12,2) | Entrada paga/recebida no ato (0 se não houver) |
+| num_parcelas | int | Quantidade de parcelas do saldo (0 se a entrada quitou tudo) |
+| categoria | text | Categoria usada nas transações geradas |
+| forma_pagamento | text | Forma padrão das transações geradas |
+| responsavel | text | Responsável padrão das transações geradas |
 | created_at | timestamptz | — |
+
+### `conta_parcelas`
+
+Cada conta tem N parcelas. Conta à vista = 1 parcela. `numero = 0` é a **entrada**.
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| conta_id | uuid (FK → contas) | `on delete cascade` |
+| numero | int | `0` = entrada; `1..N` = parcela N |
+| valor | numeric(12,2) | Sempre > 0. O resto do arredondamento vai na última parcela |
+| vencimento | date | — |
+| status | text | "a_vencer", "paga", "recebida". **"vencida" não é armazenada** — a UI deriva de `vencimento < hoje` |
+| quitada_em | date | Data da baixa |
+| transacao_id | uuid (FK → transacoes) | Transação gerada na baixa (`on delete set null`) |
+| created_at | timestamptz | — |
+
+Restrição: `unique (conta_id, numero)`.
 
 ### `metas`
 
@@ -245,9 +269,13 @@ produtos ←── frascos_abertos ←── decants ──→ produtos
 canais ←── vendas ←── venda_itens ──→ produtos
 vendas ←── transacoes (origem='venda')
 decants ──→ transacoes (origem='decant', consumo não-faturável)
+contas ←── conta_parcelas ──→ transacoes (origem='conta', baixa de parcela)
 ```
 
-`contas` é independente (módulo financeiro puro). `metas` armazena o cadastro da meta, mas metas em R$ têm progresso calculado pelo backend a partir de `transacoes.tipo='entrada'` no período informado. `transacoes` pode ser: inserida **manualmente** (`origem='manual'`), gerada pela RPC de **venda** (`origem='venda'`) ou pela RPC de **consumo de decant** (`origem='decant'`, despesa de perda/brinde/amostra/marketing/uso interno).
+`contas` + `conta_parcelas` formam o módulo de parcelamento: `contas` guarda o acordo
+(total, entrada, nº de parcelas) e `conta_parcelas` guarda cada vencimento. Baixar uma
+parcela (`baixar_parcela`) gera a transação correspondente — `entrada` para contas a
+receber, `saida` para contas a pagar — e `estornar_parcela` desfaz. `metas` armazena o cadastro da meta, mas metas em R$ têm progresso calculado pelo backend a partir de `transacoes.tipo='entrada'` no período informado. `transacoes` pode ser: inserida **manualmente** (`origem='manual'`), gerada pela RPC de **venda** (`origem='venda'`) ou pela RPC de **consumo de decant** (`origem='decant'`, despesa de perda/brinde/amostra/marketing/uso interno).
 
 ## Row Level Security (RLS)
 

@@ -461,7 +461,8 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- Verificação frontend completa: **215/215 testes passando** (0 falhas) e build de produção sem erros
+- Verificação frontend: **229/229 testes passando** (0 falhas). ⚠️ `npm run build` quebrado por erro **pré-existente** em `src/pages/estoque/vendas/VendaFormModal.tsx:270` (`Property 'code' does not exist on type '{ message: string; }'`)
+- Contas a Pagar/Receber suportam **parcelamento com entrada** (tabela `conta_parcelas` + RPCs). ⚠️ Migration `20260911_contas_parceladas.sql` **escrita mas ainda NÃO aplicada** no Supabase — a tela quebra até ela rodar
 - Backend completo: **50/50 testes passando**
 - Edição de vendas e correção de transações implementada com RPCs atômicas e interface completa no frontend
 - `PeriodSelector`: período personalizado não valida `início <= fim` (resultado zera silenciosamente)
@@ -470,6 +471,8 @@
 ## Decisões pendentes
 
 - Definir o momento de aplicar a migration 20260713_correcao_unificada_transacoes.sql no Supabase de producao.
+- Aplicar `supabase/migrations/20260911_contas_parceladas.sql` no SQL Editor do projeto Horus (manual — o MCP do Supabase conectado aponta para outro projeto e **não deve ser usado** para este banco).
+- Corrigir a quebra de build pré-existente em `VendaFormModal.tsx:270`.
 
 ## Para a IA
 

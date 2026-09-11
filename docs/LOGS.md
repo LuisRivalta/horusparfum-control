@@ -1,3 +1,36 @@
+## 2026-09-11 - Sessão 67: Contas parceladas com entrada (Contas a Pagar e a Receber)
+
+**Responsável:** Claude + Luis
+
+### O que foi feito
+- Contas a Pagar e a Receber passam a aceitar **acordo parcelado, com ou sem entrada**. Caso de uso original: pedido de R$ 500, cliente dá R$ 300 de entrada e paga o resto em 2x de R$ 100.
+- **Migration `supabase/migrations/20260911_contas_parceladas.sql`** (⚠️ **ainda não aplicada** — o MCP do Supabase conectado aponta para outro projeto, então nada foi executado em banco):
+  - Novas colunas em `contas`: `valor_entrada`, `num_parcelas`, `categoria`, `forma_pagamento`, `responsavel`. `contas.valor` passa a ser o **total do acordo**.
+  - Nova tabela `conta_parcelas` (`numero = 0` é a entrada, `1..N` são as parcelas), com RLS no padrão do projeto.
+  - `transacoes.origem` passa a aceitar `'conta'`; nova coluna `transacoes.conta_parcela_id`.
+  - Backfill: cada conta existente vira 1 parcela à vista, preservando o status atual.
+  - Trigger `trg_sync_conta_status` mantém `contas.status` derivado das parcelas (compatibilidade com quem já lê essa coluna).
+  - RPCs: `criar_conta`, `baixar_parcela`, `estornar_parcela`, `estornar_parcela_por_transacao`, `excluir_conta`.
+- **`frontend/src/pages/financeiro/Contas.tsx`** reescrito: linha agrupada por conta (total, saldo, próximo vencimento, progresso `n/N`) que expande para listar as parcelas; ações de baixar e estornar por parcela; modal de criação com campos de entrada e parcelamento e **prévia** das parcelas antes de salvar; cards de resumo (Total / Em aberto / Vencido / Quitadas).
+- **`frontend/src/pages/financeiro/Transacoes.tsx`**: badge `conta`, e excluir uma transação de origem `conta` agora **estorna a parcela** em vez de apagar o registro solto.
+
+### Decisões de modelagem
+- Toda conta tem linhas em `conta_parcelas` — conta à vista é simplesmente 1 parcela. Evita dois caminhos de código na tela.
+- `vencida` **não é armazenada** em `conta_parcelas.status`; a UI deriva de `vencimento < hoje`, então nenhuma parcela fica com status desatualizado.
+- Resto do arredondamento vai sempre na **última** parcela (R$ 100 em 3x = 33,33 + 33,33 + 33,34). A regra está duplicada na RPC `criar_conta` e em `dividirParcelas()` (só para a prévia) — precisam continuar batendo.
+- Baixa gera transação na **data do recebimento/pagamento** (regime de caixa), não na data de cadastro da conta.
+
+### Verificação
+- Suíte Vitest frontend: **34/34 arquivos, 229/229 testes passando** (215 antes; +14 no novo `src/pages/financeiro/__tests__/Contas.test.tsx`, cobrindo divisão/arredondamento, soma de meses com encaixe de fim de mês, agrupamento, derivação de `vencida`, baixa, estorno, criação via RPC e bloqueio de entrada maior que o total).
+- ESLint em `Contas.tsx`: 1 erro `react-hooks/set-state-in-effect` — **pré-existente e idêntico ao do arquivo original** (padrão presente em todo o repo); o warning de `exhaustive-deps` que existia antes foi eliminado.
+- `npm run build`: **falha por erro pré-existente** em `src/pages/estoque/vendas/VendaFormModal.tsx:270` (`Property 'code' does not exist on type '{ message: string; }'`) — arquivo não tocado nesta sessão, fora do escopo. Os arquivos desta sessão passam limpos no `tsc -b`.
+
+### Pendente
+- Aplicar a migration no SQL Editor do projeto Horus (manualmente).
+- Corrigir a quebra de build pré-existente em `VendaFormModal.tsx:270`.
+
+---
+
 ## 2026-08-06 - Sessão 66: Edição de Vendas Completa (VendaFormModal, Vendas.tsx, Transações)
 
 **Responsável:** Antigravity + Luis

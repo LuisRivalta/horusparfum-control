@@ -19,6 +19,7 @@ interface Transacao {
   origem?: string
   venda_id?: string | null
   decant_id?: string | null
+  conta_parcela_id?: string | null
 }
 
 export function FinTransacoes() {
@@ -91,6 +92,8 @@ export function FinTransacoes() {
       await supabase.rpc('cancelar_venda', { p_venda_id: excluindoTransacao.venda_id })
     } else if (excluindoTransacao.origem === 'decant' && excluindoTransacao.decant_id) {
       await supabase.rpc('cancelar_consumo_decant', { p_decant_id: excluindoTransacao.decant_id })
+    } else if (excluindoTransacao.origem === 'conta') {
+      await supabase.rpc('estornar_parcela_por_transacao', { p_transacao_id: excluindoTransacao.id })
     } else {
       await supabase.from('transacoes').delete().eq('id', excluindoTransacao.id)
     }
@@ -167,6 +170,11 @@ export function FinTransacoes() {
                         decant
                       </span>
                     )}
+                    {t.origem === 'conta' && (
+                      <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[0.6rem] font-medium bg-surface-2 text-text-2 border border-line align-middle">
+                        conta
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${t.tipo === 'entrada' ? 'bg-up/15 text-up' : 'bg-down/15 text-down'}`}>
@@ -240,6 +248,11 @@ export function FinTransacoes() {
             {excluindoTransacao?.origem === 'decant' && (
               <span className="text-down text-sm">
                 <strong>Atenção:</strong> Isso devolverá o líquido do consumo ao frasco original.
+              </span>
+            )}
+            {excluindoTransacao?.origem === 'conta' && (
+              <span className="text-down text-sm">
+                <strong>Atenção:</strong> Isso estornará a parcela vinculada, que voltará a aparecer como em aberto em Contas a pagar/receber.
               </span>
             )}
             {(!excluindoTransacao?.origem || excluindoTransacao.origem === 'manual') && (
