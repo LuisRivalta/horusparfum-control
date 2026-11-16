@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { planejarOrigens, totalOrigens, custoPrevistoOrigens, origemParaJson, type Origem } from '../decantOrigens'
+import { planejarOrigens, totalOrigens, custoPrevistoOrigens, origemParaJson, aplicarDevolucoes, type Origem } from '../decantOrigens'
 
 const frasco = { id: 'f1', produtoId: 'p1', mlRestante: 4, mlTotal: 100 }
 
@@ -43,5 +43,26 @@ describe('origemParaJson', () => {
   })
   it('frasco', () => {
     expect(origemParaJson({ tipo: 'frasco', frascoId: 'f1', produtoId: 'p1', ml: 4 })).toEqual({ frasco_id: 'f1', ml: 4 })
+  })
+})
+
+describe('aplicarDevolucoes', () => {
+  const f1 = { id: 'f1', produtoId: 'p1', mlRestante: 0, mlTotal: 100, ativo: false }
+  const f9 = { id: 'f9', produtoId: 'p1', mlRestante: 94, mlTotal: 100, ativo: true }
+  it('origem de frasco esgotado volta ao frasco ativo do perfume, com teto no ml_total', () => {
+    const r = aplicarDevolucoes([f1, f9], [{ frascoId: 'f1', ml: 4 }, { frascoId: 'f9', ml: 6 }])
+    expect(r.find((f) => f.id === 'f9')).toMatchObject({ mlRestante: 100, ativo: true })
+    expect(r.find((f) => f.id === 'f1')).toMatchObject({ mlRestante: 0, ativo: false })
+  })
+  it('sem frasco ativo do perfume reativa o próprio', () => {
+    expect(aplicarDevolucoes([f1], [{ frascoId: 'f1', ml: 4 }])[0]).toMatchObject({ mlRestante: 4, ativo: true })
+  })
+  it('item antigo sem decant: soma no próprio frasco, sem teto', () => {
+    const cheio = { ...f9, mlRestante: 98 }
+    expect(aplicarDevolucoes([cheio], [{ frascoId: 'f9', ml: 5, semTeto: true }])[0].mlRestante).toBe(103)
+  })
+  it('não altera a lista recebida', () => {
+    aplicarDevolucoes([f1], [{ frascoId: 'f1', ml: 4 }])
+    expect(f1.mlRestante).toBe(0)
   })
 })

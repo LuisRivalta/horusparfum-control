@@ -254,4 +254,30 @@ describe('VendaFormModal', () => {
     expect(p.p_itens[1]).not.toHaveProperty('custo_unitario')
     expect(p.p_insumos_envio).toEqual([{ insumo_id: 'i-caixa', quantidade: 2 }])
   })
+
+  it('edição que muda o ml planeja com os ml devolvidos pela própria venda', async () => {
+    // a venda esvaziou f1 (4 ml) e abriu f9 (6 ml): f1 esgotado, f9 ativo com 94 ml
+    db.frascos_abertos = [
+      { id: 'f1', produto_id: 'p1', ml_restante: 0, ml_total: 100, status: 'esgotado', produtos: { nome: 'Perfume X', custo_medio: 100 } },
+      { id: 'f9', produto_id: 'p1', ml_restante: 94, ml_total: 100, status: 'ativo', produtos: { nome: 'Perfume X', custo_medio: 100 } },
+    ]
+    db.venda_itens = [
+      { id: 'vi-decant', venda_id: 'v1', tipo: 'decant', produto_id: 'p1', frasco_id: 'f1', decant_id: 'd1', ml: 10, quantidade: 1, preco_unitario: 50, custo_unitario: 10, custo_embalagem: 0 },
+    ]
+    db.decant_origens = [
+      { decant_id: 'd1', frasco_id: 'f1', produto_id: 'p1', ml: 4, abriu_frasco: false },
+      { decant_id: 'd1', frasco_id: 'f9', produto_id: 'p1', ml: 6, abriu_frasco: true },
+    ]
+    render(<EditarVendaModal open vendaId="v1" onClose={vi.fn()} onSaved={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByLabelText('ml')).toHaveValue('10'))
+    fireEvent.change(screen.getByLabelText('ml'), { target: { value: '5' } })
+    expect(screen.queryByText(/faltam/i)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /salvar altera/i }))
+    await waitFor(() => expect(payload('editar_venda')).toBeDefined())
+    const item = payload('editar_venda').p_itens[0]
+    expect(item.origens).toEqual([{ frasco_id: 'f9', ml: 5 }])
+    expect(item).not.toHaveProperty('decant_id')
+  })
 })

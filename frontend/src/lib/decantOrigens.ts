@@ -35,3 +35,21 @@ export function custoPrevistoOrigens(
 export function origemParaJson(o: Origem): { frasco_id?: string; abrir_produto_id?: string; ml: number } {
   return o.tipo === 'frasco' ? { frasco_id: o.frascoId, ml: o.ml } : { abrir_produto_id: o.produtoId, ml: o.ml }
 }
+
+export interface FrascoEstado extends FrascoAtivo { ativo: boolean }
+export interface Devolucao { frascoId: string; ml: number; semTeto?: boolean }
+
+// Espelha _devolver_origens (e o item antigo sem decant do cancelar_venda, semTeto): a origem
+// volta ao frasco ativo do mesmo perfume quando o seu não está ativo; teto = ml_total; reativa.
+export function aplicarDevolucoes(frascos: FrascoEstado[], devolucoes: Devolucao[]): FrascoEstado[] {
+  const estado = frascos.map((f) => ({ ...f }))
+  for (const d of devolucoes) {
+    const origem = estado.find((f) => f.id === d.frascoId)
+    if (!origem) continue
+    const alvo = origem.ativo || d.semTeto ? origem : estado.find((f) => f.produtoId === origem.produtoId && f.ativo) ?? origem
+    const soma = new Decimal(alvo.mlRestante).add(d.ml)
+    alvo.mlRestante = (d.semTeto ? soma : Decimal.min(soma, alvo.mlTotal)).toNumber()
+    alvo.ativo = true
+  }
+  return estado
+}

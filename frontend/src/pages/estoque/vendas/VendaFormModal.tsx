@@ -8,12 +8,12 @@ import { formatBRL } from '@/lib/utils'
 import Decimal from 'decimal.js'
 import { resumoVenda, type ItemVenda } from '@/lib/vendas'
 import { custoInsumos, listaDoItem, listaEnvio, somarItens, type ItemInsumo, type ListaInsumos } from '@/lib/insumos'
-import { custoPrevistoOrigens, origemParaJson, planejarOrigens, totalOrigens, type Origem } from '@/lib/decantOrigens'
+import { aplicarDevolucoes, custoPrevistoOrigens, origemParaJson, planejarOrigens, totalOrigens, type Devolucao, type FrascoEstado, type Origem } from '@/lib/decantOrigens'
 import { InsumosVenda, type GrupoInsumos, type InsumoOpt } from './InsumosVenda'
 
 export interface Canal { id: string; nome: string; taxa_padrao: number; usa_envio: boolean }
 export interface ProdutoOpt { id: string; nome: string; estoque_atual: number; custo_medio: number | null; preco_referencia: number | null; volume_ml: number | null }
-export interface FrascoOpt { id: string; produto_id: string; ml_restante: number; ml_total: number; produtos: { nome: string; custo_medio: number | null } | null }
+export interface FrascoOpt { id: string; produto_id: string; ml_restante: number; ml_total: number; status?: string; produtos: { nome: string; custo_medio: number | null } | null }
 
 export interface LinhaForm {
   tipo: 'produto' | 'decant'
@@ -85,6 +85,8 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
   const [insumos, setInsumos] = useState<InsumoOpt[]>([])
   const [insumosEnvio, setInsumosEnvio] = useState<ItemInsumo[] | null>(null) // null = lista de envio do canal
   const [completando, setCompletando] = useState<number | null>(null)
+  // edição: ml que o cancelamento da venda devolve aos frascos (decantId null = item antigo sem decant)
+  const [devolucoes, setDevolucoes] = useState<(Devolucao & { decantId: string | null })[]>([])
 
   const [titulo, setTitulo] = useState('')
   const [canalId, setCanalId] = useState('')
@@ -105,11 +107,12 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
     setSubmitting(false)
     setCompletando(null)
     setInsumosEnvio(null)
+    setDevolucoes([])
 
     const base = Promise.all([
       supabase.from('canais').select('id, nome, taxa_padrao, usa_envio').eq('ativo', true).order('nome'),
       supabase.from('produtos').select('id, nome, estoque_atual, custo_medio, preco_referencia, volume_ml').order('nome'),
-      supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, produtos(nome, custo_medio)').eq('status', 'ativo'),
+      supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, status, produtos(nome, custo_medio)').eq('status', 'ativo'),
       supabase.from('insumo_listas').select('tipo, tamanho_ml, insumo_lista_itens(insumo_id, quantidade)'),
       supabase.from('insumos').select('id, nome, custo_medio, ativo').order('nome'),
     ]).then(([c, p, f, l, ins]) => {
@@ -157,26 +160,36 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
         setFrete(v.frete != null ? String(v.frete) : '')
 
         const viItems = viRes.data || []
-        const decantFrascoIds = viItems.filter(i => i.tipo === 'decant' && i.frasco_id).map(i => i.frasco_id as string)
-
-        if (decantFrascoIds.length > 0) {
-          const missingFrascoIds = decantFrascoIds.filter(id => !frascosData.some(fr => fr.id === id))
-          if (missingFrascoIds.length > 0) {
-            const { data: extraFrascos } = await supabase
-              .from('frascos_abertos')
-              .select('id, produto_id, ml_restante, ml_total, produtos(nome, custo_medio)')
-              .in('id', missingFrascoIds)
-            if (extraFrascos && extraFrascos.length > 0) {
-              frascosData = [...frascosData, ...(extraFrascos as unknown as FrascoOpt[])]
-            }
-          }
-        }
-        setFrascos(frascosData)
-
         const decantIds = viItems.map(i => i.decant_id).filter(Boolean) as string[]
         const origensDb: OrigemDb[] = decantIds.length > 0
           ? ((await supabase.from('decant_origens').select('decant_id, frasco_id, produto_id, ml, abriu_frasco').in('decant_id', decantIds)).data as OrigemDb[]) || []
           : []
+
+        // frascos da venda que não estão ativos (esgotados ou já abertos por ela): precisa do estado deles
+        const decantFrascoIds = [
+          ...viItems.filter(i => i.tipo === 'decant' && i.frasco_id).map(i => i.frasco_id as string),
+          ...origensDb.map(o => o.frasco_id).filter(Boolean) as string[],
+        ]
+        const missingFrascoIds = [...new Set(decantFrascoIds)].filter(id => !frascosData.some(fr => fr.id === id))
+        if (missingFrascoIds.length > 0) {
+          const { data: extraFrascos } = await supabase
+            .from('frascos_abertos')
+            .select('id, produto_id, ml_restante, ml_total, status, produtos(nome, custo_medio)')
+            .in('id', missingFrascoIds)
+          if (extraFrascos && extraFrascos.length > 0) {
+            frascosData = [...frascosData, ...(extraFrascos as unknown as FrascoOpt[])]
+          }
+        }
+        setFrascos(frascosData)
+
+        // mesma regra e ordem do cancelar_venda/_devolver_origens
+        const mlTotalItem = (i: { ml: number | null; quantidade: number | null }) => new Decimal(Number(i.ml) || 0).mul(Number(i.quantidade) || 1).toNumber()
+        setDevolucoes(viItems.filter(i => i.tipo === 'decant').flatMap((i): (Devolucao & { decantId: string | null })[] => {
+          if (!i.decant_id) return i.frasco_id ? [{ decantId: null, frascoId: i.frasco_id, ml: mlTotalItem(i), semTeto: true }] : []
+          const doDecant = origensDb.filter(o => o.decant_id === i.decant_id && o.frasco_id)
+          if (doDecant.length > 0) return doDecant.map(o => ({ decantId: i.decant_id as string, frascoId: o.frasco_id as string, ml: Number(o.ml) }))
+          return i.frasco_id ? [{ decantId: i.decant_id as string, frascoId: i.frasco_id, ml: mlTotalItem(i) }] : []
+        }))
 
         // consumo gravado: o do decant é do item; o resto vai primeiro aos itens de produto e o que sobra é envio
         const consumo = ((movRes.data as ConsumoDb[]) || []).map(m => ({ decantId: m.decant_id, insumoId: m.insumo_id, quantidade: -Number(m.quantidade) }))
@@ -266,15 +279,25 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
 
   // Origens gravadas/completadas, ou o caminho padrão: frasco aberto e depois um lacrado.
   // Sem caminho padrão, devolve o que o frasco aberto cobre (falta o resto).
+  // Frascos como a RPC os verá: na edição, com os ml devolvidos pelos decants da venda que não ficam como estão.
+  const frascosPlano: FrascoEstado[] = aplicarDevolucoes(
+    frascos.map(f => ({ id: f.id, produtoId: f.produto_id, mlRestante: Number(f.ml_restante), mlTotal: Number(f.ml_total), ativo: (f.status ?? 'ativo') === 'ativo' })),
+    devolucoes.filter(d => !d.decantId || !linhas.some(l => l.decant_id === d.decantId)),
+  )
+  // frasco do qual a linha tira: o escolhido, ou o ativo do mesmo perfume quando o escolhido acabou
+  function frascoDaLinha(l: LinhaForm): FrascoEstado | undefined {
+    const f = frascosPlano.find(x => x.id === l.frasco_id)
+    return f && !f.ativo ? frascosPlano.find(x => x.produtoId === f.produtoId && x.ativo) ?? f : f
+  }
+
   function origensDaLinha(l: LinhaForm): Origem[] {
     if (l.origens) return l.origens
-    const f = frascos.find(x => x.id === l.frasco_id)
+    const aberto = frascoDaLinha(l)
     const need = mlNecessario(l)
-    if (!f || need <= 0) return []
-    const p = produtos.find(x => x.id === f.produto_id)
-    const aberto = { id: f.id, produtoId: f.produto_id, mlRestante: Number(f.ml_restante), mlTotal: Number(f.ml_total) }
-    return planejarOrigens(need, aberto, f.produto_id, p?.estoque_atual ?? 0, Number(p?.volume_ml) || 0)
-      ?? planejarOrigens(Math.min(need, aberto.mlRestante), aberto, f.produto_id, 0, 0)
+    if (!aberto || need <= 0) return []
+    const p = produtos.find(x => x.id === aberto.produtoId)
+    return planejarOrigens(need, aberto, aberto.produtoId, p?.estoque_atual ?? 0, Number(p?.volume_ml) || 0)
+      ?? planejarOrigens(Math.min(need, aberto.mlRestante), aberto, aberto.produtoId, 0, 0)
       ?? []
   }
 
@@ -294,10 +317,10 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
 
   function completarCom(i: number, frascoId: string) {
     const l = linhas[i]
-    const f = frascos.find(x => x.id === frascoId)
+    const f = frascosPlano.find(x => x.id === frascoId)
     if (!f) return
-    const ml = Decimal.min(faltaMl(l), Number(f.ml_restante)).toNumber()
-    setLinha(i, { origens: [...origensDaLinha(l), { tipo: 'frasco', frascoId: f.id, produtoId: f.produto_id, ml }] })
+    const ml = Decimal.min(faltaMl(l), f.mlRestante).toNumber()
+    setLinha(i, { origens: [...origensDaLinha(l), { tipo: 'frasco', frascoId: f.id, produtoId: f.produtoId, ml }] })
     setCompletando(null)
   }
 
@@ -740,11 +763,10 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                         {completando === i ? (
                           <Select
                             label="Outro perfume"
-                            options={frascos
-                              .filter(f => f.produto_id !== frascos.find(x => x.id === l.frasco_id)?.produto_id
-                                && Number(f.ml_restante) > 0
+                            options={frascosPlano
+                              .filter(f => f.ativo && f.produtoId !== frascoDaLinha(l)?.produtoId && f.mlRestante > 0
                                 && !origensDaLinha(l).some(o => o.tipo === 'frasco' && o.frascoId === f.id))
-                              .map(f => ({ value: f.id, label: `${f.produtos?.nome} (${fmtMl(Number(f.ml_restante))} ml)` }))}
+                              .map(f => ({ value: f.id, label: `${nomeProduto(f.produtoId)} (${fmtMl(f.mlRestante)} ml)` }))}
                             value=""
                             onChange={(e) => e.target.value && completarCom(i, e.target.value)}
                           />
