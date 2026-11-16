@@ -74,6 +74,14 @@ export function EstInsumos() {
               </tr>
             </thead>
             <tbody>
+              {insumos.length === 0 && (
+                <tr className="border-t border-line">
+                  <td colSpan={6} className="p-8 text-center text-sm text-muted">
+                    Nenhum insumo cadastrado. Clique em <span className="text-gold">Novo insumo</span> para começar.
+                    <br />Cada insumo aparece aqui com os botões Comprar, Acertar estoque, Editar e Excluir.
+                  </td>
+                </tr>
+              )}
               {insumos.map((i) => {
                 const acao = emUso.has(i.id) ? (i.ativo ? 'Inativar' : 'Reativar') : 'Excluir'
                 return (
