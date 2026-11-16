@@ -18,6 +18,14 @@ const FIN_NAV = [
   { id: 'metas', label: 'Metas', icon: 'goal', path: '/financeiro/metas' },
 ]
 
+const ANU_NAV = [
+  { id: 'anuncios', label: 'Anúncios', icon: 'tag', path: '/anuncios' },
+  { id: 'novo', label: 'Novo anúncio', icon: 'plus', path: '/anuncios/novo' },
+  { id: 'ligar', label: 'Ligar anúncios', icon: 'swap', path: '/anuncios/ligar' },
+  { id: 'config', label: 'Configuração', icon: 'grid', path: '/anuncios/config' },
+]
+
+
 const ADMIN_EMAIL = 'byhorusco@gmail.com'
 
 const EST_NAV = [
@@ -30,6 +38,13 @@ const EST_NAV = [
   { id: 'relatorios', label: 'Relatório de giro', icon: 'report', path: '/estoque/relatorios' },
 ]
 
+type Modulo = 'financeiro' | 'estoque' | 'anuncios'
+const MODULOS: { id: Modulo; label: string }[] = [
+  { id: 'financeiro', label: 'Financeiro' },
+  { id: 'estoque', label: 'Estoque' },
+  { id: 'anuncios', label: 'Anúncios' },
+]
+
 export function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -38,8 +53,10 @@ export function Layout() {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
 
-  const isFin = location.pathname.startsWith('/financeiro')
-  const nav = isFin ? FIN_NAV : EST_NAV
+  const segmento = location.pathname.split('/')[1]
+  const modulo: Modulo = segmento === 'financeiro' || segmento === 'anuncios' ? segmento : 'estoque'
+  const nav = { financeiro: FIN_NAV, estoque: EST_NAV, anuncios: ANU_NAV }[modulo]
+  const indice = MODULOS.findIndex((m) => m.id === modulo)
   const isAdmin = user?.email === ADMIN_EMAIL
 
   // Fecha o drawer mobile ao navegar
@@ -63,7 +80,7 @@ export function Layout() {
         {!collapsed && (
           <span className="flex items-center gap-2">
             <span className="w-1 h-1 bg-gold/60 rotate-45 shrink-0" />
-            {isFin ? 'Financeiro' : 'Estoque'}
+            {MODULOS[indice].label}
           </span>
         )}
       </div>
@@ -160,31 +177,23 @@ export function Layout() {
           </button>
 
           <div className="flex p-0.5 border border-line-2 rounded-3xl bg-surface-2 gap-0.5 relative">
-            {/* Indicador deslizante */}
+            {/* Indicador deslizante (em terços) */}
             <span
-              className={cn(
-                'absolute top-0.5 bottom-0.5 rounded-2xl bg-gold shadow-[0_2px_12px_rgba(201,168,76,0.35)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
-                isFin ? 'left-0.5 right-1/2 mr-0' : 'left-1/2 right-0.5 ml-0'
-              )}
+              className="absolute top-0.5 bottom-0.5 rounded-2xl bg-gold shadow-[0_2px_12px_rgba(201,168,76,0.35)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              style={{ width: 'calc((100% - 4px) / 3)', left: `calc(2px + ${indice} * (100% - 4px) / 3)` }}
             />
-            <button
-              onClick={() => navigate('/financeiro')}
-              className={cn(
-                'relative z-10 w-24 sm:w-28 py-1.5 rounded-2xl text-xs sm:text-sm font-medium transition-colors duration-300 cursor-pointer text-center',
-                isFin ? 'text-[#1A1407]' : 'text-muted hover:text-text'
-              )}
-            >
-              Financeiro
-            </button>
-            <button
-              onClick={() => navigate('/estoque')}
-              className={cn(
-                'relative z-10 w-24 sm:w-28 py-1.5 rounded-2xl text-xs sm:text-sm font-medium transition-colors duration-300 cursor-pointer text-center',
-                !isFin ? 'text-[#1A1407]' : 'text-muted hover:text-text'
-              )}
-            >
-              Estoque
-            </button>
+            {MODULOS.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => navigate('/' + m.id)}
+                className={cn(
+                  'relative z-10 w-24 sm:w-28 py-1.5 rounded-2xl text-xs sm:text-sm font-medium transition-colors duration-300 cursor-pointer text-center',
+                  modulo === m.id ? 'text-[#1A1407]' : 'text-muted hover:text-text'
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
           </div>
 
           <div className="flex-1" />

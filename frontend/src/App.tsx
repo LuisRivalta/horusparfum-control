@@ -23,6 +23,8 @@ import { EstVendas } from '@/pages/estoque/Vendas'
 import { VendasConfig } from '@/pages/estoque/vendas/VendasConfig'
 import { Cadastros } from '@/pages/estoque/Cadastros'
 import { PedidosLayout } from '@/pages/estoque/PedidosLayout'
+import { AnunciosConfig } from '@/pages/anuncios/AnunciosConfig'
+import { EmConstrucao } from '@/pages/anuncios/EmConstrucao'
 
 export function App() {
   return (
@@ -58,6 +60,11 @@ export function App() {
         <Route path="/estoque/decants" element={<EstDecants />} />
         <Route path="/estoque/insumos" element={<EstInsumos />} />
         <Route path="/estoque/relatorios" element={<EstRelatorios />} />
+        <Route path="/anuncios" element={<EmConstrucao />} />
+        <Route path="/anuncios/novo" element={<EmConstrucao />} />
+        <Route path="/anuncios/ligar" element={<EmConstrucao />} />
+        <Route path="/anuncios/config" element={<AnunciosConfig />} />
+        <Route path="/anuncios/:id" element={<EmConstrucao />} />
       </Route>
     </Routes>
   )
