@@ -1,0 +1,86 @@
+import unittest
+from decimal import Decimal as D
+
+from app.services.anuncios.preco import (
+    Custos,
+    Pacote,
+    arredondar_90,
+    calcular_preco,
+    consulta_ml,
+)
+
+
+def consultar_falso(p: D) -> Custos:
+    comissao = (p * D('0.14')).quantize(D('0.01'))
+    if p >= 79:
+        return Custos(comissao, D('0'), D('20'))
+    return Custos(comissao, D('6.50'), D('0'))
+
+
+def liquido(p: D) -> D:
+    c = consultar_falso(p)
+    return p - c.comissao - c.taxa_fixa - c.frete
+
+
+class ClienteFalso:
+    ml_user_id = 123
+
+    def __init__(self):
+        self.chamadas = []
+
+    def get(self, path, params=None):
+        self.chamadas.append(path)
+        if 'listing_prices' in path:
+            return {'sale_fee_amount': 13.5, 'sale_fee_details': {'fixed_fee': 6.5}}
+        return {'coverage': {'all_country': {'list_cost': 20}}}
+
+
+class PrecoTest(unittest.TestCase):
+    def test_arredondar_90(self):
+        self.assertEqual(arredondar_90(D('10.00')), D('10.90'))
+        self.assertEqual(arredondar_90(D('10.90')), D('10.90'))
+        self.assertEqual(arredondar_90(D('10.91')), D('11.90'))
+
+    def test_preco_fecha_margem(self):
+        r = calcular_preco(D('25'), D('0.6'), consultar_falso)
+        p = r['preco']
+        self.assertEqual(p % 1, D('0.90'))
+        self.assertGreaterEqual(liquido(p), 40)
+        self.assertLess(liquido(p - 1), 40)
+        self.assertEqual(r['lucro'], p - r['comissao'] - r['taxa_fixa'] - r['frete'] - 25)
+
+    def test_preco_minimo_ml(self):
+        r = calcular_preco(D('2'), D('0.6'), consultar_falso)
+        self.assertGreaterEqual(r['preco'], D('8.90'))
+        self.assertGreaterEqual(liquido(r['preco']), D('3.2'))
+
+    def test_cruza_79_sem_pular_faixa(self):
+        r = calcular_preco(D('40'), D('0.6'), consultar_falso)
+        p = r['preco']
+        self.assertGreaterEqual(p, D('79.90'))
+        self.assertEqual(p % 1, D('0.90'))
+        self.assertGreaterEqual(liquido(p), 64)
+        self.assertLess(liquido(p - 1), 64)
+
+    def test_custo_zero_erro(self):
+        with self.assertRaises(ValueError):
+            calcular_preco(D('0'), D('0.6'), consultar_falso)
+
+    def test_pacote_sem_medidas_acima_de_79(self):
+        consultar = consulta_ml(ClienteFalso(), 'gold_special', Pacote(None, None, None, None))
+        with self.assertRaises(ValueError) as e:
+            consultar(D('99.90'))
+        self.assertIn('kit de envio', str(e.exception))
+        self.assertEqual(consultar(D('50.90')).frete, 0)
+
+    def test_consulta_ml_usa_cache(self):
+        cli = ClienteFalso()
+        consultar = consulta_ml(cli, 'gold_special', Pacote(300, D('10'), D('10'), D('10')))
+        consultar(D('50.90'))
+        consultar(D('50.90'))
+        self.assertEqual(len([c for c in cli.chamadas if 'listing_prices' in c]), 1)
+        self.assertEqual(consultar(D('99.90')).frete, D('20'))
+
+
+if __name__ == '__main__':
+    unittest.main()
