@@ -1,3 +1,41 @@
+## 2026-11-16 - Sessão 69: Insumos (Parte 1 do módulo Anúncios)
+
+**Responsável:** Claude + Luis
+
+### O que foi feito
+- Spec `docs/superpowers/specs/2026-11-16-anuncios-design.md` (seção 5) e plano `docs/superpowers/plans/2026-11-16-insumos.md`; implementação por tarefas com revisão.
+- Migrations `20261116100000_insumos_schema.sql` (ml decimal, `canais.usa_envio`, `vendas.custo_envio`, `transacoes.origem='insumo'`, tabelas `insumos`, `insumo_movimentacoes`, `insumo_listas`, `insumo_lista_itens`, `decant_origens`, RLS, seeds, RPCs `acertar_estoque_insumo` e `registrar_compra_insumo`) e `20261116110000_insumos_rpcs.sql` (baixa/estorno de insumos, decant com várias origens, reescrita de `registrar_venda`, `editar_venda`, `cancelar_venda`, `excluir_venda`, `registrar_consumo_decant`, `corrigir_consumo_decant`, `cancelar_consumo_decant`). Scripts de conferência em `supabase/checks/`. Aplicadas pelo Luis no SQL Editor em 16/11/2026; checks sem erro.
+- Frontend: `lib/insumos.ts`, `lib/decantOrigens.ts`, página `/estoque/insumos` (compra, acerto, listas), `InsumosVenda` no `VendaFormModal`, `DecantModal` e `CorrigirConsumoDecantModal` com origens e insumos, `VendasConfig` sem embalagens.
+- `embalagens_decant` ficou sem uso pelas telas (mantida no banco).
+- Docs: novo `docs/features/INSUMOS.md`; atualizados `BANCO.md`, `ARQUITETURA.md`, `features/VENDAS.md`, `features/DECANTS.md`, `00-INDEX.md` e o HANDOFF.
+
+### Pendente
+- Aplicar as duas migrations e rodar os checks; só então testar as telas.
+- Limitações conhecidas (detalhe no HANDOFF e em `features/INSUMOS.md`): decant de perfume só lacrado exige abrir o frasco antes; separação produto/envio na edição de venda é heurística; `venda_itens.lucro` sem `custo_envio`; excluir frasco aberto que é 1a origem de decant falha por FK.
+- Partes 2 (Anúncios) e 3 (Vendas do ML) precisam de plano próprio.
+- Continua pendente o parser de PDF da Sessão 68 (`backend/app/services/pedido_pdf_import.py`): local, não commitado e não publicado.
+
+## 2026-11-12 - Sessão 68: Importar planilha de estoque em PDF como pedido
+
+**Responsável:** Claude + Luis
+
+### O que foi feito
+- Pedido: lançar como pedido de compra (fornecedor "bras") os 27 perfumes / 30 unidades / R$ 7.611,75 de `Horus_Parfum_Apresentacao_Legivel.pdf` (planilha "Qtd | Perfume | Custo unit. | Venda unit. | Lucro").
+- O "Importar PDF" do Novo pedido falhava com esse arquivo ("Nenhum item encontrado"): o parser só entendia o layout Onun (NCM).
+- `backend/app/services/pedido_pdf_import.py`: novo `PLANILHA_ROW_RE` + `_parse_planilha`, ativado quando o texto tem "Custo unit."; lê tanto uma célula por linha (como o pypdf extrai) quanto a linha inteira. Preço do item = custo unitário.
+- Teste novo em `backend/tests/test_pedido_pdf_import.py` (inclui nome começando com número, "212 VIP Black"). Backend: 51/51.
+- **Não publicado:** Vercel CLI deslogado, então a API em produção ainda tem o parser antigo. Código não commitado.
+- Como alternativa, o usuário recebeu um SQL para o SQL Editor (`Downloads\pedido_bras_horus__Claude_Code_MS125_luisgfr.sql`): cria o fornecedor "bras" se faltar, o pedido `aguardando` e os itens; casa por nome exato, depois por nome que contém o do PDF (só se único), senão cadastra o produto com `preco_referencia` = venda do PDF; trava contra rodar duas vezes. Sintaxe validada com pglast.
+- Depois o usuário pediu para reverter: `Downloads\desfazer_pedido_bras_horus__Claude_Code_MS125_luisgfr.sql` apaga o pedido (só se ainda `aguardando`), os produtos que o script cadastrou (identificados por `created_at` igual ao do pedido, mesma transação) e o fornecedor "bras" se foi criado por ele; o que estiver em uso é mantido. Os dois SQL foram rodados pelo usuário, não por esta sessão.
+- A v1 recadastrou produtos que já existiam com outro nome (ex.: "Asad Tradicional" = "Asad Lattafa"). Refeito em `Downloads\pedido_bras_horus_v2__Claude_Code_MS125_luisgfr.sql`: catálogo conferido com o usuário, 14 itens apontam para o `produtos.id` existente e 13 cadastram produto novo no padrão do catálogo (maiúsculas, marca na frente, `marca_id` quando a marca existe). Para sem gravar nada se algum id sumir. Validado contra o PDF: 27 linhas, 30 unidades, R$ 7.611,75. Rodado pelo usuário no SQL Editor em 2026-11-12.
+- Fotos dos 13 produtos novos: o site só aceita foto no cadastro (o `ProductDetailsModal` não tem upload na edição). Saída: 13 JPEG 800×800 em `Downloads\fotos-pedido-bras` (Fragrantica `fimgs.net` + loja para o Rayhaan Amazonica), o usuário sobe no bucket `produtos` e roda `Downloads\fotos_pedido_bras__Claude_Code_MS125_luisgfr.sql`, que confere `storage.objects`, só preenche `foto_url` vazio e renomeia VALENTINO → VALENTINO UOMO BORN IN ROMA INTENSE e SILVER SECRET → JACQUES BOGART SILVER SCENT (confirmado pelo usuário). Fotos subidas e SQL rodado pelo usuário em 2026-11-12.
+- Marca e categoria: a v2 ligou só as marcas que já existiam (Armaf, Lattafa, Rayhaan) e não definiu categoria. `Downloads\marca_categoria_pedido_bras__Claude_Code_MS125_luisgfr.sql` cria as marcas Valentino, Carolina Herrera, Lancôme, Paco Rabanne e Jacques Bogart e põe marca + categoria "Perfumes" nos 13 (só onde estiver vazio). Categorias do Horus hoje: Perfumes, Body Splash, Cremes/Hidratantes.
+- Rede: download por curl exige `--ssl-no-revoke` (CRYPT_E_NO_REVOCATION_CHECK, mesmo bloqueio do Codex).
+- Lição: para importar pedido de nomes curtos, o casamento por nome não basta; conferir o catálogo com o usuário antes.
+
+### Pendente
+- Publicar a API (`npx vercel --prod` em `backend/`) e commitar o parser, para o "Importar PDF" aceitar esse layout no site.
+
 ## 2026-09-11 - Sessão 67: Contas parceladas com entrada (Contas a Pagar e a Receber)
 
 **Responsável:** Claude + Luis

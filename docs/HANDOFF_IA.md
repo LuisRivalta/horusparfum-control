@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-08-06 (Sessão 66)
+> Última atualização: 2026-11-16 (Sessão 69)
 
 ## O que já foi feito
 
@@ -449,6 +449,13 @@
     - Testes unitários do backend (`test_correcao_transacoes_migration.py`, etc.) 100% passando (50/50).
     - Build de produção do frontend (`npm run build`) passando sem erros.
 
+64. **Insumos (Sessão 69, Parte 1 do módulo Anúncios)**
+    - Tela `/estoque/insumos`: estoque, compra (RPC `registrar_compra_insumo`, custo médio, despesa `origem='insumo'`), acerto e listas de insumos por tipo (`decant` 2,5/5/10 ml, `frasco`, `envio_decant`, `envio_frasco`)
+    - Venda e consumo de decant baixam insumos pelas listas; `canais.usa_envio` e `vendas.custo_envio`; decant com várias origens (`decant_origens`: frasco aberto + lacrado); `ml` decimal (2,5 ml)
+    - Libs `lib/insumos.ts` e `lib/decantOrigens.ts`; `VendaFormModal` + `InsumosVenda`, `DecantModal`, `CorrigirConsumoDecantModal`; `embalagens_decant` ficou **sem uso pelas telas** (mantida no banco)
+    - Migrations `20261116100000_insumos_schema.sql` e `20261116110000_insumos_rpcs.sql` (checks em `supabase/checks/`), **aplicadas em 16/11/2026, checks sem erro**
+    - Docs: `docs/features/INSUMOS.md`; spec `docs/superpowers/specs/2026-11-16-anuncios-design.md`; plano `docs/superpowers/plans/2026-11-16-insumos.md`
+
 ## Estado atual
 
 - **Deploy frontend produção:** https://horusparfum-control.vercel.app (Vercel, branch main, auto-deploy a cada push)
@@ -461,18 +468,27 @@
 - Dark/light theme funcional
 - Migração de pedidos (20260610_pedidos.sql) já aplicada no Supabase
 - Smoke test operacional de producao passou em 2026-06-22
-- Verificação frontend: **229/229 testes passando** (0 falhas). ⚠️ `npm run build` quebrado por erro **pré-existente** em `src/pages/estoque/vendas/VendaFormModal.tsx:270` (`Property 'code' does not exist on type '{ message: string; }'`)
+- Verificação frontend (Sessão 69): **276/276 testes passando** e `npm run build` OK (o erro antigo em `VendaFormModal.tsx:270` foi corrigido)
 - Contas a Pagar/Receber suportam **parcelamento com entrada** (tabela `conta_parcelas` + RPCs). ⚠️ Migration `20260911_contas_parceladas.sql` **escrita mas ainda NÃO aplicada** no Supabase — a tela quebra até ela rodar
 - Backend completo: **50/50 testes passando**
 - Edição de vendas e correção de transações implementada com RPCs atômicas e interface completa no frontend
 - `PeriodSelector`: período personalizado não valida `início <= fim` (resultado zera silenciosamente)
 - Bundle do recharts é pesado (~445 kB gzip) — considerar code splitting
 
+- Importar PDF de pedido aceita também a planilha "Qtd / Perfume / Custo unit." (Sessão 68). ⚠️ Mudança **local, não commitada e não publicada**: a API em produção ainda tem o parser antigo
+- Insumos (Sessão 69): migrations `20261116100000_insumos_schema.sql` e `20261116110000_insumos_rpcs.sql` **aplicadas pelo Luis em 16/11/2026**; os dois checks de `supabase/checks/` rodaram sem erro. Frontend ainda não publicado (publicar só depois do SQL — já cumprido).
+- Insumos, limitações conhecidas: vender decant de perfume só com frascos lacrados exige abrir o frasco antes em Decants (spec 7.1, Parte 3); na edição de venda, insumos de produto e de envio são separados por heurística (falta coluna marcadora em `insumo_movimentacoes`); `venda_itens.lucro` não inclui `custo_envio`; excluir frasco aberto que é a primeira origem de um decant ainda falha por FK em `decants`/`venda_itens` (pré-existente)
+- `backend/.venv` criado em Python 3.15 sem `uvicorn[standard]` (pyyaml não compila no 3.15); testes rodam com `.venv/Scripts/python -m pytest`
+
 ## Decisões pendentes
+
+- Aplicar as migrations de Insumos (`20261116100000` e `20261116110000`) e escrever os planos das Partes 2 (Anúncios) e 3 (Vendas do ML) do spec `2026-11-16-anuncios-design.md`.
+
+- `ProductDetailsModal` não permite trocar/adicionar foto na edição (só no cadastro em `Produtos.tsx`); produto criado por SQL ou sem foto não tem caminho pela UI.
+- Commitar e publicar o parser de PDF da Sessão 68 (`npx vercel --prod` em `backend/`, exige `vercel login`).
 
 - Definir o momento de aplicar a migration 20260713_correcao_unificada_transacoes.sql no Supabase de producao.
 - Aplicar `supabase/migrations/20260911_contas_parceladas.sql` no SQL Editor do projeto Horus (manual — o MCP do Supabase conectado aponta para outro projeto e **não deve ser usado** para este banco).
-- Corrigir a quebra de build pré-existente em `VendaFormModal.tsx:270`.
 
 ## Para a IA
 
