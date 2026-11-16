@@ -16,6 +16,12 @@ declare
   v_ok     boolean;
   v_msg    text;
   r        jsonb;
+  v_prod2  uuid;
+  v_old2   uuid;
+  v_new2   uuid;
+  v_venda3 uuid;
+  v_dec3   uuid;
+  v_itens3 jsonb;
 begin
   -- Massa de teste ---------------------------------------------------
   insert into produtos (nome, volume_ml, custo_medio, estoque_atual, categoria_id)
@@ -150,6 +156,59 @@ begin
   perform cancelar_consumo_decant((r->>'id')::uuid);
   assert (select estoque_atual from insumos where id = v_a) = 99, 'A voltou ao cancelar brinde';
   assert (select ml_restante from frascos_abertos where id = v_f_new) = 97.5, 'ml voltou ao cancelar brinde';
+
+  -- 8. editar_venda só com preço novo mantém o decant que abriu lacrado (não perde ml)
+  insert into produtos (nome, volume_ml, custo_medio, estoque_atual, categoria_id)
+  values ('teste-check-rpc-2', 100, 180, 2, (select id from categorias limit 1))
+  returning id into v_prod2;
+  insert into frascos_abertos (produto_id, ml_total, ml_restante)
+  values (v_prod2, 100, 4) returning id into v_old2;
+  r := registrar_venda(
+    v_canal, current_date, 'Pix', 'cliente', 0, 0, 'check', null,
+    jsonb_build_array(jsonb_build_object(
+      'tipo', 'decant', 'ml', 10, 'quantidade', 1, 'preco_unitario', 50,
+      'origens', jsonb_build_array(
+        jsonb_build_object('frasco_id', v_old2, 'ml', 4),
+        jsonb_build_object('abrir_produto_id', v_prod2, 'ml', 6)))));
+  v_venda3 := (r->>'id')::uuid;
+  select decant_id into v_dec3 from venda_itens where venda_id = v_venda3;
+  select id into v_new2 from frascos_abertos where produto_id = v_prod2 and status = 'ativo';
+
+  -- mesmas origens, preço 80
+  perform editar_venda(
+    v_venda3, v_canal, current_date, 'Pix', 'cliente', 0, 0, 'check', null,
+    jsonb_build_array(jsonb_build_object(
+      'tipo', 'decant', 'decant_id', v_dec3, 'ml', 10, 'quantidade', 1, 'preco_unitario', 80,
+      'origens', jsonb_build_array(
+        jsonb_build_object('frasco_id', v_old2, 'ml', 4),
+        jsonb_build_object('abrir_produto_id', v_prod2, 'ml', 6)))));
+  assert (select ml_restante from frascos_abertos where id = v_new2) = 94, 'edição de preço: frasco novo 94';
+  assert (select status from frascos_abertos where id = v_old2) = 'esgotado', 'edição de preço: antigo esgotado';
+  assert (select count(*) from decant_origens where decant_id = v_dec3) = 2, 'edição de preço: 2 origens';
+  assert (select decant_id from venda_itens where venda_id = v_venda3) = v_dec3, 'mesmo decant';
+  assert (select estoque_atual from produtos where id = v_prod2) = 1, 'edição de preço: estoque igual';
+  assert (select custo_unitario from venda_itens where venda_id = v_venda3) = 18.00, 'custo mantido';
+  assert (select lucro_bruto from vendas where id = v_venda3) = 62.00, 'lucro 80 - 18';
+
+  -- frontend antigo (frasco_id gravado, sem origens) e origens com o id do frasco aberto
+  v_itens3 := jsonb_build_array(jsonb_build_object(
+    'tipo', 'decant', 'decant_id', v_dec3, 'frasco_id', v_old2, 'ml', 10, 'quantidade', 1,
+    'preco_unitario', 70));
+  perform editar_venda(v_venda3, v_canal, current_date, 'Pix', 'cliente', 0, 0, 'check', null, v_itens3);
+  v_itens3 := jsonb_build_array(jsonb_build_object(
+    'tipo', 'decant', 'decant_id', v_dec3, 'ml', 10, 'quantidade', 1, 'preco_unitario', 60,
+    'origens', jsonb_build_array(
+      jsonb_build_object('frasco_id', v_old2, 'ml', 4),
+      jsonb_build_object('frasco_id', v_new2, 'ml', 6))));
+  perform editar_venda(v_venda3, v_canal, current_date, 'Pix', 'cliente', 0, 0, 'check', null, v_itens3);
+  assert (select ml_restante from frascos_abertos where id = v_new2) = 94, 'outras formas: frasco novo 94';
+  assert (select count(*) from decant_origens where decant_id = v_dec3) = 2, 'outras formas: 2 origens';
+  assert (select lucro_bruto from vendas where id = v_venda3) = 42.00, 'lucro 60 - 18';
+
+  -- excluir o frasco aberto não esbarra em decant_origens (on delete set null)
+  delete from frascos_abertos where id = v_new2;
+  assert (select count(*) from decant_origens where decant_id = v_dec3 and frasco_id is null) = 1,
+    'origem do frasco excluído fica sem frasco';
 end $$;
 
 rollback;

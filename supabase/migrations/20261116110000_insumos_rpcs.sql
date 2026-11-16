@@ -7,6 +7,11 @@
 -- (quando a primeira origem é 'abrir'); _consumir_origens preenche em seguida.
 alter table public.decants alter column frasco_id drop not null;
 
+-- Excluir um frasco aberto não pode esbarrar na origem de um decant de outro frasco.
+alter table public.decant_origens drop constraint if exists decant_origens_frasco_id_fkey;
+alter table public.decant_origens add constraint decant_origens_frasco_id_fkey
+  foreign key (frasco_id) references public.frascos_abertos(id) on delete set null;
+
 -- =============================================================
 -- Helpers internos
 -- =============================================================
@@ -535,6 +540,48 @@ begin
 end;
 $$;
 
+-- Item de decant da edição bate com o gravado? (ml, quantidade e origens; sem 'origens',
+-- compara frasco_id). Origem 'abrir' bate com a origem gravada que abriu frasco daquele
+-- perfume, enviada como abrir_produto_id ou como o frasco que foi aberto.
+create or replace function public._decant_inalterado(p_entrada jsonb, p_item venda_itens)
+returns boolean
+language plpgsql
+stable
+set search_path = public
+as $$
+begin
+  if (p_entrada->>'ml')::numeric is distinct from p_item.ml
+     or coalesce((p_entrada->>'quantidade')::int, 1) <> p_item.quantidade then
+    return false;
+  end if;
+
+  if jsonb_typeof(p_entrada->'origens') is distinct from 'array' then
+    return (p_entrada->>'frasco_id')::uuid is not distinct from p_item.frasco_id;
+  end if;
+
+  return (select count(*) from decant_origens where decant_id = p_item.decant_id)
+           = jsonb_array_length(p_entrada->'origens')
+     and not exists (
+       select case
+                when o->>'abrir_produto_id' is not null
+                  then 'a:' || ((o->>'abrir_produto_id')::uuid)::text
+                else coalesce(
+                  (select 'a:' || d.produto_id::text from decant_origens d
+                   where d.decant_id = p_item.decant_id and d.abriu_frasco
+                     and d.frasco_id = (o->>'frasco_id')::uuid),
+                  'f:' || ((o->>'frasco_id')::uuid)::text)
+              end,
+              (o->>'ml')::numeric
+       from jsonb_array_elements(p_entrada->'origens') o
+       except all
+       select case when abriu_frasco then 'a:' || produto_id::text else 'f:' || frasco_id::text end,
+              ml
+       from decant_origens
+       where decant_id = p_item.decant_id
+     );
+end;
+$$;
+
 drop function if exists public.editar_venda(uuid, uuid, date, text, text, numeric, numeric, text, text, jsonb);
 drop function if exists public.editar_venda(uuid, uuid, date, text, text, numeric, numeric, text, text, jsonb, text);
 
@@ -589,6 +636,9 @@ declare
   v_taxa_acc numeric(12,2) := 0;
   v_frete_acc numeric(12,2) := 0;
   v_ci venda_itens%rowtype;
+  v_manter uuid[] := '{}';
+  v_manter_custo numeric[] := '{}';
+  v_pos int;
 begin
   select * into v_venda from vendas where id = p_venda_id for update;
   if not found then raise exception 'Venda nao encontrada'; end if;
@@ -602,6 +652,21 @@ begin
   if coalesce(p_taxa_total, 0) < 0 or coalesce(p_frete, 0) < 0 then
     raise exception 'Taxa e frete nao podem ser negativos';
   end if;
+
+  -- Decant reenviado com o mesmo decant_id, ml, quantidade e origens: fica como está.
+  -- Tira a linha dele de venda_itens antes do cancelamento, que assim não devolve os ml
+  -- nem apaga o decant (os insumos dele seguem o estorno + regravação da venda).
+  for v_entrada in select * from jsonb_array_elements(p_itens) loop
+    continue when v_entrada->>'tipo' is distinct from 'decant' or v_entrada->>'decant_id' is null;
+    select * into v_ci from venda_itens
+    where venda_id = p_venda_id and tipo = 'decant'
+      and decant_id = (v_entrada->>'decant_id')::uuid;
+    if found and _decant_inalterado(v_entrada, v_ci) then
+      v_manter := array_append(v_manter, v_ci.decant_id);
+      v_manter_custo := array_append(v_manter_custo, v_ci.custo_unitario);
+      delete from venda_itens where id = v_ci.id;
+    end if;
+  end loop;
 
   -- estorna estoque, origens dos decants, insumos e lançamentos
   perform cancelar_venda(p_venda_id);
@@ -682,18 +747,31 @@ begin
         raise exception 'Custo de embalagem nao pode ser negativo';
       end if;
 
-      -- sem 'origens' (frontend antigo): origem única = frasco_id com ml * quantidade
-      v_origens := case when jsonb_typeof(v_entrada->'origens') = 'array' then v_entrada->'origens'
-                        else jsonb_build_array(jsonb_build_object(
-                               'frasco_id', v_entrada->'frasco_id', 'ml', v_ml * v_qtd)) end;
-      v_decant_id := _novo_decant(v_origens, v_ml * v_qtd);
-      v_custo_origens := _consumir_origens(v_origens, v_decant_id, p_responsavel);
-      select * into v_decant from decants where id = v_decant_id;
+      v_pos := case when v_entrada->>'decant_id' is not null
+                    then array_position(v_manter, (v_entrada->>'decant_id')::uuid) end;
+      if v_pos is not null then
+        -- decant inalterado: mantém decant e origens, sem devolver nem reconsumir ml
+        v_decant_id := v_manter[v_pos];
+        v_manter[v_pos] := null;
+        select * into v_decant from decants where id = v_decant_id;
+        v_custo_unit := coalesce(
+          (v_entrada->>'custo_unitario')::numeric,
+          v_manter_custo[v_pos]
+        );
+      else
+        -- sem 'origens' (frontend antigo): origem única = frasco_id com ml * quantidade
+        v_origens := case when jsonb_typeof(v_entrada->'origens') = 'array' then v_entrada->'origens'
+                          else jsonb_build_array(jsonb_build_object(
+                                 'frasco_id', v_entrada->'frasco_id', 'ml', v_ml * v_qtd)) end;
+        v_decant_id := _novo_decant(v_origens, v_ml * v_qtd);
+        v_custo_origens := _consumir_origens(v_origens, v_decant_id, p_responsavel);
+        select * into v_decant from decants where id = v_decant_id;
 
-      v_custo_unit := coalesce(
-        (v_entrada->>'custo_unitario')::numeric,
-        round(v_custo_origens / v_qtd, 2)
-      );
+        v_custo_unit := coalesce(
+          (v_entrada->>'custo_unitario')::numeric,
+          round(v_custo_origens / v_qtd, 2)
+        );
+      end if;
       v_produto_id := v_decant.produto_id;
       v_frasco_id := v_decant.frasco_id;
     else
