@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { Select } from '@/components/shared/FormControls'
 import {
   periodoMes,
   periodoTrimestre,
@@ -68,7 +69,7 @@ export function PeriodSelector({ value, onChange }: Props) {
     else aplicarCustom(inicioCustom, fimCustom)
   }
 
-  const anos = [ano - 2, ano - 1, ano, ano + 1]
+  const anoOps = [ano - 2, ano - 1, ano, ano + 1].map((a) => ({ value: a, label: String(a) }))
 
   return (
     <div className="flex flex-col gap-3 border border-line rounded-xl p-4 bg-surface">
@@ -93,28 +94,20 @@ export function PeriodSelector({ value, onChange }: Props) {
       <div className="flex items-center gap-2 flex-wrap">
         {gran === 'mes' && (
           <>
-            <select className={selectCls} value={mes} onChange={(e) => aplicarMes(ano, Number(e.target.value))}>
-              {MES_OPCOES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-            </select>
-            <select className={selectCls} value={ano} onChange={(e) => aplicarMes(Number(e.target.value), mes)}>
-              {anos.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
+            <Select aria-label="Mês" className="min-w-36" placeholder={false} value={mes} onChange={(e) => aplicarMes(ano, Number(e.target.value))}
+              options={MES_OPCOES.map((m, i) => ({ value: i, label: m }))} />
+            <Select aria-label="Ano" className="min-w-24" placeholder={false} value={ano} onChange={(e) => aplicarMes(Number(e.target.value), mes)} options={anoOps} />
           </>
         )}
         {gran === 'trimestre' && (
           <>
-            <select className={selectCls} value={trimestre} onChange={(e) => aplicarTrimestre(ano, Number(e.target.value))}>
-              {[1, 2, 3, 4].map((t) => <option key={t} value={t}>{t}º trimestre</option>)}
-            </select>
-            <select className={selectCls} value={ano} onChange={(e) => aplicarTrimestre(Number(e.target.value), trimestre)}>
-              {anos.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
+            <Select aria-label="Trimestre" className="min-w-36" placeholder={false} value={trimestre} onChange={(e) => aplicarTrimestre(ano, Number(e.target.value))}
+              options={[1, 2, 3, 4].map((t) => ({ value: t, label: `${t}º trimestre` }))} />
+            <Select aria-label="Ano" className="min-w-24" placeholder={false} value={ano} onChange={(e) => aplicarTrimestre(Number(e.target.value), trimestre)} options={anoOps} />
           </>
         )}
         {gran === 'ano' && (
-          <select className={selectCls} value={ano} onChange={(e) => aplicarAno(Number(e.target.value))}>
-            {anos.map((a) => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <Select aria-label="Ano" className="min-w-24" placeholder={false} value={ano} onChange={(e) => aplicarAno(Number(e.target.value))} options={anoOps} />
         )}
         {gran === 'personalizado' && (
           <>

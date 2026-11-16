@@ -1,3 +1,4 @@
+import { opcoes } from '@/test/escolher'
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { EstInsumos } from '../Insumos'
@@ -122,8 +123,8 @@ describe('EstInsumos', () => {
   it('insumo inativo não aparece para adicionar nas listas', async () => {
     render(<EstInsumos />)
     const secao = await screen.findByTestId('lista-l1')
-    const opcoes = within(secao).getAllByRole('option').map((o) => o.textContent)
-    expect(opcoes).toContain('Caixa')
-    expect(opcoes).not.toContain('Fita Velha')
+    const lista = opcoes(within(secao).getByRole('combobox'))
+    expect(lista).toContain('Caixa')
+    expect(lista).not.toContain('Fita Velha')
   })
 })

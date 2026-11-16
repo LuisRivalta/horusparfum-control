@@ -1,3 +1,4 @@
+import { escolher } from '@/test/escolher'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EstEstoque } from '../EstoqueView'
@@ -90,9 +91,7 @@ describe('EstEstoque', () => {
     render(<EstEstoque />)
     await waitFor(() => expect(screen.getByText('Asad')).toBeInTheDocument())
 
-    fireEvent.change(screen.getByDisplayValue('Marca'), {
-      target: { value: 'm2' },
-    })
+    escolher(screen.getAllByRole('combobox').find((b) => b.textContent === 'Marca')!, 'm2')
 
     expect(screen.queryByText('Asad')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Lattafa/ })).toBeInTheDocument()

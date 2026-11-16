@@ -218,26 +218,14 @@ export function EstEstoque() {
             value={filterFornecedor}
             onChange={(e) => setFilterFornecedor(e.target.value)}
           />
-          <div className="relative">
-            <select
-              className="w-full appearance-none px-3.5 py-2.5 pr-9 rounded-lg border border-line bg-surface-2 text-text text-sm cursor-pointer transition-all duration-200 focus:outline-none focus:border-gold/60 focus:shadow-[0_0_0_3px_rgba(201,168,76,0.12)] hover:border-line-2"
-              value={filterMarca}
-              onChange={(e) => setFilterMarca(e.target.value)}
-            >
-              <option value="">Marca</option>
-              {marcas.map((m) => (
-                <option key={m.id} value={m.id}>{m.nome}</option>
-              ))}
-            </select>
-            <svg
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
-              width="12" height="12" viewBox="0 0 12 12" fill="none"
-            >
-              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <Select
+            options={[{ value: '', label: 'Marca' }, ...marcas.map((m) => ({ value: m.id, label: m.nome }))]}
+            value={filterMarca}
+            onChange={(e) => setFilterMarca(e.target.value)}
+          />
           <Select
             label=""
+            placeholder={false}
             options={[
               { value: 'qty_desc', label: 'Maior quantidade' },
               { value: 'qty_asc', label: 'Menor quantidade' },

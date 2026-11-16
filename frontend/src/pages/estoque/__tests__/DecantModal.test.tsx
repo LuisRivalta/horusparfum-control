@@ -1,4 +1,5 @@
 // frontend/src/pages/estoque/__tests__/DecantModal.test.tsx
+import { escolher } from '@/test/escolher'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DecantModal } from '../decants/DecantModal'
@@ -81,7 +82,7 @@ describe('DecantModal', () => {
 
   it('renderiza select de classificação', () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
-    expect(screen.getByDisplayValue('Selecione...')).toBeInTheDocument()
+    expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Selecione...')
   })
 
   it('chama onSaved após registrar consumo com sucesso', async () => {
@@ -89,7 +90,7 @@ describe('DecantModal', () => {
     fireEvent.click(await screen.findByText('10ml'))
     // Select classification
     const selects = screen.getAllByRole('combobox')
-    fireEvent.change(selects[0], { target: { value: 'amostra' } })
+    escolher(selects[0], 'amostra')
     fireEvent.click(screen.getByText('Registrar consumo'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())
     await waitFor(() => expect(mockOnSaved).toHaveBeenCalled(), { timeout: 2000 })
@@ -103,7 +104,7 @@ describe('DecantModal', () => {
   it('brinde pré-preenche insumos do tamanho e envia p_insumos', async () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
     fireEvent.click(await screen.findByText('5ml'))
-    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'brinde' } })
+    escolher(screen.getAllByRole('combobox')[0], 'brinde')
     expect(screen.getByLabelText('Decant: Frasquinho')).toHaveValue(1)
     fireEvent.click(screen.getByText('Registrar consumo'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())
@@ -116,7 +117,7 @@ describe('DecantModal', () => {
   it('perda não envia insumos', async () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
     fireEvent.click(await screen.findByText('5ml'))
-    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'perda' } })
+    escolher(screen.getAllByRole('combobox')[0], 'perda')
     expect(screen.queryByText('Insumos do decant')).not.toBeInTheDocument()
     fireEvent.click(screen.getByText('Registrar consumo'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())
@@ -127,7 +128,7 @@ describe('DecantModal', () => {
     tabelas.insumos = [{ id: 'i1', nome: 'Frasquinho', custo_medio: 2, ativo: false }]
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
     fireEvent.click(await screen.findByText('5ml'))
-    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'brinde' } })
+    escolher(screen.getAllByRole('combobox')[0], 'brinde')
     expect(screen.queryByLabelText('Decant: Frasquinho')).toBeNull()
     fireEvent.click(screen.getByText('Registrar consumo'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())
@@ -138,7 +139,7 @@ describe('DecantModal', () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
     await screen.findByText('5ml')
     fireEvent.change(screen.getByPlaceholderText('ML'), { target: { value: '2.55' } })
-    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'amostra' } })
+    escolher(screen.getAllByRole('combobox')[0], 'amostra')
     fireEvent.click(screen.getByText('Registrar consumo'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())
     expect(rpcMock).toHaveBeenCalledWith('registrar_consumo_decant', expect.objectContaining({ p_ml: 2.6 }))
@@ -149,7 +150,7 @@ describe('DecantModal', () => {
     const pouco = { ...mockFrasco, ml_restante: 3 }
     render(<DecantModal frasco={pouco} onClose={mockOnClose} onSaved={mockOnSaved} />)
     fireEvent.click(await screen.findByText('5ml'))
-    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'brinde' } })
+    escolher(screen.getAllByRole('combobox')[0], 'brinde')
     await waitFor(() => expect(screen.getByText(/abrir 1 lacrado/)).toBeInTheDocument())
     fireEvent.click(screen.getByText('Registrar consumo'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())

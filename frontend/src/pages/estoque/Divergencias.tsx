@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { DIVERGENCIA_TIPOS, type DivergenciaTipo } from '@/lib/pedidos'
+import { Select } from '@/components/shared/FormControls'
 
 interface DivergenciaRow {
   id: string
@@ -69,27 +70,19 @@ export function EstDivergencias() {
         </div>
       )}
 
-      {/* selects crus (não FormControls.Select) — precisamos de "Todos..." como opção vazia,
-          e o Select compartilhado injeta "Selecione..." fixo */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-        <select
+        <Select
+          aria-label="Filtrar por fornecedor"
+          options={[{ value: '', label: 'Todos os fornecedores' }, ...fornecedores.map((f) => ({ value: f, label: f }))]}
           value={filtroFornecedor}
           onChange={(e) => setFiltroFornecedor(e.target.value)}
-          className="px-3.5 py-2.5 rounded-lg border border-line bg-surface text-text text-sm cursor-pointer focus:outline-none focus:border-gold/60"
-          aria-label="Filtrar por fornecedor"
-        >
-          <option value="">Todos os fornecedores</option>
-          {fornecedores.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
-        <select
+        />
+        <Select
+          aria-label="Filtrar por tipo"
+          options={[{ value: '', label: 'Todos os tipos' }, ...DIVERGENCIA_TIPOS]}
           value={filtroTipo}
           onChange={(e) => setFiltroTipo(e.target.value)}
-          className="px-3.5 py-2.5 rounded-lg border border-line bg-surface text-text text-sm cursor-pointer focus:outline-none focus:border-gold/60"
-          aria-label="Filtrar por tipo"
-        >
-          <option value="">Todos os tipos</option>
-          {DIVERGENCIA_TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-        </select>
+        />
       </div>
 
       <div className="border border-line rounded-xl overflow-hidden">

@@ -1,3 +1,4 @@
+import { escolher } from '@/test/escolher'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -93,7 +94,7 @@ describe('EstProdutos', () => {
 
     await user.click(await screen.findByRole('button', { name: /novo produto/i }))
     await user.type(screen.getByLabelText(/nome/i), 'Lattafa Asad')
-    await user.selectOptions(screen.getByLabelText(/marca/i), 'm1')
+    escolher(screen.getByLabelText(/marca/i), 'm1')
     await user.click(screen.getByRole('button', { name: /^salvar$/i }))
 
     await waitFor(() => expect(inserts).toHaveLength(1))

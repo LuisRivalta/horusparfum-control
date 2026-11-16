@@ -96,11 +96,15 @@ export function EstInsumos() {
                             <Button size="sm" variant="secondary" aria-label={`Acertar estoque ${i.nome}`} onClick={() => setDialogo({ tipo: 'acerto', insumo: i })}>Acertar estoque</Button>
                           </>
                         )}
-                        <Button size="sm" variant="ghost" aria-label={`Editar ${i.nome}`} onClick={() => setDialogo({ tipo: 'editar', insumo: i })}>
-                          <Icon name="edit" size={14} />
+                        <Button size="sm" variant="secondary" aria-label={`Editar ${i.nome}`} onClick={() => setDialogo({ tipo: 'editar', insumo: i })}>
+                          <Icon name="edit" size={14} /> Editar
                         </Button>
-                        <Button size="sm" variant="danger" aria-label={`${acao} ${i.nome}`} onClick={() => removerOuInativar(i)}>
-                          {acao === 'Excluir' ? <Icon name="trash" size={14} /> : acao}
+                        <Button
+                          size="sm" variant="danger" aria-label={`${acao} ${i.nome}`}
+                          title={acao === 'Excluir' ? undefined : 'Já foi usado: inativar guarda o histórico'}
+                          onClick={() => removerOuInativar(i)}
+                        >
+                          {acao === 'Excluir' && <Icon name="trash" size={14} />} {acao}
                         </Button>
                       </div>
                     </td>

@@ -1,3 +1,4 @@
+import { escolher } from '@/test/escolher'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -40,10 +41,10 @@ describe('SaidaRapidaModal', () => {
     render(<SaidaRapidaModal open onClose={vi.fn()} onDone={onDone} />)
 
     await waitFor(() => expect(screen.getByLabelText(/produto/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/produto/i), 'pr1')
+    escolher(screen.getByLabelText(/produto/i), 'pr1')
     await user.clear(screen.getByLabelText(/quantidade/i))
     await user.type(screen.getByLabelText(/quantidade/i), '2')
-    await user.selectOptions(screen.getByLabelText(/motivo/i), 'venda')
+    escolher(screen.getByLabelText(/motivo/i), 'venda')
     await user.click(screen.getByRole('button', { name: /^registrar$/i }))
 
     await waitFor(() => {
@@ -67,10 +68,10 @@ describe('SaidaRapidaModal', () => {
     render(<SaidaRapidaModal open onClose={vi.fn()} onDone={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByLabelText(/produto/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/produto/i), 'pr1')
+    escolher(screen.getByLabelText(/produto/i), 'pr1')
     await user.clear(screen.getByLabelText(/quantidade/i))
     await user.type(screen.getByLabelText(/quantidade/i), '99')
-    await user.selectOptions(screen.getByLabelText(/motivo/i), 'venda')
+    escolher(screen.getByLabelText(/motivo/i), 'venda')
     await user.click(screen.getByRole('button', { name: /^registrar$/i }))
 
     await waitFor(() => {

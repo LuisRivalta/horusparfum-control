@@ -1,3 +1,4 @@
+import { escolher } from '@/test/escolher'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -81,7 +82,7 @@ describe('ConferenciaModal', () => {
     const input = screen.getAllByLabelText(/qtd recebida/i)[0]
     await user.clear(input)
     await user.type(input, '3')
-    await user.selectOptions(screen.getByLabelText(/tipo de divergência/i), 'faltou')
+    escolher(screen.getByLabelText(/tipo de divergência/i), 'faltou')
     await user.click(screen.getByRole('button', { name: /confirmar recebimento/i }))
 
     await waitFor(() => {
@@ -121,7 +122,7 @@ describe('ConferenciaModal', () => {
     // diverge, classifica, e depois volta ao valor original
     await user.clear(input)
     await user.type(input, '3')
-    await user.selectOptions(screen.getByLabelText(/tipo de divergência/i), 'faltou')
+    escolher(screen.getByLabelText(/tipo de divergência/i), 'faltou')
     await user.clear(input)
     await user.type(input, '5')
 

@@ -1,3 +1,4 @@
+import { escolher } from '@/test/escolher'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { VendasDashboard } from '../vendas/VendasDashboard'
@@ -189,7 +190,7 @@ describe('VendasDashboard', () => {
     await waitFor(() => expect(screen.getByText('3 itens vendidos')).toBeInTheDocument())
 
     const firstOptions = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]
-    fireEvent.change(screen.getByDisplayValue('Junho'), { target: { value: '6' } })
+    escolher(screen.getByLabelText('Mês'), '6')
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
     const secondUrl = String((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[0])

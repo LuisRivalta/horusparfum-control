@@ -1,4 +1,5 @@
 // frontend/src/pages/estoque/__tests__/AbrirFrascoModal.test.tsx
+import { escolher, opcoes } from '@/test/escolher'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AbrirFrascoModal } from '../decants/AbrirFrascoModal'
@@ -58,20 +59,20 @@ beforeEach(() => {
 describe('AbrirFrascoModal', () => {
   it('lista produtos disponíveis no select', async () => {
     render(<AbrirFrascoModal onClose={mockOnClose} onSaved={mockOnSaved} />)
-    await waitFor(() => expect(screen.getByText('Asad')).toBeInTheDocument())
+    await waitFor(() => expect(opcoes(screen.getByRole('combobox')).join()).toContain('Asad'))
   })
 
   it('mostra o volume ao selecionar produto', async () => {
     render(<AbrirFrascoModal onClose={mockOnClose} onSaved={mockOnSaved} />)
-    await waitFor(() => screen.getByText('Asad'))
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'p1' } })
+    await waitFor(() => expect(opcoes(screen.getByRole('combobox')).join()).toContain('Asad'))
+    escolher(screen.getByRole('combobox'), 'p1')
     expect(screen.getByText(/100ml/)).toBeInTheDocument()
   })
 
   it('chama onSaved após confirmar abertura', async () => {
     render(<AbrirFrascoModal onClose={mockOnClose} onSaved={mockOnSaved} />)
-    await waitFor(() => screen.getByText('Asad'))
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'p1' } })
+    await waitFor(() => expect(opcoes(screen.getByRole('combobox')).join()).toContain('Asad'))
+    escolher(screen.getByRole('combobox'), 'p1')
     fireEvent.click(screen.getByText('Confirmar'))
     await waitFor(() => expect(mockOnSaved).toHaveBeenCalled())
   })

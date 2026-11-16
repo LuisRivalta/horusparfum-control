@@ -100,10 +100,23 @@ function SecaoLista({ lista, insumos, depois }: {
       {itens.length === 0 && <p className="text-xs text-muted">Nenhum insumo na lista</p>}
       {itens.map((i) => (
         <div key={i.insumo_id} className="flex items-center justify-between text-sm">
-          <span>
-            {porId[i.insumo_id]?.nome ?? '—'} <span className="text-muted">× {i.quantidade}</span>
+          <span className="flex-1 truncate">
+            {porId[i.insumo_id]?.nome ?? '—'}
             {porId[i.insumo_id] && !porId[i.insumo_id].ativo && <span className="text-muted"> (inativo)</span>}
           </span>
+          <span className="text-muted mr-1">×</span>
+          <input
+            key={`${i.insumo_id}-${i.quantidade}`}
+            type="number" min="0" step="any" defaultValue={i.quantidade}
+            aria-label={`Quantidade de ${porId[i.insumo_id]?.nome ?? 'insumo'}`}
+            className="w-16 mr-3 px-2 py-1 rounded-md border border-line bg-surface-2 text-sm font-mono tabular-nums text-right focus:outline-none focus:border-gold/60"
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+            onBlur={(e) => {
+              const q = Number(e.target.value)
+              if (!(q > 0)) { e.target.value = String(i.quantidade); return }
+              if (q !== i.quantidade) depois(supabase.from('insumo_lista_itens').update({ quantidade: q }).eq('lista_id', lista.id).eq('insumo_id', i.insumo_id))
+            }}
+          />
           <button
             aria-label={`Remover ${porId[i.insumo_id]?.nome ?? 'insumo'}`}
             className="text-muted hover:text-down cursor-pointer"

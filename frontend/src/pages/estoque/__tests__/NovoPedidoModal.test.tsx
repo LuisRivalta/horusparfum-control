@@ -1,3 +1,4 @@
+import { escolher } from '@/test/escolher'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -108,7 +109,7 @@ describe('NovoPedidoModal', () => {
 
     await waitFor(() => expect(screen.getByText(/total do pedido/i)).toBeInTheDocument())
 
-    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    escolher(screen.getByLabelText(/produto 1/i), 'pr1')
     await user.clear(screen.getByLabelText(/qtd 1/i))
     await user.type(screen.getByLabelText(/qtd 1/i), '5')
     await user.clear(screen.getByLabelText(/preço 1/i))
@@ -122,9 +123,9 @@ describe('NovoPedidoModal', () => {
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByLabelText(/produto 1/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    escolher(screen.getByLabelText(/produto 1/i), 'pr1')
     await user.click(screen.getByRole('button', { name: /adicionar item/i }))
-    await user.selectOptions(screen.getByLabelText(/produto 2/i), 'pr1')
+    escolher(screen.getByLabelText(/produto 2/i), 'pr1')
 
     expect(screen.getByText(/produto repetido/i)).toBeInTheDocument()
   })
@@ -135,12 +136,12 @@ describe('NovoPedidoModal', () => {
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
 
     await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
-    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    escolher(screen.getByLabelText(/fornecedor/i), 'f1')
+    escolher(screen.getByLabelText(/produto 1/i), 'pr1')
     await user.clear(screen.getByLabelText(/preço 1/i))
     await user.type(screen.getByLabelText(/preço 1/i), '100')
     await user.click(screen.getByRole('button', { name: /adicionar item/i }))
-    await user.selectOptions(screen.getByLabelText(/produto 2/i), 'pr1')
+    escolher(screen.getByLabelText(/produto 2/i), 'pr1')
     await user.clear(screen.getByLabelText(/preço 2/i))
     await user.type(screen.getByLabelText(/preço 2/i), '100')
 
@@ -161,8 +162,8 @@ describe('NovoPedidoModal', () => {
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
 
     await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
-    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    escolher(screen.getByLabelText(/fornecedor/i), 'f1')
+    escolher(screen.getByLabelText(/produto 1/i), 'pr1')
     await user.clear(screen.getByLabelText(/qtd 1/i))
     await user.type(screen.getByLabelText(/qtd 1/i), '5')
     await user.clear(screen.getByLabelText(/preço 1/i))
@@ -287,7 +288,7 @@ describe('NovoPedidoModal', () => {
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByLabelText(/produto 1/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    escolher(screen.getByLabelText(/produto 1/i), 'pr1')
     await user.upload(screen.getByLabelText(/arquivo pdf do pedido/i), new File(['bad'], 'pedido.pdf', { type: 'application/pdf' }))
 
     await waitFor(() => expect(screen.getByText(/pdf sem texto extraível/i)).toBeInTheDocument())
@@ -308,7 +309,7 @@ describe('NovoPedidoModal', () => {
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
 
     await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
+    escolher(screen.getByLabelText(/fornecedor/i), 'f1')
     await user.upload(screen.getByLabelText(/arquivo pdf do pedido/i), new File(['%PDF fake'], 'pedido.pdf', { type: 'application/pdf' }))
     await waitFor(() => expect(screen.getByText(/produto não encontrado: produto novo 200ml/i)).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: /criar pedido/i }))
@@ -324,8 +325,8 @@ describe('NovoPedidoModal', () => {
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
 
     await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
-    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    escolher(screen.getByLabelText(/fornecedor/i), 'f1')
+    escolher(screen.getByLabelText(/produto 1/i), 'pr1')
     await user.clear(screen.getByLabelText(/qtd 1/i))
     await user.type(screen.getByLabelText(/qtd 1/i), '5')
     await user.clear(screen.getByLabelText(/preço 1/i))
@@ -353,8 +354,8 @@ describe('NovoPedidoModal', () => {
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
 
     await waitFor(() => expect(screen.getByLabelText(/fornecedor/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/fornecedor/i), 'f1')
-    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    escolher(screen.getByLabelText(/fornecedor/i), 'f1')
+    escolher(screen.getByLabelText(/produto 1/i), 'pr1')
     await user.clear(screen.getByLabelText(/preço 1/i))
     await user.type(screen.getByLabelText(/preço 1/i), '100')
     await user.click(screen.getByRole('button', { name: /criar pedido/i }))
@@ -372,7 +373,7 @@ describe('NovoPedidoModal', () => {
     render(<NovoPedidoModal open onClose={vi.fn()} onSaved={onSaved} />)
 
     await waitFor(() => expect(screen.getByLabelText(/produto 1/i)).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText(/produto 1/i), 'pr1')
+    escolher(screen.getByLabelText(/produto 1/i), 'pr1')
     await user.clear(screen.getByLabelText(/preço 1/i))
     await user.type(screen.getByLabelText(/preço 1/i), '100')
     await user.click(screen.getByRole('button', { name: /criar pedido/i }))

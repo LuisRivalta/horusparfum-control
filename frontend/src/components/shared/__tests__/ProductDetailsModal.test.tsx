@@ -1,3 +1,4 @@
+import { escolher } from '@/test/escolher'
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProductDetailsModal, type Produto } from '../ProductDetailsModal'
@@ -330,7 +331,7 @@ describe('ProductDetailsModal', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: /editar/i }))
-    fireEvent.change(screen.getByLabelText(/marca/i), { target: { value: 'm2' } })
+    escolher(screen.getByLabelText(/marca/i), 'm2')
     fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalled())

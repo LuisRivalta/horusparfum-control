@@ -1,3 +1,4 @@
+import { escolher } from '@/test/escolher'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { CorrigirConsumoDecantModal } from '../decants/CorrigirConsumoDecantModal'
@@ -37,7 +38,7 @@ describe('CorrigirConsumoDecantModal', () => {
   it('muda só a classificação: origens usam o frasco ativo, sem abrir lacrado', async () => {
     render(<CorrigirConsumoDecantModal open transacao={transacao} onClose={vi.fn()} onSaved={vi.fn()} />)
     await screen.findByLabelText('Decant: Frasquinho')
-    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'marketing' } })
+    escolher(screen.getAllByRole('combobox')[0], 'marketing')
     fireEvent.click(screen.getByText('Salvar correção'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())
     expect(rpcMock).toHaveBeenCalledWith('corrigir_consumo_decant', expect.objectContaining({

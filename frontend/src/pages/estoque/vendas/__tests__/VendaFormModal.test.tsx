@@ -1,3 +1,4 @@
+import { escolher, opcoes } from '@/test/escolher'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EditarVendaModal } from '../EditarVendaModal'
@@ -99,11 +100,11 @@ beforeEach(() => {
 
 async function novoDecant(ml: string, canal = 'c1') {
   render(<NovaVendaModal open onClose={vi.fn()} onSaved={vi.fn()} />)
-  await waitFor(() => expect(within(screen.getByLabelText('Canal')).getAllByRole('option')).toHaveLength(3))
-  fireEvent.change(screen.getByLabelText('Canal'), { target: { value: canal } })
-  fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'decant' } })
-  fireEvent.change(screen.getByLabelText('Frasco aberto'), { target: { value: 'f1' } })
-  fireEvent.change(screen.getByLabelText('ml'), { target: { value: ml } })
+  await waitFor(() => expect(opcoes(screen.getByLabelText('Canal'))).toHaveLength(3))
+  escolher(screen.getByLabelText('Canal'), canal)
+  escolher(screen.getByLabelText('Tipo'), 'decant')
+  escolher(screen.getByLabelText('Frasco aberto'), 'f1')
+  escolher(screen.getByLabelText('ml'), ml)
   fireEvent.change(screen.getByLabelText('Preço un.'), { target: { value: '50' } })
 }
 
@@ -147,8 +148,8 @@ describe('VendaFormModal', () => {
 
   it('decant de 2,5 ml aparece como opção', async () => {
     await novoDecant('2.5')
-    expect(within(screen.getByLabelText('ml')).getByRole('option', { name: '2,5 ml' })).toBeInTheDocument()
-    expect(screen.getByLabelText('ml')).toHaveValue('2.5')
+    expect(opcoes(screen.getByLabelText('ml'))).toContain('2,5 ml')
+    expect(screen.getByLabelText('ml')).toHaveAttribute('value', '2.5')
     expect(screen.getByText('do frasco aberto')).toBeInTheDocument()
   })
 
@@ -174,8 +175,8 @@ describe('VendaFormModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /completar com outro perfume/i }))
     const outro = screen.getByLabelText('Outro perfume')
-    expect(within(outro).queryByRole('option', { name: /Perfume X/ })).toBeNull()
-    fireEvent.change(outro, { target: { value: 'f2' } })
+    expect(opcoes(outro).join()).not.toMatch(/Perfume X/)
+    escolher(outro, 'f2')
     expect(screen.getByText('4 ml do aberto + 6 ml de Perfume Y')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /registrar venda/i }))
@@ -187,9 +188,9 @@ describe('VendaFormModal', () => {
     db.frascos_abertos[0].ml_restante = 7
     await novoDecant('5')
     fireEvent.click(screen.getByRole('button', { name: /adicionar item/i }))
-    fireEvent.change(screen.getAllByLabelText('Tipo')[1], { target: { value: 'decant' } })
-    fireEvent.change(screen.getAllByLabelText('Frasco aberto')[1], { target: { value: 'f1' } })
-    fireEvent.change(screen.getAllByLabelText('ml')[1], { target: { value: '2.5' } })
+    escolher(screen.getAllByLabelText('Tipo')[1], 'decant')
+    escolher(screen.getAllByLabelText('Frasco aberto')[1], 'f1')
+    escolher(screen.getAllByLabelText('ml')[1], '2.5')
     fireEvent.change(screen.getAllByLabelText('Preço un.')[1], { target: { value: '30' } })
     expect(screen.getByText('2 ml do aberto + abrir 1 lacrado (0,5 ml)')).toBeInTheDocument()
 
@@ -204,7 +205,7 @@ describe('VendaFormModal', () => {
     db.produtos[0].estoque_atual = 1
     await novoDecant('10')
     fireEvent.click(screen.getByRole('button', { name: /adicionar item/i }))
-    fireEvent.change(screen.getAllByLabelText(/^Produto$/)[0], { target: { value: 'p1' } })
+    escolher(screen.getAllByLabelText(/^Produto$/)[0], 'p1')
     expect(screen.getByText(/faltam 6 ml/i)).toBeInTheDocument()
   })
 
@@ -330,7 +331,7 @@ describe('VendaFormModal', () => {
     render(<EditarVendaModal open vendaId="v1" onClose={vi.fn()} onSaved={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByLabelText('ml')).toHaveValue('10'))
-    fireEvent.change(screen.getByLabelText('ml'), { target: { value: '5' } })
+    escolher(screen.getByLabelText('ml'), '5')
     expect(screen.queryByText(/faltam/i)).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /salvar altera/i }))
