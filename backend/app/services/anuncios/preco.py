@@ -1,12 +1,12 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-145826-85d5
+# ID                 : 20261116-162048-36d5
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : preco.py
 # Assunto            : 
 # Origem             : automatico (hook)
 # Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
-# Ultima modificacao : 2026-11-16 14:58:26
+# Ultima modificacao : 2026-11-16 16:20:48
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import math
@@ -66,8 +66,11 @@ def calcular_preco(custo: Decimal, margem: Decimal,
 
 
 def consulta_ml(cliente: MLCliente, listing_type: str,
-                pacote: Pacote) -> Callable[[Decimal], Custos]:
+                pacote: Pacote, taxas: dict | None = None) -> Callable[[Decimal], Custos]:
+    """`taxas` (preço → resposta do listing_prices) pode ser compartilhado entre tipos de anúncio:
+    a consulta vai sem listing_type_id e o ML devolve a lista com todos os tipos."""
     cache: dict[Decimal, Custos] = {}
+    taxas = {} if taxas is None else taxas
 
     def consultar(p: Decimal) -> Custos:
         if p in cache:
@@ -76,11 +79,12 @@ def consulta_ml(cliente: MLCliente, listing_type: str,
         if p >= FRETE_GRATIS_A_PARTIR:
             if None in (pacote.peso_g, pacote.altura_cm, pacote.largura_cm, pacote.comprimento_cm):
                 raise ValueError('Preencha peso e medidas do kit de envio')
-        r = cliente.get('/sites/MLB/listing_prices', {
-            'price': str(p), 'category_id': 'MLB6284', 'currency_id': 'BRL',
-            'listing_type_id': listing_type, 'logistic_type': 'drop_off',
-            'shipping_mode': 'me2',
-        })
+        if p not in taxas:
+            taxas[p] = cliente.get('/sites/MLB/listing_prices', {
+                'price': str(p), 'category_id': 'MLB6284', 'currency_id': 'BRL',
+                'logistic_type': 'drop_off', 'shipping_mode': 'me2',
+            })
+        r = taxas[p]
         if isinstance(r, list):
             r = next((x for x in r if x.get('listing_type_id') == listing_type), None)
             if r is None:

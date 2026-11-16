@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-152623-c8f0
+# ID                 : 20261116-162032-2edf
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Testes publicar anuncios
 # Assunto            : Testes de montar_item e quantidade_disponivel
-# Origem             : solicitacao do usuario
-# Motivo             : Brief da Task 7 pede TDD da montagem do item e da quantidade.
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:24:25
+# Ultima modificacao : 2026-11-16 16:20:32
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import unittest
@@ -70,6 +71,14 @@ class MontarItemTest(unittest.TestCase):
         a = atributos(item)
         self.assertNotIn('GTIN', a)
         self.assertEqual(a['UNIT_VOLUME']['value_name'], '2.5 mL')
+
+    def test_frasco_sem_gtin_leva_motivo(self):
+        produto = {**PRODUTO, 'gtin': None}
+        item = montar_item({'tipo': 'frasco', 'ml': None, 'preco': 199.9, 'titulo': 't',
+                            'listing_type': 'gold_special', 'fotos': []}, produto, False, 1, PACOTE)
+        a = atributos(item)
+        self.assertNotIn('GTIN', a)
+        self.assertEqual(a['EMPTY_GTIN_REASON'], {'id': 'EMPTY_GTIN_REASON', 'value_id': '17055160'})
 
 
 class QuantidadeTest(unittest.TestCase):

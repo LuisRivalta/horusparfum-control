@@ -1,12 +1,12 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-145824-7091
+# ID                 : 20261116-162157-d47d
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : test_anuncios_preco.py
 # Assunto            : 
 # Origem             : automatico (hook)
 # Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
-# Ultima modificacao : 2026-11-16 14:58:24
+# Ultima modificacao : 2026-11-16 16:21:57
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import unittest
@@ -120,6 +120,21 @@ class PrecoTest(unittest.TestCase):
         consultar(D('50.90'))
         self.assertEqual(len([c for c in cli.chamadas if 'listing_prices' in c]), 1)
         self.assertEqual(consultar(D('99.90')).frete, D('20'))
+
+    def test_taxas_compartilhadas_entre_tipos(self):
+        class Cli(ClienteFalso):
+            def get(self, path, params=None):
+                self.chamadas.append((path, params))
+                return [{'listing_type_id': lt, 'sale_fee_amount': fee, 'sale_fee_details': {'fixed_fee': 6.5}}
+                        for lt, fee in (('gold_special', 13.5), ('gold_pro', 20))]
+
+        cli, taxas = Cli(), {}
+        pacote = Pacote(300, D('10'), D('10'), D('10'))
+        especial = consulta_ml(cli, 'gold_special', pacote, taxas)(D('50.90'))
+        pro = consulta_ml(cli, 'gold_pro', pacote, taxas)(D('50.90'))
+        self.assertEqual((especial.comissao, pro.comissao), (D('7.0'), D('13.5')))
+        self.assertEqual(len(cli.chamadas), 1)
+        self.assertNotIn('listing_type_id', cli.chamadas[0][1])
 
 
 if __name__ == '__main__':

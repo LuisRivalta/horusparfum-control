@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-150059-5e12
+# ID                 : 20261116-162149-2634
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : backend\tests\test_anuncios_ia.py
 # Assunto            : IA opcional de ficha e textos dos anuncios ML
-# Origem             : solicitacao do usuario
-# Motivo             : Task 4 do plano de anuncios pedida pelo usuario
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:00:59
+# Ultima modificacao : 2026-11-16 16:21:49
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import json
@@ -89,6 +90,13 @@ class TextosTest(unittest.TestCase):
         self.assertNotIn(">", d)
         self.assertNotIn("❤", d)
         self.assertIn("Ótimo", d)
+
+    def test_textos_limpa_setas_estrelas_e_espaco_duplo(self):
+        c = falso({"anuncios": [{"chave": "a", "titulo": "Asad ⭐ 100ml  ➡ Original", "descricao": "Top ↗ fixação"}]})
+        with patch.object(settings, "anthropic_api_key", "k"):
+            r = ia.gerar_textos({}, "N", "M", [{"chave": "a", "tipo": "frasco", "ml": 100}], "", cliente=c)
+        self.assertEqual(r[0]["titulo"], "Asad 100ml Original")
+        self.assertEqual(r[0]["descricao"], "Top fixação")
 
     def test_textos_falha_vira_runtimeerror(self):
         ruins = [falso({}, stop="max_tokens"), texto_ruim(), explode(),

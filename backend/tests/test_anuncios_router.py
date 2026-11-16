@@ -1,5 +1,5 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-160556-a9bd
+# ID                 : 20261116-162131-e836
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Testes rotas anuncios
@@ -7,7 +7,7 @@
 # Origem             : automatico (hook)
 # Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:24:58
-# Ultima modificacao : 2026-11-16 16:05:56
+# Ultima modificacao : 2026-11-16 16:21:31
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import sys
@@ -117,6 +117,9 @@ class FakeML:
         self._ver()
         self.chamadas.append(("PUT", path, json))
         return {}
+
+
+UID = "6f1c2a3b-0000-4000-8000-000000000001"
 
 
 def anuncio(i, **extra):
@@ -261,27 +264,72 @@ class AnunciosRouterTest(unittest.TestCase):
         self.assertEqual(item["chave"], "frasco")
         self.assertEqual(item["gold_special"], {"erro": "Preencha peso e medidas do kit de envio"})
 
+    def test_precos_recusa_do_ml_fica_so_no_tipo(self):
+        lista = [{"listing_type_id": lt, "sale_fee_amount": 20, "sale_fee_details": {"fixed_fee": 0}}
+                 for lt in ("gold_special", "gold_pro")]
+
+        def frete(params):
+            if params["listing_type_id"] == "gold_pro":
+                raise MLErro(400, "Dimensões inválidas")
+            return {"coverage": {"all_country": {"list_cost": 20}}}
+
+        self.usar(banco([]), FakeML(respostas={"/sites/MLB/listing_prices": lista,
+                                               "/users/1/shipping_options/free": frete}))
+        pacote = {"peso_g": 300, "altura_cm": 10, "largura_cm": 10, "comprimento_cm": 20}
+        r = self.http.post("/api/anuncios/precos", json={
+            "itens": [{"chave": "frasco", "custo": 100, "margem": 0.6, "tipo": "frasco"}],
+            "pacotes": {"frasco": pacote, "decant": pacote},
+        })
+        self.assertEqual(r.status_code, 200)
+        item = r.json()["itens"][0]
+        self.assertIn("preco", item["gold_special"])
+        self.assertEqual(item["gold_pro"], {"erro": "Dimensões inválidas"})
+
+    def test_precos_uma_consulta_de_taxas_serve_os_dois_tipos(self):
+        pedidos = []
+
+        def taxas(params):
+            pedidos.append(params)
+            return [{"listing_type_id": lt, "sale_fee_amount": 1, "sale_fee_details": {"fixed_fee": 0}}
+                    for lt in ("gold_special", "gold_pro")]
+
+        self.usar(banco([]), FakeML(respostas={"/sites/MLB/listing_prices": taxas}))
+        pacote = {"peso_g": 300, "altura_cm": 10, "largura_cm": 10, "comprimento_cm": 20}
+        r = self.http.post("/api/anuncios/precos", json={
+            "itens": [{"chave": "d5", "custo": 5, "margem": 0.5, "tipo": "decant"}],
+            "pacotes": {"frasco": pacote, "decant": pacote},
+        }).json()["itens"][0]
+        self.assertEqual(r["gold_special"]["preco"], 8.9)
+        self.assertEqual(r["gold_pro"]["preco"], 8.9)
+        self.assertEqual(len(pedidos), 1)
+        self.assertNotIn("listing_type_id", pedidos[0])
+
+    def test_id_que_nao_e_uuid_422(self):
+        self.usar(banco([]), FakeML())
+        self.assertEqual(self.http.get("/api/anuncios/a1/qualidade").status_code, 422)
+        self.assertEqual(self.http.post("/api/anuncios/xx/preco", json={"preco": 1}).status_code, 422)
+
     def test_qualidade_lista_pendencias(self):
         perf = {"score": 72, "level_wording": "Profissional", "buckets": [{"variables": [{"rules": [
             {"status": "COMPLETED", "wordings": {"title": "ok", "label": "ok", "link": "https://x/ok"}},
             {"status": "PENDING", "wordings": {"title": "Fotos", "label": "Adicione fotos", "link": "https://x/fotos"}},
         ]}]}]}
-        db = banco([anuncio(1, status="publicado", ml_item_id="MLB9")])
+        db = banco([anuncio(1, id=UID, status="publicado", ml_item_id="MLB9")])
         self.usar(db, FakeML(respostas={"/item/MLB9/performance": perf}))
-        r = self.http.get("/api/anuncios/a1/qualidade").json()
+        r = self.http.get(f"/api/anuncios/{UID}/qualidade").json()
         self.assertEqual(r["score"], 72)
         self.assertEqual(r["nivel"], "Profissional")
         self.assertEqual(r["pendencias"], [{"titulo": "Fotos", "texto": "Adicione fotos", "link": "https://x/fotos"}])
         self.assertEqual(db.tabelas["anuncios"][0]["qualidade_score"], 72)
 
     def test_quantidade_status_e_preco(self):
-        db = banco([anuncio(1, tipo="decant", ml=10, status="publicado", ml_item_id="MLB9")])
+        db = banco([anuncio(1, id=UID, tipo="decant", ml=10, status="publicado", ml_item_id="MLB9")])
         ml = FakeML()
         self.usar(db, ml)
-        self.assertEqual(self.http.post("/api/anuncios/a1/quantidade").json(), {"quantidade": 34})
-        self.http.post("/api/anuncios/a1/status", json={"status": "paused"})
+        self.assertEqual(self.http.post(f"/api/anuncios/{UID}/quantidade").json(), {"quantidade": 34})
+        self.http.post(f"/api/anuncios/{UID}/status", json={"status": "paused"})
         self.assertEqual(db.tabelas["anuncios"][0]["status"], "pausado")
-        self.http.post("/api/anuncios/a1/preco", json={"preco": 49.9})
+        self.http.post(f"/api/anuncios/{UID}/preco", json={"preco": 49.9})
         self.assertEqual(db.tabelas["anuncios"][0]["preco"], 49.9)
         self.assertEqual([c[2] for c in ml.chamadas], [
             {"available_quantity": 34}, {"status": "paused"}, {"price": 49.9}])

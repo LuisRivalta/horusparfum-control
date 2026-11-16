@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-150058-9090
+# ID                 : 20261116-162148-1a1d
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : backend\app\services\anuncios\ia.py
 # Assunto            : IA opcional de ficha e textos dos anuncios ML
-# Origem             : solicitacao do usuario
-# Motivo             : Task 4 do plano de anuncios pedida pelo usuario
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:00:58
+# Ultima modificacao : 2026-11-16 16:21:48
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 """IA opcional (Claude Haiku) para ficha técnica e textos dos anúncios do ML."""
@@ -16,7 +17,7 @@ import re
 from app.config import settings
 
 MODELO = "claude-haiku-5-5"
-_EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200D<>]")
+_EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2190-\u21FF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D<>]")
 _AVISO = (
     "Não invente código de barras (GTIN), registro ANVISA nem números que não estejam nos dados."
 )
@@ -102,7 +103,7 @@ def sugerir_ficha(nome, marca, volume_ml, atributos, cliente=None) -> dict:
 
 
 def _limpar(txt: str) -> str:
-    return _EMOJI.sub("", txt or "").strip()
+    return re.sub(r"[ \t]{2,}", " ", _EMOJI.sub("", txt or "")).strip()
 
 
 def gerar_textos(ficha, nome, marca, anuncios, modelo_descricao, cliente=None) -> list[dict]:

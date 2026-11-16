@@ -1,5 +1,5 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-160554-a597
+# ID                 : 20261116-162052-75b3
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Rotas de anuncios
@@ -7,13 +7,14 @@
 # Origem             : automatico (hook)
 # Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:25:55
-# Ultima modificacao : 2026-11-16 16:05:54
+# Ultima modificacao : 2026-11-16 16:20:52
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import re
 import time
 from decimal import Decimal
 from typing import Literal
+from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -109,15 +110,17 @@ class PrecosIn(BaseModel):
 @router.post('/precos')
 def precos(body: PrecosIn, cliente: MLCliente = Depends(obter_cliente_ml)):
     saida = []
+    taxas: dict = {}  # listing_prices por preço, vale para os dois tipos e todos os itens
     for it in body.itens:
         pacote = body.pacotes.get(it.tipo, PacoteIn()).pacote()
         linha = {'chave': it.chave}
         for lt in TIPOS_ML:
             try:
-                r = calcular_preco(Decimal(str(it.custo)), Decimal(str(it.margem)), consulta_ml(cliente, lt, pacote))
+                r = calcular_preco(Decimal(str(it.custo)), Decimal(str(it.margem)),
+                                   consulta_ml(cliente, lt, pacote, taxas))
                 linha[lt] = _dinheiro(r)
-            except (ValueError, RuntimeError) as e:
-                linha[lt] = {'erro': str(e)}
+            except (ValueError, RuntimeError, MLErro) as e:  # MLDesconectado sobe (409)
+                linha[lt] = {'erro': getattr(e, 'mensagem', None) or str(e)}
         saida.append(linha)
     return {'itens': saida}
 
@@ -207,7 +210,8 @@ def _publicado(db, anuncio_id) -> dict:
 
 
 @router.get('/{anuncio_id}/qualidade')
-def qualidade(anuncio_id: str, db=Depends(obter_db), cliente: MLCliente = Depends(obter_cliente_ml)):
+def qualidade(anuncio_id: UUID, db=Depends(obter_db), cliente: MLCliente = Depends(obter_cliente_ml)):
+    anuncio_id = str(anuncio_id)
     a = _publicado(db, anuncio_id)
     perf = cliente.get(f"/item/{a['ml_item_id']}/performance")
     pendencias = [
@@ -222,7 +226,8 @@ def qualidade(anuncio_id: str, db=Depends(obter_db), cliente: MLCliente = Depend
 
 
 @router.post('/{anuncio_id}/quantidade')
-def quantidade(anuncio_id: str, db=Depends(obter_db), cliente: MLCliente = Depends(obter_cliente_ml)):
+def quantidade(anuncio_id: UUID, db=Depends(obter_db), cliente: MLCliente = Depends(obter_cliente_ml)):
+    anuncio_id = str(anuncio_id)
     a = _publicado(db, anuncio_id)
     produto = carregar_produto(db, a['produto_id']) or {}
     q = quantidade_disponivel(produto, ml_aberto(db, a['produto_id']), a['tipo'], a.get('ml'))
@@ -235,8 +240,9 @@ class StatusIn(BaseModel):
 
 
 @router.post('/{anuncio_id}/status')
-def alterar_status(anuncio_id: str, body: StatusIn, db=Depends(obter_db),
+def alterar_status(anuncio_id: UUID, body: StatusIn, db=Depends(obter_db),
                    cliente: MLCliente = Depends(obter_cliente_ml)):
+    anuncio_id = str(anuncio_id)
     a = _publicado(db, anuncio_id)
     cliente.put(f"/items/{a['ml_item_id']}", {'status': body.status})
     novo = 'pausado' if body.status == 'paused' else 'publicado'
@@ -249,8 +255,9 @@ class PrecoIn(BaseModel):
 
 
 @router.post('/{anuncio_id}/preco')
-def alterar_preco(anuncio_id: str, body: PrecoIn, db=Depends(obter_db),
+def alterar_preco(anuncio_id: UUID, body: PrecoIn, db=Depends(obter_db),
                   cliente: MLCliente = Depends(obter_cliente_ml)):
+    anuncio_id = str(anuncio_id)
     a = _publicado(db, anuncio_id)
     preco = round(body.preco, 2)
     cliente.put(f"/items/{a['ml_item_id']}", {'price': preco})

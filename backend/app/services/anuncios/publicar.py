@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-153010-f3da
+# ID                 : 20261116-162029-5587
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Publicacao de anuncios
 # Assunto            : Monta o item do ML e publica sem duplicar
-# Origem             : solicitacao do usuario
-# Motivo             : Revisao pediu tratar MLDesconectado e erro de rede depois de criar o item, falha de rede no POST /items e perfume sem marca.
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:25:28
-# Ultima modificacao : 2026-11-16 15:30:10
+# Ultima modificacao : 2026-11-16 16:20:29
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 """Monta o item do ML a partir do rascunho e publica um anúncio sem duplicar."""
@@ -20,7 +20,7 @@ from app.services.anuncios.preco import FRETE_GRATIS_A_PARTIR, Pacote
 from app.services.mercadolivre import MLErro
 
 CATEGORIA = 'MLB6284'
-SEM_GTIN_DECANT = '17055160'
+SEM_GTIN = '17055160'  # EMPTY_GTIN_REASON: produto sem código de barras
 
 
 def _num(v) -> str:
@@ -52,10 +52,12 @@ def montar_item(anuncio: dict, produto: dict, user_product: bool, quantidade: in
         attrs['UNIT_VOLUME'] = {'id': 'UNIT_VOLUME', 'value_name': f'{_num(ml)} mL'}
     if decant:
         attrs.pop('GTIN', None)  # decant nunca leva o código de barras do frasco
-        attrs['EMPTY_GTIN_REASON'] = {'id': 'EMPTY_GTIN_REASON', 'value_id': SEM_GTIN_DECANT}
-    elif produto.get('gtin'):
-        attrs.pop('EMPTY_GTIN_REASON', None)
+    if produto.get('gtin') and not decant:
         attrs['GTIN'] = {'id': 'GTIN', 'value_name': produto['gtin']}
+    if 'GTIN' in attrs:
+        attrs.pop('EMPTY_GTIN_REASON', None)
+    else:  # GTIN é condicional no MLB6284: sem ele o ML pede o motivo
+        attrs['EMPTY_GTIN_REASON'] = {'id': 'EMPTY_GTIN_REASON', 'value_id': SEM_GTIN}
     for aid, v in (('SELLER_PACKAGE_HEIGHT', pacote.altura_cm), ('SELLER_PACKAGE_WIDTH', pacote.largura_cm),
                    ('SELLER_PACKAGE_LENGTH', pacote.comprimento_cm), ('SELLER_PACKAGE_WEIGHT', pacote.peso_g)):
         if v is not None:
