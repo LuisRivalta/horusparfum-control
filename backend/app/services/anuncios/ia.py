@@ -1,3 +1,14 @@
+# [CLAUDE-CODE-AUDIT]
+# ID                 : 20261116-150058-9090
+# Tipo de item       : Script Python
+# Autores            : luisgfr; MS125; Claude Code
+# Titulo             : backend\app\services\anuncios\ia.py
+# Assunto            : IA opcional de ficha e textos dos anuncios ML
+# Origem             : solicitacao do usuario
+# Motivo             : Task 4 do plano de anuncios pedida pelo usuario
+# Criado em          : 2026-11-16 15:00:58
+# Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
+# [/CLAUDE-CODE-AUDIT]
 """IA opcional (Claude Haiku) para ficha técnica e textos dos anúncios do ML."""
 import json
 import re
@@ -35,18 +46,23 @@ _SCHEMA_TEXTOS = {
 
 
 def _chamar(prompt: str, schema: dict, cliente=None) -> dict:
-    if cliente is None:
-        import anthropic
-        cliente = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    resposta = cliente.messages.create(
-        model=MODELO,
-        max_tokens=4000,
-        messages=[{"role": "user", "content": prompt}],
-        output_config={"format": {"type": "json_schema", "schema": schema}},
-    )
-    if resposta.stop_reason in ("refusal", "max_tokens"):
-        raise RuntimeError(f"IA sem resposta utilizável ({resposta.stop_reason})")
-    return json.loads(resposta.content[0].text)
+    try:
+        if cliente is None:
+            import anthropic
+            cliente = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        resposta = cliente.messages.create(
+            model=MODELO,
+            max_tokens=4000,
+            messages=[{"role": "user", "content": prompt}],
+            output_config={"format": {"type": "json_schema", "schema": schema}},
+        )
+        if resposta.stop_reason in ("refusal", "max_tokens"):
+            raise RuntimeError(f"IA sem resposta utilizável ({resposta.stop_reason})")
+        return json.loads(resposta.content[0].text)
+    except RuntimeError:
+        raise
+    except Exception as e:  # sem a chave nem a resposta crua na mensagem
+        raise RuntimeError("IA falhou") from e
 
 
 def sugerir_ficha(nome, marca, volume_ml, atributos, cliente=None) -> dict:
@@ -66,18 +82,22 @@ def sugerir_ficha(nome, marca, volume_ml, atributos, cliente=None) -> dict:
         "value_id da lista (e value_name igual ao nome dele); para os demais, value_id null. "
         + _AVISO
     )
-    dados = _chamar(prompt, _SCHEMA_FICHA, cliente)
+    try:
+        dados = _chamar(prompt, _SCHEMA_FICHA, cliente)
+    except RuntimeError:
+        return {}
     ficha = {}
     for it in dados.get("atributos", []):
         a = por_id.get(it.get("id"))
         if not a:
             continue
         if a.get("values"):
-            if it.get("value_id") not in {v["id"] for v in a["values"]}:
+            v = next((v for v in a["values"] if v["id"] == it.get("value_id")), None)
+            if not v:
                 continue
-        elif not it.get("value_name"):
-            continue
-        ficha[a["id"]] = {"value_id": it.get("value_id"), "value_name": it["value_name"]}
+            ficha[a["id"]] = {"value_id": v["id"], "value_name": v["name"]}
+        elif it.get("value_name"):
+            ficha[a["id"]] = {"value_id": it.get("value_id"), "value_name": it["value_name"]}
     return ficha
 
 
@@ -98,7 +118,10 @@ def gerar_textos(ficha, nome, marca, anuncios, modelo_descricao, cliente=None) -
         + _AVISO + " Devolva uma entrada por anúncio, com a mesma chave."
     )
     dados = _chamar(prompt, _SCHEMA_TEXTOS, cliente)
-    return [
-        {"chave": x["chave"], "titulo": _limpar(x["titulo"])[:150], "descricao": _limpar(x["descricao"])}
-        for x in dados.get("anuncios", [])
-    ]
+    try:
+        return [
+            {"chave": x["chave"], "titulo": _limpar(x["titulo"])[:150], "descricao": _limpar(x["descricao"])}
+            for x in dados["anuncios"]
+        ]
+    except (KeyError, TypeError) as e:
+        raise RuntimeError("IA falhou") from e

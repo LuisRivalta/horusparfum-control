@@ -1,3 +1,14 @@
+# [CLAUDE-CODE-AUDIT]
+# ID                 : 20261116-150059-5e12
+# Tipo de item       : Script Python
+# Autores            : luisgfr; MS125; Claude Code
+# Titulo             : backend\tests\test_anuncios_ia.py
+# Assunto            : IA opcional de ficha e textos dos anuncios ML
+# Origem             : solicitacao do usuario
+# Motivo             : Task 4 do plano de anuncios pedida pelo usuario
+# Criado em          : 2026-11-16 15:00:59
+# Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
+# [/CLAUDE-CODE-AUDIT]
 import json
 import unittest
 from types import SimpleNamespace
@@ -10,6 +21,17 @@ from app.services.anuncios import ia
 def falso(dados, stop="end_turn"):
     def create(**kw):
         return SimpleNamespace(content=[SimpleNamespace(text=json.dumps(dados))], stop_reason=stop)
+    return SimpleNamespace(messages=SimpleNamespace(create=create))
+
+
+def texto_ruim(txt="{nao e json"):
+    create = lambda **kw: SimpleNamespace(content=[SimpleNamespace(text=txt)], stop_reason="end_turn")
+    return SimpleNamespace(messages=SimpleNamespace(create=create))
+
+
+def explode():
+    def create(**kw):
+        raise ConnectionError("rede")
     return SimpleNamespace(messages=SimpleNamespace(create=create))
 
 
@@ -42,10 +64,17 @@ class FichaTest(unittest.TestCase):
         with patch.object(settings, "anthropic_api_key", ""):
             self.assertEqual(ia.sugerir_ficha("A", "B", 100, ATRS), {})
 
-    def test_ficha_recusa_vira_erro(self):
+    def test_ficha_falha_vira_vazio(self):
+        ruins = [falso({}, stop="refusal"), falso({}, stop="max_tokens"), texto_ruim(), explode()]
         with patch.object(settings, "anthropic_api_key", "k"):
-            with self.assertRaises(RuntimeError):
-                ia.sugerir_ficha("A", "B", 1, ATRS, cliente=falso({}, stop="refusal"))
+            for c in ruins:
+                self.assertEqual(ia.sugerir_ficha("A", "B", 1, ATRS, cliente=c), {})
+
+    def test_ficha_usa_nome_do_valor_da_categoria(self):
+        c = falso({"atributos": [item("GENDER", "339665", "inventado")]})
+        with patch.object(settings, "anthropic_api_key", "k"):
+            r = ia.sugerir_ficha("A", "B", 1, ATRS, cliente=c)
+        self.assertEqual(r["GENDER"]["value_name"], "Feminino")
 
 
 class TextosTest(unittest.TestCase):
@@ -60,6 +89,14 @@ class TextosTest(unittest.TestCase):
         self.assertNotIn(">", d)
         self.assertNotIn("❤", d)
         self.assertIn("Ótimo", d)
+
+    def test_textos_falha_vira_runtimeerror(self):
+        ruins = [falso({}, stop="max_tokens"), texto_ruim(), explode(),
+                 falso({"anuncios": [{"chave": "a"}]}), falso({})]
+        with patch.object(settings, "anthropic_api_key", "k"):
+            for c in ruins:
+                with self.assertRaises(RuntimeError):
+                    ia.gerar_textos({}, "N", "M", [], "", cliente=c)
 
     def test_textos_sem_chave_erro(self):
         with patch.object(settings, "anthropic_api_key", ""):
