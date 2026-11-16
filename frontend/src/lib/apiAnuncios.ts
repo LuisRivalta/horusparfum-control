@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import type { TipoAnuncio } from '@/lib/anuncios'
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
 
@@ -30,14 +31,15 @@ export interface AtributoML {
   id: string; name: string; value_type: string
   values?: { id: string; name: string }[]; tags?: unknown
 }
-export interface Pacote { peso_g: number; altura_cm: number; largura_cm: number; comprimento_cm: number }
+// medida faltando vai como null: o backend devolve {erro} só para aquele tipo
+export interface Pacote { peso_g: number | null; altura_cm: number | null; largura_cm: number | null; comprimento_cm: number | null }
 export type TipoML = 'gold_special' | 'gold_pro'
-export interface ItemPreco { chave: string; custo: number; margem: number; tipo: TipoML }
+export interface ItemPreco { chave: string; custo: number; margem: number; tipo: TipoAnuncio }
 export interface Cotacao { preco: number; comissao: number; taxa_fixa: number; frete: number; lucro: number }
 export type CotacaoOuErro = Cotacao | { erro: string }
 export interface PrecosBody { itens: ItemPreco[]; pacotes: { frasco: Pacote; decant: Pacote } }
 export interface PrecosResp { itens: { chave: string; gold_special: CotacaoOuErro; gold_pro: CotacaoOuErro }[] }
-export interface AnuncioTexto { chave: string; tipo: TipoML; ml: unknown }
+export interface AnuncioTexto { chave: string; tipo: TipoAnuncio; ml: number | null }
 export interface TextoGerado { chave: string; titulo: string; descricao: string }
 export interface ResultadoPublicar { id: string; status: string; ml_item_id?: string; erro?: string }
 export interface Qualidade {
