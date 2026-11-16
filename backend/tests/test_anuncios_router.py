@@ -1,18 +1,22 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-152623-95c9
+# ID                 : 20261116-153011-7bfa
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Testes rotas anuncios
 # Assunto            : Testes das rotas de anuncios com banco e ML falsos
 # Origem             : solicitacao do usuario
-# Motivo             : Brief da Task 7 pede TDD das rotas de publicacao, preco e qualidade.
+# Motivo             : Revisao pediu testes das falhas depois de criar o item e do perfume sem marca.
 # Criado em          : 2026-11-16 15:24:58
+# Ultima modificacao : 2026-11-16 15:30:11
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import sys
 import types
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
+
+import httpx
 
 from fastapi.testclient import TestClient
 
@@ -62,11 +66,12 @@ class FakeML:
     user_product = False
     ml_user_id = 1
 
-    def __init__(self, falhar_titulos=(), falhar_descricao=False, desconectado=False, respostas=None):
+    def __init__(self, falhar_titulos=(), falhar_descricao=False, desconectado=False, respostas=None, excecoes=None):
         self.falhar_titulos = set(falhar_titulos)
         self.falhar_descricao = falhar_descricao
         self.desconectado = desconectado
         self.respostas = respostas or {}
+        self.excecoes = excecoes or {}  # (método, path) -> exceção a lançar
         self.chamadas = []
         self.n = 0
 
@@ -77,6 +82,8 @@ class FakeML:
     def get(self, path, params=None):
         self._ver()
         self.chamadas.append(("GET", path))
+        if ("GET", path) in self.excecoes:
+            raise self.excecoes[("GET", path)]
         if path in self.respostas:
             return self.respostas[path]
         if path.startswith("/items/"):
@@ -86,6 +93,8 @@ class FakeML:
     def post(self, path, json):
         self._ver()
         self.chamadas.append(("POST", path))
+        if ("POST", path) in self.excecoes:
+            raise self.excecoes[("POST", path)]
         if path == "/items":
             if json["title"] in self.falhar_titulos:
                 self.falhar_titulos.discard(json["title"])
@@ -168,6 +177,58 @@ class AnunciosRouterTest(unittest.TestCase):
         r = self.http.post("/api/anuncios/publicar", json={"ids": ["a1"]}).json()["resultados"]
         self.assertIn("deleted", r[0]["erro"])
         self.assertIn("deleted", db.tabelas["anuncios"][0]["erro"])
+
+    def test_descricao_desconectado_fica_publicado_com_erro(self):
+        db = banco([anuncio(1)])
+        ml = FakeML(excecoes={("POST", "/items/MLB1/description"): MLDesconectado()})
+        self.usar(db, ml)
+        r = self.http.post("/api/anuncios/publicar", json={"ids": ["a1"]})
+        self.assertEqual(r.status_code, 200)
+        linha = db.tabelas["anuncios"][0]
+        self.assertEqual((linha["status"], linha["ml_item_id"]), ("publicado", "MLB1"))
+        self.assertTrue(linha["erro"].startswith("Descrição:"))
+
+    def test_timeout_na_conferencia_mantem_publicado(self):
+        db = banco([anuncio(1)])
+        ml = FakeML(excecoes={("GET", "/items/MLB1"): httpx.ReadTimeout("tempo esgotado")})
+        self.usar(db, ml)
+        r = self.http.post("/api/anuncios/publicar", json={"ids": ["a1"]}).json()["resultados"]
+        self.assertEqual(r[0]["status"], "publicado")
+        linha = db.tabelas["anuncios"][0]
+        self.assertEqual((linha["status"], linha["ml_item_id"]), ("publicado", "MLB1"))
+
+    def test_falha_de_rede_no_post_items_vira_erro_sem_ml_item_id(self):
+        db = banco([anuncio(1)])
+        self.usar(db, FakeML(excecoes={("POST", "/items"): httpx.ConnectTimeout("rede")}))
+        r = self.http.post("/api/anuncios/publicar", json={"ids": ["a1"]}).json()["resultados"]
+        self.assertEqual(r[0]["status"], "erro")
+        self.assertEqual(r[0]["erro"], "Falha de rede ao publicar: confira no ML antes de tentar de novo")
+        self.assertIsNone(db.tabelas["anuncios"][0]["ml_item_id"])
+
+    def test_perfume_sem_marca_nao_chama_ml(self):
+        db = banco([anuncio(1)])
+        db.tabelas["produtos"][0]["marca_id"] = None
+        ml = FakeML()
+        self.usar(db, ml)
+        r = self.http.post("/api/anuncios/publicar", json={"ids": ["a1"]}).json()["resultados"]
+        self.assertEqual((r[0]["status"], r[0]["erro"]), ("erro", "Perfume sem marca"))
+        self.assertEqual(db.tabelas["anuncios"][0]["erro"], "Perfume sem marca")
+        self.assertEqual(self.posts_items(ml), [])
+
+    def test_falha_inesperada_com_item_criado_nao_vira_erro(self):
+        db = banco([anuncio(1)])
+        self.usar(db, FakeML())
+
+        def quebra(db_, cliente, anuncio_id):
+            db_.tabelas["anuncios"][0].update(status="publicado", ml_item_id="MLB7")
+            raise KeyError("x")
+
+        with patch.object(rota, "publicar_um", quebra):
+            r = self.http.post("/api/anuncios/publicar", json={"ids": ["a1"]}).json()["resultados"]
+        linha = db.tabelas["anuncios"][0]
+        self.assertEqual((linha["status"], linha["ml_item_id"]), ("publicado", "MLB7"))
+        self.assertEqual(r[0]["status"], "publicado")
+        self.assertIn("KeyError", linha["erro"])
 
     def test_precos_sem_conexao_409(self):
         self.usar(banco([]), FakeML(desconectado=True))

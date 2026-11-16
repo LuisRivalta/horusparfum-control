@@ -1,17 +1,20 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-152622-8839
+# ID                 : 20261116-153010-f3da
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Publicacao de anuncios
 # Assunto            : Monta o item do ML e publica sem duplicar
 # Origem             : solicitacao do usuario
-# Motivo             : Brief da Task 7 pede montar_item, quantidade_disponivel e a publicacao isolada por anuncio.
+# Motivo             : Revisao pediu tratar MLDesconectado e erro de rede depois de criar o item, falha de rede no POST /items e perfume sem marca.
 # Criado em          : 2026-11-16 15:25:28
+# Ultima modificacao : 2026-11-16 15:30:10
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 """Monta o item do ML a partir do rascunho e publica um anúncio sem duplicar."""
 from datetime import datetime, timezone
 from decimal import Decimal
+
+import httpx
 
 from app.services.anuncios.preco import FRETE_GRATIS_A_PARTIR, Pacote
 from app.services.mercadolivre import MLErro
@@ -110,8 +113,17 @@ def gravar(db, anuncio_id, campos: dict) -> None:
 
 # --- publicação ---------------------------------------------------------------
 
+def _falhou(db, anuncio_id, erro: str) -> dict:
+    gravar(db, anuncio_id, {'status': 'erro', 'erro': erro})
+    return {'id': anuncio_id, 'status': 'erro', 'erro': erro}
+
+
+def _msg(e: Exception) -> str:
+    return getattr(e, 'mensagem', None) or type(e).__name__
+
+
 def publicar_um(db, cliente, anuncio_id) -> dict:
-    """Publica um rascunho; nunca cria o item de novo se já há ml_item_id. MLDesconectado sobe."""
+    """Publica um rascunho; nunca cria o item de novo se já há ml_item_id. MLDesconectado antes de criar sobe."""
     a = carregar_anuncio(db, anuncio_id)
     if not a:
         return {'id': anuncio_id, 'status': 'erro', 'erro': 'Anúncio não encontrado'}
@@ -120,15 +132,19 @@ def publicar_um(db, cliente, anuncio_id) -> dict:
 
     produto = carregar_produto(db, a['produto_id'])
     if not produto:
-        gravar(db, anuncio_id, {'status': 'erro', 'erro': 'Perfume não encontrado'})
-        return {'id': anuncio_id, 'status': 'erro', 'erro': 'Perfume não encontrado'}
+        return _falhou(db, anuncio_id, 'Perfume não encontrado')
+    if not produto.get('marca') and not (produto.get('ficha') or {}).get('BRAND'):
+        return _falhou(db, anuncio_id, 'Perfume sem marca')
     qtd = quantidade_disponivel(produto, ml_aberto(db, a['produto_id']), a['tipo'], a.get('ml'))
     item = montar_item(a, produto, cliente.user_product, qtd, pacote_envio(db, a['tipo']))
     try:
         criado = cliente.post('/items', item)
     except MLErro as e:
-        gravar(db, anuncio_id, {'status': 'erro', 'erro': e.mensagem})
-        return {'id': anuncio_id, 'status': 'erro', 'erro': e.mensagem}
+        return _falhou(db, anuncio_id, e.mensagem)
+    except httpx.HTTPError:
+        # ponytail: o ML não tem chave de idempotência no POST /items; se a rede caiu depois de ele criar,
+        # só conferindo a conta (ou buscando pelo título em items/search) dá para evitar o duplicado.
+        return _falhou(db, anuncio_id, 'Falha de rede ao publicar: confira no ML antes de tentar de novo')
 
     ml_id = criado['id']
     # Grava já: daqui em diante uma nova tentativa não cria outro item.
@@ -136,14 +152,14 @@ def publicar_um(db, cliente, anuncio_id) -> dict:
     erros = []
     try:
         cliente.post(f'/items/{ml_id}/description', {'plain_text': a.get('descricao') or ''})
-    except MLErro as e:
-        erros.append(f'Descrição: {e.mensagem}')
+    except Exception as e:  # inclui MLDesconectado e rede: o item já existe, só registra
+        erros.append(f'Descrição: {_msg(e)}')
     try:
         situacao = cliente.get(f'/items/{ml_id}')
         if situacao.get('status') == 'closed':
             sub = situacao.get('sub_status') or []
             erros.append('ML fechou o anúncio: ' + (', '.join(sub) if isinstance(sub, list) else str(sub)))
-    except MLErro:
+    except Exception:
         pass  # conferência opcional; o item já foi criado
     erro = '; '.join(erros) or None
     if erro:

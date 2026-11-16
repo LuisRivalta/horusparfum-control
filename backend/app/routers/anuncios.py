@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-152622-c644
+# ID                 : 20261116-153011-683f
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Rotas de anuncios
 # Assunto            : Atributos, precos, IA, publicar, qualidade, quantidade, status e preco no ML
 # Origem             : solicitacao do usuario
-# Motivo             : Brief da Task 7 pede as rotas de anuncios usadas pela tela Anuncios.
+# Motivo             : Revisao pediu nao trocar o status para erro quando o anuncio ja tem ml_item_id.
 # Criado em          : 2026-11-16 15:25:55
+# Ultima modificacao : 2026-11-16 15:30:11
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import time
@@ -185,6 +186,11 @@ def publicar(body: PublicarIn, db=Depends(obter_db), cliente: MLCliente = Depend
             raise
         except Exception as e:  # um anúncio com problema não derruba os outros
             erro = f'Falha inesperada ({type(e).__name__})'
+            a = carregar_anuncio(db, anuncio_id) or {}
+            if a.get('ml_item_id'):  # item já existe no ML: não volta para erro, só anota
+                gravar(db, anuncio_id, {'erro': erro})
+                resultados.append({'id': anuncio_id, 'status': a.get('status'), 'ml_item_id': a['ml_item_id'], 'erro': erro})
+                continue
             gravar(db, anuncio_id, {'status': 'erro', 'erro': erro})
             resultados.append({'id': anuncio_id, 'status': 'erro', 'erro': erro})
     return {'resultados': resultados}
