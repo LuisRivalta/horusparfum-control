@@ -39,7 +39,8 @@ C:\Horus\
 │       ├── 20260617_consumo_decant.sql
 │       ├── 20260622142718_fix_cancelar_venda_decant_fk.sql
 │       ├── 20261116100000_insumos_schema.sql
-│       └── 20261116110000_insumos_rpcs.sql
+│       ├── 20261116110000_insumos_rpcs.sql
+│       └── 20261117100000_anuncios_schema.sql
 ├── frontend\
 │   ├── vercel.json             → Rewrite SPA para o deploy na Vercel
 │   └── src\
@@ -55,6 +56,7 @@ C:\Horus\
 │       │   ├── auth\           → Login.tsx
 │       │   ├── home\           → Home.tsx
 │       │   ├── financeiro\     → Dashboard, Transacoes, Contas, Relatorios, Metas
+│       │   ├── anuncios\       → AnunciosLista, NovoAnuncio (+ novo\*), FotosPerfume, LigarAnuncios, AnunciosConfig
 │       │   └── estoque\        → EstoqueView (Estoque), Cadastros (layout), Produtos, Vendas, Decants,
 │       │       │               → Pedidos, Divergencias, Categorias, Fornecedores,
 │       │       │               → Relatorios
@@ -65,7 +67,7 @@ C:\Horus\
 │       │       ├── vendas\     → VendaFormModal, InsumosVenda, VendaDetalheModal, VendasConfig
 │       │       └── __tests__\  → testes de componente (colocados por área)
 │       ├── lib\                → utils, supabase, financeiro, pedidos, estoque,
-│       │   │                   → decants, vendas, insumos, decantOrigens (lógica pura, testável)
+│       │   │                   → decants, vendas, insumos, decantOrigens, anuncios (lógica pura, testável); apiAnuncios.ts (chamadas ao backend)
 │       │   └── __tests__\      → financeiro, pedidos, estoque, decants, vendas (TDD)
 │       ├── test\               → setup.ts (Vitest)
 │       ├── styles\             → globals.css (Tailwind + tema dark/light)
@@ -75,9 +77,11 @@ C:\Horus\
     └── app\
         ├── main.py             → FastAPI app + CORS
         ├── auth\               → deps.py (validação de JWT)
-        ├── routers\            → financeiro.py, estoque.py
+        ├── routers\            → financeiro.py, estoque.py, mercadolivre.py, anuncios.py
         ├── models\             → schemas Pydantic
         ├── services\           → cálculos backend (relatórios financeiros)
+        │   ├── mercadolivre\  → cliente.py (MLCliente, renova token), conexao.py (OAuth, state)
+        │   └── anuncios\      → preco.py, ia.py, publicar.py
         └── db\                 → supabase.py (service role client)
 ```
 
@@ -163,6 +167,10 @@ SUPABASE_URL=https://wyobbztexoofhqdttxzq.supabase.co
 SUPABASE_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 FRONTEND_URL=http://localhost:5173
+ML_CLIENT_ID=
+ML_CLIENT_SECRET=
+ML_REDIRECT_URI=
+ANTHROPIC_API_KEY=          # opcional (IA dos anúncios)
 ```
 
 ## Fluxo de dados
@@ -206,8 +214,11 @@ Browser (React SPA)
 | /estoque/cadastros (+ /produtos · /categorias · /fornecedores) | Cadastros (abas: Produtos, Categorias, Fornecedores) — as rotas antigas `/estoque/produtos`, `/estoque/categorias`, `/estoque/fornecedores` redirecionam para as novas |
 | /estoque/pedidos · /divergencias | Pedidos · Divergências |
 | /estoque/relatorios | Relatório de giro |
+| /anuncios | Lista de anúncios |
+| /anuncios/novo · /anuncios/:id | Novo anúncio (passo a passo) · reabrir rascunho |
+| /anuncios/ligar · /anuncios/config | Ligar anúncios do ML · Configuração (conexão, margem, IA) |
 
-Tudo sob `/financeiro/*` e `/estoque/*` usa o `Layout` (sidebar + header). A nav lateral alterna entre os grupos Financeiro e Estoque.
+Tudo sob `/financeiro/*`, `/estoque/*` e `/anuncios/*` usa o `Layout` (sidebar + header). A nav lateral alterna entre os módulos Financeiro, Estoque e Anúncios.
 
 ## Deploy
 

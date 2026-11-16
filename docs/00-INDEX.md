@@ -40,6 +40,8 @@ Abaixo estão os guias detalhados de cada módulo funcional do sistema, explican
 - [[features/INSUMOS]] — Estoque de insumos (embalagem/envio), compra, acerto e listas que baixam na venda e no decant.
 - [[features/AUTENTICACAO]] — Fluxo de login e políticas RLS de segurança e controle de acessos.
 
+
+
 ---
 
 ## 🧩 Histórico de Design e Implementação

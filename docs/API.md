@@ -70,6 +70,21 @@ const token = session?.access_token;
 | 11 | `GET` | `/api/estoque/alertas` | ✅ | Listar alertas de estoque | 🔶 Stub |
 | 12 | `POST` | `/api/estoque/pedidos/importar-pdf` | ✅ | Importar pedido via PDF | ✅ Completo |
 | 13 | `GET` | `/api/estoque/vendas/dashboard` | ✅ | Dashboard de vendas | ✅ Completo |
+| 14 | `GET` | `/api/mercadolivre/conexao` | ✅ | Estado da conexão com o ML | ✅ Completo |
+| 15 | `GET` | `/api/mercadolivre/conectar` | ✅ | URL de autorização do ML | ✅ Completo |
+| 16 | `GET` | `/api/mercadolivre/callback` | ❌ | Retorno do OAuth (redireciona ao frontend) | ✅ Completo |
+| 17 | `POST` | `/api/mercadolivre/desconectar` | ✅ | Apaga a conexão | ✅ Completo |
+| 18 | `GET` | `/api/anuncios/atributos` | ✅ | Atributos da categoria de perfumes | ✅ Completo |
+| 19 | `POST` | `/api/anuncios/precos` | ✅ | Preço que fecha a margem | ✅ Completo |
+| 20 | `POST` | `/api/anuncios/ia/ficha` | ✅ | IA sugere a ficha | ✅ Completo |
+| 21 | `POST` | `/api/anuncios/ia/textos` | ✅ | IA gera título e descrição | ✅ Completo |
+| 22 | `POST` | `/api/anuncios/publicar` | ✅ | Publica rascunhos no ML | ✅ Completo |
+| 23 | `GET` | `/api/anuncios/{id}/qualidade` | ✅ | Nota de qualidade do ML | ✅ Completo |
+| 24 | `POST` | `/api/anuncios/{id}/quantidade` | ✅ | Envia a quantidade ao ML | ✅ Completo |
+| 25 | `POST` | `/api/anuncios/{id}/status` | ✅ | Pausa ou reativa | ✅ Completo |
+| 26 | `POST` | `/api/anuncios/{id}/preco` | ✅ | Aplica um preço no ML | ✅ Completo |
+| 27 | `GET` | `/api/anuncios/conta/itens` | ✅ | Anúncios que já existem na conta do ML | ✅ Completo |
+| 28 | `POST` | `/api/anuncios/ligar` | ✅ | Liga um anúncio do ML a um perfume | ✅ Completo |
 
 **Legenda:**
 - ✅ **Completo** — Endpoint totalmente funcional com lógica de negócio
@@ -579,6 +594,52 @@ Retorna dados consolidados para o dashboard de vendas no período especificado.
 
 ---
 
+### 14. Mercado Livre e Anúncios ✅
+
+Detalhes de negócio em [[features/ANUNCIOS]]. Todas as rotas exigem JWT, exceto `/api/mercadolivre/callback` (protegida pelo `state` assinado). Erros comuns às rotas que falam com o ML: `409 {"detail": "Conecte a conta do Mercado Livre"}` (sem conexão) e `502 {"detail": "<mensagem do ML>"}` (o ML recusou).
+
+**Conexão (`/api/mercadolivre`)**
+
+| Rota | Body | Resposta | Erros |
+|---|---|---|---|
+| `GET /conexao` | — | `{"conectado": bool, "nickname": str\|null, "user_product": bool}` (nunca devolve token) | — |
+| `GET /conectar` | — | `{"url": "<autorização do ML>"}` | `503` ML não configurado (faltam variáveis) |
+| `GET /callback?code=&state=` | — | Redireciona (302) para `{FRONTEND_URL}/anuncios/config?ml=ok` ou `?ml=erro` | — |
+| `POST /desconectar` | — | `{"conectado": false}` | — |
+
+**Preço e catálogo (`/api/anuncios`)**
+
+| Rota | Body | Resposta | Erros |
+|---|---|---|---|
+| `GET /atributos` | — | Lista de atributos visíveis da categoria `MLB6284` (cache de 1 h) | `502` |
+| `POST /precos` | `{"itens": [{"chave", "custo", "margem", "tipo": "frasco"\|"decant"}], "pacotes": {"frasco": Pacote, "decant": Pacote}}` (Pacote: `peso_g`, `altura_cm`, `largura_cm`, `comprimento_cm`, todos opcionais) | `{"itens": [{"chave", "gold_special": {preco, comissao, taxa_fixa, frete, lucro} \| {"erro"}, "gold_pro": {...}}]}` | `409`, `502` |
+
+**IA (`/api/anuncios/ia`)**
+
+| Rota | Body | Resposta | Erros |
+|---|---|---|---|
+| `POST /ficha` | `{"produto_id"}` | `{"ficha": {ATRIBUTO: {value_id\|value_name}}}` | `409` IA desligada, `404` perfume não encontrado |
+| `POST /textos` | `{"produto_id", "anuncios": [{"chave", "tipo", "ml"?}]}` | `{"textos": ...}` por anúncio | `409`, `404`, `502` |
+
+**Publicar e gerir (`/api/anuncios`)**
+
+| Rota | Body | Resposta | Erros |
+|---|---|---|---|
+| `POST /publicar` | `{"ids": [anuncio_id]}` | `{"resultados": [{"id", "status", "ml_item_id"?, "erro"?}]}`; um anúncio com problema não derruba os outros | `409` sem conexão |
+| `GET /{id}/qualidade` | — | `{"score": int\|null, "nivel", "pendencias": [{"titulo", "texto", "link"}]}` | `404`, `400` ainda não publicado, `409`, `502` |
+| `POST /{id}/quantidade` | — | `{"quantidade": int}` (calculada pela regra de estoque e enviada ao ML) | `404`, `400`, `409`, `502` |
+| `POST /{id}/status` | `{"status": "paused"\|"active"}` | `{"status": "pausado"\|"publicado"}` | `404`, `400`, `409`, `502` |
+| `POST /{id}/preco` | `{"preco": float > 0}` | `{"preco": float}` | `404`, `400`, `422`, `409`, `502` |
+
+**Ligar anúncios existentes (`/api/anuncios`)**
+
+| Rota | Body | Resposta | Erros |
+|---|---|---|---|
+| `GET /conta/itens` | — | `{"itens": [{"ml_item_id", "titulo", "preco", "quantidade", "status", "permalink", "volume_ml", "ligado"}]}` (para em 1000 itens) | `409`, `502` |
+| `POST /ligar` | `{"ml_item_id", "produto_id", "tipo", "ml"?}` | `{"status": "publicado"\|"pausado"}` | `400` (decant sem ml, frasco com ml, perfume inexistente, anúncio encerrado, tipo de anúncio não suportado), `409` já ligado, `502` |
+
+---
+
 ## ⚠️ Tratamento de Erros — Referência Geral
 
 A API segue um padrão consistente de respostas de erro:
@@ -590,6 +651,7 @@ A API segue um padrão consistente de respostas de erro:
 | `400` | Bad Request | Parâmetros inválidos, período inválido, `inicio` > `fim`, arquivo não é PDF |
 | `401` | Unauthorized | Token JWT ausente, expirado ou inválido |
 | `404` | Not Found | Recurso não encontrado (ex: produto inexistente) |
+| `409` | Conflict | Mercado Livre desconectado, IA desligada, anúncio já ligado |
 | `413` | Payload Too Large | Upload de PDF excede 10MB |
 | `502` | Bad Gateway | Falha na comunicação com o Supabase |
 
@@ -603,6 +665,7 @@ A API segue um padrão consistente de respostas de erro:
 
 > [!NOTE]
 > Todas as mensagens de erro são retornadas **sem acentos** para evitar problemas de encoding em diferentes ambientes.
+> As rotas de Anúncios (`/api/anuncios`, `/api/mercadolivre`) devolvem mensagens em português **com acentos**.
 
 ---
 
@@ -642,6 +705,7 @@ O FastAPI gera documentação interativa automaticamente:
 - [[features/FINANCEIRO]] — Módulo financeiro no frontend
 - [[features/ESTOQUE]] — Módulo de estoque no frontend
 - [[features/VENDAS]] — Funcionalidades de vendas
+- [[features/ANUNCIOS]] — Anúncios no Mercado Livre
 - [[features/PEDIDOS]] — Gestão de pedidos de compra
 - [[features/METAS]] — Sistema de metas financeiras
 - [[features/RELATORIOS]] — Relatórios e dashboards

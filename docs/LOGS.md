@@ -1,3 +1,19 @@
+## 2026-11-17 - Sessão 70: Anúncios (Parte 2 do módulo Anúncios)
+
+**Responsável:** Claude + Luis
+
+### O que foi feito
+- Plano `docs/superpowers/plans/2026-11-16-anuncios.md` executado por tarefas (16-17/11/2026), commits locais na `main`, sem push.
+- Migration `20261117100000_anuncios_schema.sql` (`ml_conexao`, `anuncios`, `anuncios_config`, `produtos.ficha`/`fotos`), aplicada pelo Luis em 16/11/2026.
+- Backend: `routers/mercadolivre.py` (conexão OAuth, token de uso único), `routers/anuncios.py` (atributos, preços, IA, publicar, qualidade, quantidade, status, preço, ligar), `services/mercadolivre/`, `services/anuncios/{preco,ia,publicar}.py`; variáveis `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `ML_REDIRECT_URI`, `ANTHROPIC_API_KEY`.
+- Frontend: módulo Anúncios na nav (`/anuncios`, `/novo`, `/:id`, `/ligar`, `/config`), `lib/anuncios.ts`, `lib/apiAnuncios.ts`.
+- Docs: novo `features/ANUNCIOS.md` (com checklist de ativação); atualizados `00-INDEX`, `API`, `ARQUITETURA`, `DEPLOY`, `HANDOFF_IA`.
+
+### Pendente
+- Luis: criar o app no ML, cadastrar as variáveis na Vercel, `npx vercel --prod` em `backend/`, push da `main`, conectar em Anúncios › Configuração (passo a passo em `features/ANUNCIOS.md`).
+- Limites conhecidos: busca de existentes para em 1000; anúncios ligados sem `custo_base`; quantidade só por botão; sem idempotência na criação.
+- Parte 3 ("Vendas do ML") precisa de plano próprio.
+
 ## 2026-11-16 - Sessão 69: Insumos (Parte 1 do módulo Anúncios)
 
 **Responsável:** Claude + Luis
