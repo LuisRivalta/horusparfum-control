@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162032-2edf
+# ID                 : 20261116-162709-cd47
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Testes publicar anuncios
 # Assunto            : Testes de montar_item e quantidade_disponivel
-# Origem             : automatico (hook)
-# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
+# Origem             : solicitacao do usuario
+# Motivo             : Teste do frasco sem GTIN pedido pela revisao.
 # Criado em          : 2026-11-16 15:24:25
-# Ultima modificacao : 2026-11-16 16:20:32
+# Ultima modificacao : 2026-11-16 16:27:09
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import unittest

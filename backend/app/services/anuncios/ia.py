@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162148-1a1d
+# ID                 : 20261116-162711-7b88
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : backend\app\services\anuncios\ia.py
 # Assunto            : IA opcional de ficha e textos dos anuncios ML
-# Origem             : automatico (hook)
-# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
+# Origem             : solicitacao do usuario
+# Motivo             : Revisao apontou setas, estrelas e espaco duplo nao removidos dos textos da IA.
 # Criado em          : 2026-11-16 15:00:58
-# Ultima modificacao : 2026-11-16 16:21:48
+# Ultima modificacao : 2026-11-16 16:27:11
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 """IA opcional (Claude Haiku) para ficha técnica e textos dos anúncios do ML."""

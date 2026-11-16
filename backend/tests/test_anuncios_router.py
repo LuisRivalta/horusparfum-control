@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162131-e836
+# ID                 : 20261116-162709-e7fe
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Testes rotas anuncios
 # Assunto            : Testes das rotas de anuncios com banco e ML falsos
-# Origem             : automatico (hook)
-# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
+# Origem             : solicitacao do usuario
+# Motivo             : Testes de recusa do ML por tipo, consulta unica de taxas e id nao UUID pedidos pela revisao.
 # Criado em          : 2026-11-16 15:24:58
-# Ultima modificacao : 2026-11-16 16:21:31
+# Ultima modificacao : 2026-11-16 16:27:09
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import sys

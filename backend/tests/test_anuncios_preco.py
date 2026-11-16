@@ -1,12 +1,12 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162157-d47d
+# ID                 : 20261116-162710-de13
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : test_anuncios_preco.py
 # Assunto            : 
-# Origem             : automatico (hook)
-# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
-# Ultima modificacao : 2026-11-16 16:21:57
+# Origem             : solicitacao do usuario
+# Motivo             : Teste das taxas compartilhadas entre tipos pedido pela revisao.
+# Ultima modificacao : 2026-11-16 16:27:10
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import unittest

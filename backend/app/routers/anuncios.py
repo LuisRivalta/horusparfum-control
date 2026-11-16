@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162052-75b3
+# ID                 : 20261116-162710-d003
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Rotas de anuncios
 # Assunto            : Atributos, precos, IA, publicar, qualidade, quantidade, status e preco no ML
-# Origem             : automatico (hook)
-# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
+# Origem             : solicitacao do usuario
+# Motivo             : Revisao apontou recusa do ML derrubando todo o calculo de preco e id nao UUID gerando erro 500.
 # Criado em          : 2026-11-16 15:25:55
-# Ultima modificacao : 2026-11-16 16:20:52
+# Ultima modificacao : 2026-11-16 16:27:10
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import re

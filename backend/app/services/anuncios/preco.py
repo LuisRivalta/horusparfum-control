@@ -1,12 +1,12 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162048-36d5
+# ID                 : 20261116-162708-a65e
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : preco.py
 # Assunto            : 
-# Origem             : automatico (hook)
-# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
-# Ultima modificacao : 2026-11-16 16:20:48
+# Origem             : solicitacao do usuario
+# Motivo             : Revisao pediu reduzir chamadas ao ML no calculo de preco compartilhando listing_prices entre os tipos de anuncio.
+# Ultima modificacao : 2026-11-16 16:27:08
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import math

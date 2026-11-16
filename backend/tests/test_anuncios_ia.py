@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162149-2634
+# ID                 : 20261116-162709-3506
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : backend\tests\test_anuncios_ia.py
 # Assunto            : IA opcional de ficha e textos dos anuncios ML
-# Origem             : automatico (hook)
-# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
+# Origem             : solicitacao do usuario
+# Motivo             : Teste da limpeza de setas, estrelas e espaco duplo pedido pela revisao.
 # Criado em          : 2026-11-16 15:00:59
-# Ultima modificacao : 2026-11-16 16:21:49
+# Ultima modificacao : 2026-11-16 16:27:09
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import json
