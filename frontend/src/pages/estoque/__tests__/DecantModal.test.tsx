@@ -23,15 +23,17 @@ vi.mock('@/pages/estoque/decants/FrascoViewer', () => ({
   ),
 }))
 
+const tabelas: Record<string, unknown> = {}
+function tabela(nome: string) {
+  const q: Record<string, unknown> = {}
+  for (const m of ['select', 'eq', 'order']) q[m] = () => q
+  q.single = () => Promise.resolve({ data: tabelas[nome] })
+  q.then = (res: (v: unknown) => unknown) => Promise.resolve({ data: tabelas[nome] }).then(res)
+  return q
+}
+
 vi.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn().mockResolvedValue({ data: [] }),
-      })),
-    })),
-    rpc: rpcMock,
-  },
+  supabase: { from: (nome: string) => tabela(nome), rpc: rpcMock },
 }))
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -55,6 +57,14 @@ describe('DecantModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     rpcMock.mockResolvedValue({ error: null })
+    tabelas.insumo_listas = [
+      { tipo: 'decant', tamanho_ml: 2.5, insumo_lista_itens: [] },
+      { tipo: 'decant', tamanho_ml: 5, insumo_lista_itens: [{ insumo_id: 'i1', quantidade: 1 }] },
+      { tipo: 'decant', tamanho_ml: 10, insumo_lista_itens: [{ insumo_id: 'i1', quantidade: 1 }] },
+    ]
+    tabelas.insumos = [{ id: 'i1', nome: 'Frasquinho', custo_medio: 2, ativo: true }]
+    tabelas.produtos = { estoque_atual: 0 }
+    tabelas.frascos_abertos = []
   })
 
   it('mostra nome do perfume e ml disponível', () => {
@@ -63,9 +73,9 @@ describe('DecantModal', () => {
     expect(screen.getByText(/70/)).toBeInTheDocument()
   })
 
-  it('botão rápido de 10ml seleciona o valor e mostra previsão', () => {
+  it('botão rápido de 10ml seleciona o valor e mostra previsão', async () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
-    fireEvent.click(screen.getByText('10ml'))
+    fireEvent.click(await screen.findByText('10ml'))
     expect(screen.getByText(/60ml/)).toBeInTheDocument()
   })
 
@@ -76,12 +86,54 @@ describe('DecantModal', () => {
 
   it('chama onSaved após registrar consumo com sucesso', async () => {
     render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
-    fireEvent.click(screen.getByText('10ml'))
+    fireEvent.click(await screen.findByText('10ml'))
     // Select classification
     const selects = screen.getAllByRole('combobox')
     fireEvent.change(selects[0], { target: { value: 'amostra' } })
     fireEvent.click(screen.getByText('Registrar consumo'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())
     await waitFor(() => expect(mockOnSaved).toHaveBeenCalled(), { timeout: 2000 })
+  })
+
+  it('oferece o tamanho de 2,5 ml vindo das listas', async () => {
+    render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
+    expect(await screen.findByText('2,5ml')).toBeInTheDocument()
+  })
+
+  it('brinde pré-preenche insumos do tamanho e envia p_insumos', async () => {
+    render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
+    fireEvent.click(await screen.findByText('5ml'))
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'brinde' } })
+    expect(screen.getByLabelText('Decant: Frasquinho')).toHaveValue(1)
+    fireEvent.click(screen.getByText('Registrar consumo'))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
+    expect(rpcMock).toHaveBeenCalledWith('registrar_consumo_decant', expect.objectContaining({
+      p_ml: 5, p_classificacao: 'brinde', p_custo_embalagem: 2, p_origens: null,
+      p_insumos: [{ insumo_id: 'i1', quantidade: 1 }],
+    }))
+  })
+
+  it('perda não envia insumos', async () => {
+    render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
+    fireEvent.click(await screen.findByText('5ml'))
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'perda' } })
+    expect(screen.queryByText('Insumos do decant')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Registrar consumo'))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
+    expect(rpcMock).toHaveBeenCalledWith('registrar_consumo_decant', expect.objectContaining({ p_insumos: [], p_custo_embalagem: 0 }))
+  })
+
+  it('frasco insuficiente envia p_origens com abrir lacrado', async () => {
+    tabelas.produtos = { estoque_atual: 2 }
+    const pouco = { ...mockFrasco, ml_restante: 3 }
+    render(<DecantModal frasco={pouco} onClose={mockOnClose} onSaved={mockOnSaved} />)
+    fireEvent.click(await screen.findByText('5ml'))
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'brinde' } })
+    await waitFor(() => expect(screen.getByText(/abrir 1 lacrado/)).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Registrar consumo'))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
+    expect(rpcMock).toHaveBeenCalledWith('registrar_consumo_decant', expect.objectContaining({
+      p_origens: [{ frasco_id: 'f1', ml: 3 }, { abrir_produto_id: 'p1', ml: 2 }],
+    }))
   })
 })
