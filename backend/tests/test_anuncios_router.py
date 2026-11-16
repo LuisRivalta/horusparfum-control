@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-153011-7bfa
+# ID                 : 20261116-155817-f934
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Testes rotas anuncios
 # Assunto            : Testes das rotas de anuncios com banco e ML falsos
-# Origem             : solicitacao do usuario
-# Motivo             : Revisao pediu testes das falhas depois de criar o item e do perfume sem marca.
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:24:58
-# Ultima modificacao : 2026-11-16 15:30:11
+# Ultima modificacao : 2026-11-16 15:58:17
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import sys
@@ -38,6 +38,10 @@ class FakeQuery:
     def select(self, *_):
         return self
 
+    def insert(self, payload):
+        self.op, self.payload = "insert", payload
+        return self
+
     def update(self, payload):
         self.op, self.payload = "update", payload
         return self
@@ -47,6 +51,9 @@ class FakeQuery:
         return self
 
     def execute(self):
+        if self.op == "insert":
+            self.db.tabelas.setdefault(self.nome, []).append(dict(self.payload))
+            return SimpleNamespace(data=[dict(self.payload)])
         linhas = [r for r in self.db.tabelas.get(self.nome, []) if all(f(r) for f in self.filtros)]
         if self.op == "update":
             for r in linhas:
@@ -85,7 +92,8 @@ class FakeML:
         if ("GET", path) in self.excecoes:
             raise self.excecoes[("GET", path)]
         if path in self.respostas:
-            return self.respostas[path]
+            r = self.respostas[path]
+            return r(params) if callable(r) else r
         if path.startswith("/items/"):
             return {"status": "active"}
         raise AssertionError(path)
@@ -277,6 +285,65 @@ class AnunciosRouterTest(unittest.TestCase):
         self.assertEqual(db.tabelas["anuncios"][0]["preco"], 49.9)
         self.assertEqual([c[2] for c in ml.chamadas], [
             {"available_quantity": 34}, {"status": "paused"}, {"price": 49.9}])
+
+    def test_itens_da_conta_pagina_e_marca_ligados(self):
+        ids = [f"MLB{i}" for i in range(1, 126)]  # 100 + 25 -> 2 páginas de search, 7 lotes de bulk
+        buscas, bulks = [], []
+
+        def search(params):
+            buscas.append(params["offset"])
+            return {"results": ids[params["offset"]:params["offset"] + 100],
+                    "paging": {"total": 125, "offset": params["offset"], "limit": 100}}
+
+        def bulk(params):
+            lote = params["ids"].split(",")
+            bulks.append(len(lote))
+            return [{"code": 404, "body": {}} if i == "MLB3" else {"code": 200, "body": {
+                "id": i, "title": f"Item {i}", "price": 10.5, "available_quantity": 2, "status": "active",
+                "permalink": f"https://ml/{i}", "listing_type_id": "gold_special",
+                "attributes": [{"id": "UNIT_VOLUME", "value_name": "5 mL"}] if i == "MLB1"
+                else [{"id": "UNIT_VOLUME", "value_name": "2,5 mL"}] if i == "MLB2" else []}} for i in lote]
+
+        db = banco([anuncio(1, ml_item_id="MLB2")])
+        self.usar(db, FakeML(respostas={"/users/1/items/search": search, "/items/bulk": bulk}))
+        itens = self.http.get("/api/anuncios/conta/itens").json()["itens"]
+        self.assertEqual(buscas, [0, 100])
+        self.assertEqual(bulks, [20] * 6 + [5])
+        self.assertEqual(len(itens), 124)  # MLB3 (code 404) fora
+        por_id = {i["ml_item_id"]: i for i in itens}
+        self.assertEqual(por_id["MLB1"]["volume_ml"], 5.0)
+        self.assertEqual(por_id["MLB2"]["volume_ml"], 2.5)
+        self.assertIsNone(por_id["MLB4"]["volume_ml"])
+        self.assertFalse(por_id["MLB1"]["ligado"])
+        self.assertTrue(por_id["MLB2"]["ligado"])
+        self.assertEqual(por_id["MLB1"]["quantidade"], 2)
+
+    def test_ligar_insere_com_status_do_ml(self):
+        db = banco([])
+        db.tabelas["anuncios_config"][0]["canal_id"] = "c1"
+        ml = FakeML(respostas={"/items/MLB7": {
+            "id": "MLB7", "title": "Asad 5ml", "price": 29.9, "status": "paused",
+            "permalink": "https://ml/7", "listing_type_id": "gold_pro"}})
+        self.usar(db, ml)
+        r = self.http.post("/api/anuncios/ligar", json={"ml_item_id": "MLB7", "produto_id": "p1", "tipo": "decant", "ml": 5})
+        self.assertEqual(r.status_code, 200)
+        a = db.tabelas["anuncios"][0]
+        self.assertEqual((a["status"], a["preco"], a["titulo"], a["listing_type"], a["canal_id"], a["ml"]),
+                         ("pausado", 29.9, "Asad 5ml", "gold_pro", "c1", 5))
+
+    def test_ligar_tipo_nao_suportado_400(self):
+        db = banco([])
+        self.usar(db, FakeML(respostas={"/items/MLB7": {"id": "MLB7", "status": "active", "listing_type_id": "free"}}))
+        r = self.http.post("/api/anuncios/ligar", json={"ml_item_id": "MLB7", "produto_id": "p1", "tipo": "frasco", "ml": None})
+        self.assertEqual((r.status_code, r.json()["detail"]), (400, "Tipo de anúncio não suportado"))
+
+    def test_ligar_duplicado_409(self):
+        db = banco([anuncio(1, ml_item_id="MLB7")])
+        ml = FakeML()
+        self.usar(db, ml)
+        r = self.http.post("/api/anuncios/ligar", json={"ml_item_id": "MLB7", "produto_id": "p1", "tipo": "frasco", "ml": None})
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(len(db.tabelas["anuncios"]), 1)
 
     def test_ia_textos_desligada_409(self):
         db = banco([])

@@ -50,7 +50,7 @@ export interface ItemConta {
   ml_item_id: string; titulo: string; preco: number; quantidade: number
   status: string; permalink: string; volume_ml: number | null; ligado: boolean
 }
-export interface LigarBody { ml_item_id: string; produto_id: string; tipo: string; ml: unknown }
+export interface LigarBody { ml_item_id: string; produto_id: string; tipo: TipoAnuncio; ml: number | null }
 
 export const conexaoML = () => chamarApi<ConexaoML>('/api/mercadolivre/conexao')
 export const conectarML = () => chamarApi<{ url: string }>('/api/mercadolivre/conectar')

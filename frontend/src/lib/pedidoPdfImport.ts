@@ -141,3 +141,13 @@ export async function importarPedidoPdf({
     avisos: Array.isArray(data.avisos) ? data.avisos : [],
   }
 }
+
+const RUIDO_TITULO = /\b(decants?|perfumes?|masculino|feminino|unissex|eau|de|parfum|edt|edp|\d+(?:[.,]\d+)?\s*ml)\b/g
+
+/** Sugere o produto pelo título de um anúncio do ML (ignora "Decant", "Perfume", EDP, volume, gênero). */
+export function sugerirProdutoPorNome(titulo: string, produtos: ProdutoOpcao[]): { id: string } | null {
+  const limpa = (s: string) => normalizarNomeProduto(s).replace(RUIDO_TITULO, ' ').replace(/\s+/g, ' ').trim()
+  const r = encontrarMatchFuzzy({ nome: limpa(titulo), qtd: 0, preco_unitario: 0 },
+    produtos.map((p) => ({ id: p.id, nome: limpa(p.nome) })))
+  return r.produto ? { id: r.produto.id } : null
+}

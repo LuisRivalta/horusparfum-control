@@ -10,6 +10,7 @@
 # Ultima modificacao : 2026-11-16 15:30:11
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
+import re
 import time
 from decimal import Decimal
 from typing import Literal
@@ -255,3 +256,64 @@ def alterar_preco(anuncio_id: str, body: PrecoIn, db=Depends(obter_db),
     cliente.put(f"/items/{a['ml_item_id']}", {'price': preco})
     gravar(db, anuncio_id, {'preco': preco})
     return {'preco': preco}
+
+
+# --- ligar anúncios que já existem no ML ---------------------------------------------
+
+def _volume_ml(item: dict) -> float | None:
+    for a in item.get('attributes') or []:
+        if a.get('id') == 'UNIT_VOLUME':
+            m = re.match(r'\s*(\d+(?:[.,]\d+)?)\s*mL', a.get('value_name') or '', re.I)
+            return float(m.group(1).replace(',', '.')) if m else None
+    return None
+
+
+@router.get('/conta/itens')
+def itens_da_conta(db=Depends(obter_db), cliente: MLCliente = Depends(obter_cliente_ml)):
+    ids, offset = [], 0
+    # ponytail: search comum para em 1000 itens; mais que isso pede search_type=scan
+    while offset < 1000:
+        r = cliente.get(f'/users/{cliente.ml_user_id}/items/search', {'limit': 100, 'offset': offset})
+        pagina = r.get('results') or []
+        ids += pagina
+        offset += 100
+        if not pagina or offset >= (r.get('paging') or {}).get('total', 0):
+            break
+    ligados = {a['ml_item_id'] for a in db.table('anuncios').select('ml_item_id').execute().data if a.get('ml_item_id')}
+    itens = []
+    for i in range(0, len(ids), 20):
+        for e in cliente.get('/items/bulk', {'ids': ','.join(ids[i:i + 20])}):
+            if e.get('code') != 200:
+                continue
+            b = e['body']
+            itens.append({'ml_item_id': b['id'], 'titulo': b.get('title'), 'preco': b.get('price'),
+                          'quantidade': b.get('available_quantity'), 'status': b.get('status'),
+                          'permalink': b.get('permalink'), 'volume_ml': _volume_ml(b),
+                          'ligado': b['id'] in ligados})
+    return {'itens': itens}
+
+
+class LigarIn(BaseModel):
+    ml_item_id: str
+    produto_id: str
+    tipo: Literal['frasco', 'decant']
+    ml: float | None = None
+
+
+@router.post('/ligar')
+def ligar(body: LigarIn, db=Depends(obter_db), cliente: MLCliente = Depends(obter_cliente_ml)):
+    if db.table('anuncios').select('id').eq('ml_item_id', body.ml_item_id).execute().data:
+        raise HTTPException(status_code=409, detail='Anúncio já ligado')
+    item = cliente.get(f'/items/{body.ml_item_id}')
+    if item.get('listing_type_id') not in TIPOS_ML:
+        raise HTTPException(status_code=400, detail='Tipo de anúncio não suportado')
+    canal = db.table('anuncios_config').select('canal_id').eq('id', 1).execute().data
+    linha = {
+        'produto_id': body.produto_id, 'tipo': body.tipo, 'ml': body.ml if body.tipo == 'decant' else None,
+        'canal_id': canal[0].get('canal_id') if canal else None,
+        'status': 'publicado' if item.get('status') == 'active' else 'pausado',
+        'preco': item.get('price'), 'titulo': item.get('title'), 'permalink': item.get('permalink'),
+        'listing_type': item['listing_type_id'], 'ml_item_id': body.ml_item_id,
+    }
+    db.table('anuncios').insert(linha).execute()
+    return {'status': linha['status']}
