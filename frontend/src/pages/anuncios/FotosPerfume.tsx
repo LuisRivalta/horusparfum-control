@@ -7,16 +7,18 @@ import { Icon } from '@/components/shared/Icon'
 import { cn } from '@/lib/utils'
 
 const TABELA = 'produto_fotos'
+const COLS = 'id, url, uso, ordem'
 
 // Em jsdom a imagem nunca carrega: o timeout evita travar.
 function medir(file: File): Promise<{ w: number; h: number } | null> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
-    const fim = (v: { w: number; h: number } | null) => { URL.revokeObjectURL(url); resolve(v) }
+    let t: ReturnType<typeof setTimeout>
+    const fim = (v: { w: number; h: number } | null) => { clearTimeout(t); URL.revokeObjectURL(url); resolve(v) }
     img.onload = () => fim({ w: img.naturalWidth, h: img.naturalHeight })
     img.onerror = () => fim(null)
-    setTimeout(() => fim(null), 3000)
+    t = setTimeout(() => fim(null), 3000)
     img.src = url
   })
 }
@@ -27,42 +29,63 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
   const [aviso, setAviso] = useState('')
   const [erro, setErro] = useState('')
   const [arrastando, setArrastando] = useState<number | null>(null)
+  const [ocupado, setOcupado] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
 
-  const aplicar = useCallback((lista: Foto[]) => { setFotos(lista); onChange?.(lista) }, [onChange])
+  const aplicar = useCallback((lista: Foto[]) => { setFotos(lista); onChangeRef.current?.(lista) }, [])
+
+  const carregar = useCallback(async (vivo: () => boolean = () => true) => {
+    const { data, error } = await supabase.from(TABELA).select(COLS).eq('produto_id', produtoId).order('ordem')
+    if (!vivo()) return
+    if (error) setErro('Não foi possível carregar as fotos.')
+    else aplicar((data ?? []) as Foto[])
+  }, [produtoId, aplicar])
 
   useEffect(() => {
-    supabase.from(TABELA).select('id, url, uso, ordem').eq('produto_id', produtoId).order('ordem')
-      .then(({ data }: { data: Foto[] | null }) => aplicar(data ?? []))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [produtoId])
+    let vivo = true
+    carregar(() => vivo)
+    return () => { vivo = false }
+  }, [carregar])
 
-  async function falha(r: { error: unknown } | undefined | null) {
+  // Uma operação por vez: evita snapshots velhos de `fotos`.
+  async function exec(fn: () => Promise<void>) {
+    if (ocupado) return
+    setOcupado(true)
+    setErro('')
+    try { await fn() } finally { setOcupado(false) }
+  }
+
+  const falhou = (r: { error: unknown } | null | undefined) => {
     if (r?.error) setErro('Não foi possível salvar. Tente de novo.')
     return !!r?.error
   }
 
-  async function alternarUso(f: Foto) {
+  const alternarUso = (f: Foto) => exec(async () => {
     const uso = f.uso === 'frasco' ? 'decant' : 'frasco'
-    if (await falha(await supabase.from(TABELA).update({ uso }).eq('id', f.id))) return
+    if (falhou(await supabase.from(TABELA).update({ uso }).eq('id', f.id))) return
     aplicar(fotos.map((x) => (x.id === f.id ? { ...x, uso } : x)))
-  }
+  })
 
-  async function mover(de: number, para: number) {
+  const mover = (de: number, para: number) => exec(async () => {
     if (para < 0 || para >= fotos.length || de === para) return
     const nova = [...fotos]
     nova.splice(para, 0, nova.splice(de, 1)[0])
     const ordenada = nova.map((f, i) => ({ ...f, ordem: i }))
     for (const f of ordenada) {
-      if (await falha(await supabase.from(TABELA).update({ ordem: f.ordem }).eq('id', f.id))) return
+      if (falhou(await supabase.from(TABELA).update({ ordem: f.ordem }).eq('id', f.id))) {
+        await carregar() // parte já gravada: volta a mostrar o que está no banco
+        return
+      }
     }
     aplicar(ordenada)
-  }
+  })
 
-  async function excluir(f: Foto) {
-    if (await falha(await supabase.from(TABELA).delete().eq('id', f.id))) return
+  const excluir = (f: Foto) => exec(async () => {
+    if (falhou(await supabase.from(TABELA).delete().eq('id', f.id))) return
     aplicar(fotos.filter((x) => x.id !== f.id))
-  }
+  })
 
   function escolher(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -74,9 +97,8 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
     e.target.value = ''
   }
 
-  async function subir(file: File) {
+  const subir = (file: File) => exec(async () => {
     setCropSrc(null)
-    setErro('')
     const dim = await medir(file)
     setAviso(dim && (dim.w < 500 || dim.h < 500) ? 'Foto menor que 500 px — o ML pode recusar' : '')
     const path = `${crypto.randomUUID()}.${file.name.split('.').pop()}`
@@ -85,10 +107,10 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
     const url = supabase.storage.from('produtos').getPublicUrl(path).data.publicUrl
     const ordem = fotos.reduce((m, f) => Math.max(m, f.ordem), -1) + 1
     const { data, error } = await supabase.from(TABELA)
-      .insert({ produto_id: produtoId, url, uso: 'frasco', ordem }).select('id, url, uso, ordem').single()
+      .insert({ produto_id: produtoId, url, uso: 'frasco', ordem }).select(COLS).single()
     if (error || !data) { setErro('Não foi possível salvar a foto.'); return }
     aplicar([...fotos, data as Foto])
-  }
+  })
 
   const nFrasco = fotosDoAnuncio(fotos, { tipo: 'frasco', ml: null }).length
   const nDecant = fotosDoAnuncio(fotos, { tipo: 'decant', ml: 5 }).length
@@ -97,7 +119,7 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
     <div className="gold-hairline bg-surface border border-line rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-text">Fotos do perfume</h3>
-        <Button size="sm" variant="secondary" type="button" onClick={() => inputRef.current?.click()}>
+        <Button size="sm" variant="secondary" type="button" disabled={ocupado} onClick={() => inputRef.current?.click()}>
           <Icon name="plus" size={14} /> Subir foto
         </Button>
         <input ref={inputRef} type="file" accept="image/*" hidden aria-label="Arquivo da foto" onChange={escolher} />
@@ -107,7 +129,7 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
         {fotos.map((f, i) => (
           <li
             key={f.id}
-            draggable
+            draggable={!ocupado}
             onDragStart={() => setArrastando(i)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => { if (arrastando !== null) mover(arrastando, i); setArrastando(null) }}
@@ -117,6 +139,7 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
             <div className="flex items-center justify-between gap-1">
               <button
                 type="button"
+                disabled={ocupado}
                 aria-label={`Uso da foto ${i + 1}: ${f.uso === 'frasco' ? 'Frasco' : 'Decant'}`}
                 onClick={() => alternarUso(f)}
                 className={cn(
@@ -127,13 +150,13 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
                 {f.uso === 'frasco' ? 'Frasco' : 'Decant'}
               </button>
               <div className="flex">
-                <Button type="button" variant="ghost" size="sm" disabled={i === 0} aria-label={`Mover foto ${i + 1} para a esquerda`} onClick={() => mover(i, i - 1)}>
+                <Button type="button" variant="ghost" size="sm" disabled={ocupado || i === 0} aria-label={`Mover foto ${i + 1} para a esquerda`} onClick={() => mover(i, i - 1)}>
                   <Icon name="chevron" size={14} className="rotate-180" />
                 </Button>
-                <Button type="button" variant="ghost" size="sm" disabled={i === fotos.length - 1} aria-label={`Mover foto ${i + 1} para a direita`} onClick={() => mover(i, i + 1)}>
+                <Button type="button" variant="ghost" size="sm" disabled={ocupado || i === fotos.length - 1} aria-label={`Mover foto ${i + 1} para a direita`} onClick={() => mover(i, i + 1)}>
                   <Icon name="chevron" size={14} />
                 </Button>
-                <Button type="button" variant="ghost" size="sm" aria-label={`Excluir foto ${i + 1}`} onClick={() => excluir(f)}>
+                <Button type="button" variant="ghost" size="sm" disabled={ocupado} aria-label={`Excluir foto ${i + 1}`} onClick={() => excluir(f)}>
                   <Icon name="trash" size={14} />
                 </Button>
               </div>

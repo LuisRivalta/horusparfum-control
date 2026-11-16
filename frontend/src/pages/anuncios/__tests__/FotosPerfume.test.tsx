@@ -4,16 +4,28 @@ import { FotosPerfume } from '../FotosPerfume'
 
 const chamadas: { op: string; args: unknown[] }[] = []
 let fotos: unknown[] = []
+let updatesOrdem = 0
+let falhaNoSegundo = false
+let gate: Promise<void> = Promise.resolve()
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     storage: { from: () => ({ upload: vi.fn(), getPublicUrl: () => ({ data: { publicUrl: 'x' } }) }) },
     from: () => {
+      const ops: { op: string; args: unknown[] }[] = []
       const b: Record<string, unknown> = {}
       for (const op of ['select', 'order', 'eq', 'delete', 'update', 'insert']) {
-        b[op] = (...args: unknown[]) => { chamadas.push({ op, args }); return b }
+        b[op] = (...args: unknown[]) => { chamadas.push({ op, args }); ops.push({ op, args }); return b }
       }
-      b.then = (res: (v: unknown) => unknown) => res({ data: fotos, error: null })
+      b.then = (res: (v: unknown) => unknown) => {
+        const upd = ops.find((o) => o.op === 'update')
+        if (!upd) return res({ data: fotos, error: null })
+        if ('ordem' in (upd.args[0] as object)) {
+          updatesOrdem++
+          if (falhaNoSegundo && updatesOrdem === 2) return res({ data: null, error: { message: 'x' } })
+        }
+        return gate.then(() => res({ data: null, error: null }))
+      }
       return b
     },
   },
@@ -26,6 +38,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   chamadas.length = 0
+  updatesOrdem = 0
+  falhaNoSegundo = false
+  gate = Promise.resolve()
   fotos = [
     { id: 'f1', produto_id: 'p', url: 'u1', uso: 'frasco', ordem: 0 },
     { id: 'f2', produto_id: 'p', url: 'u2', uso: 'frasco', ordem: 1 },
@@ -56,5 +71,28 @@ describe('FotosPerfume', () => {
     })
     const ids = chamadas.filter((c) => c.op === 'eq' && c.args[0] === 'id').map((c) => c.args[1])
     expect(ids).toEqual(['f2', 'f1', 'f3'])
+  })
+
+  it('falha no meio da reordenação recarrega do banco e mostra o erro', async () => {
+    falhaNoSegundo = true
+    render(<FotosPerfume produtoId="p" />)
+    await screen.findAllByRole('img')
+    const selects = () => chamadas.filter((c) => c.op === 'select').length
+    const antes = selects()
+    fireEvent.click(screen.getByRole('button', { name: 'Mover foto 1 para a direita' }))
+    await screen.findByRole('alert')
+    expect(selects()).toBe(antes + 1)
+  })
+
+  it('desabilita os botões enquanto uma ação está pendente', async () => {
+    let soltar!: () => void
+    gate = new Promise<void>((r) => { soltar = r })
+    render(<FotosPerfume produtoId="p" />)
+    await screen.findAllByRole('img')
+    const excluir = () => screen.getByRole('button', { name: 'Excluir foto 1' }) as HTMLButtonElement
+    fireEvent.click(screen.getByRole('button', { name: 'Mover foto 1 para a direita' }))
+    await waitFor(() => expect(excluir().disabled).toBe(true))
+    soltar()
+    await waitFor(() => expect(excluir().disabled).toBe(false))
   })
 })
