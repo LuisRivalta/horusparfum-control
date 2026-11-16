@@ -1,5 +1,5 @@
 import { escolher } from '@/test/escolher'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { VendasDashboard } from '../vendas/VendasDashboard'
 

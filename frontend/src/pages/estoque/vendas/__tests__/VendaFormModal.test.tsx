@@ -1,5 +1,5 @@
 import { escolher, opcoes } from '@/test/escolher'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EditarVendaModal } from '../EditarVendaModal'
 import { NovaVendaModal } from '../NovaVendaModal'
