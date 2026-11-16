@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { Select } from '@/components/shared/FormControls'
 import { formatBRL } from '@/lib/utils'
 import {
-  bloqueia, chaveAnuncio, custoAnuncio, descricaoPadrao, fotosDoAnuncio, limparDescricao, pendencias,
+  bloqueia, chaveAnuncio, custoAnuncio, descricaoPadrao, fotosDoAnuncio, limparDescricao, limparTitulo, pendencias,
   quantidadeDisponivel, tituloPadrao, type AlvoAnuncio, type Foto,
 } from '@/lib/anuncios'
 import {
@@ -72,6 +72,11 @@ export function NovoAnuncio() {
   const [ocupado, setOcupado] = useState(false)
   const [mensagem, setMensagem] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  // gravações da ficha/GTIN: Salvar e Publicar esperam a fila; erro nela bloqueia Publicar
+  const filaFicha = useRef<Promise<unknown>>(Promise.resolve())
+  const erroFichaRef = useRef<string | null>(null)
+  const [erroFicha, setErroFicha] = useState<string | null>(null)
+  const marcarErroFicha = (m: string | null) => { erroFichaRef.current = m; setErroFicha(m) }
 
   useEffect(() => {
     carregarBase().then(setBase).catch((e) => setErro(erroMsg(e)))
@@ -148,6 +153,7 @@ export function NovoAnuncio() {
     produtoAtual.current = id
     setProdutoId(id)
     setItens([]); setCotacoes({}); setFotos([]); setMensagem(null); setErro(null); setOrigemIA(new Set())
+    marcarErroFicha(null)
   }
 
   function usarModelo() {
@@ -178,7 +184,7 @@ export function NovoAnuncio() {
       const row = {
         produto_id: pid, canal_id: base.config.canal_id, tipo: i.alvo.tipo, ml: i.alvo.ml,
         listing_type: i.listingType, margem: i.margem, custo_base: i.custo, preco: precoEscolhido(i, cotacoes),
-        titulo: i.titulo, descricao: limparDescricao(i.descricao), fotos: fotosDoAnuncio(fotos, i.alvo),
+        titulo: limparTitulo(i.titulo), descricao: limparDescricao(i.descricao), fotos: fotosDoAnuncio(fotos, i.alvo),
         status: 'rascunho', erro: null, updated_at: new Date().toISOString(),
       }
       let id: string | undefined
@@ -195,7 +201,7 @@ export function NovoAnuncio() {
       }
       if (!mesmoProduto(pid)) return null
       ids.push(id)
-      mudar(i.chave, { id, status: 'rascunho', erro: null, descricao: row.descricao })
+      mudar(i.chave, { id, status: 'rascunho', erro: null, titulo: row.titulo, descricao: row.descricao })
     }
     return ids
   }
@@ -205,10 +211,15 @@ export function NovoAnuncio() {
     try { await fn() } catch (e) { setErro(erroMsg(e)) } finally { setOcupado(false) }
   }
 
-  const salvarRascunho = () => executar(async () => { if (await salvar()) setMensagem('Rascunho salvo.') })
+  const salvarRascunho = () => executar(async () => {
+    await filaFicha.current
+    if (await salvar()) setMensagem('Rascunho salvo.')
+  })
 
   const publicarTudo = () => executar(async () => {
     const pid = produtoId
+    await filaFicha.current // o backend lê a ficha e o GTIN do banco
+    if (erroFichaRef.current) { setErro(erroFichaRef.current); return }
     const ids = await salvar()
     if (!ids) return
     const { resultados } = await publicar(ids)
@@ -232,7 +243,7 @@ export function NovoAnuncio() {
   })
 
   const podeSalvar = aPublicar.length > 0 && !motivoPreco
-  const podePublicar = podeSalvar && !aPublicar.some((i) => bloqueia(pend[i.chave] ?? []))
+  const podePublicar = podeSalvar && !erroFicha && !aPublicar.some((i) => bloqueia(pend[i.chave] ?? []))
   const naLateral = itens.filter((i) => (i.marcado && !i.bloqueio) || !editavel(i))
 
   return (
@@ -275,7 +286,8 @@ export function NovoAnuncio() {
               <FichaPerfume key={produto.id} produtoId={produto.id} atributos={atributos} erroAtributos={erroAtributos}
                 ficha={ficha} origemIA={origemIA} gtin={gtin} iaAtiva={!!base?.config.ia_ativa}
                 horus={{ BRAND: produto.marca, PERFUME_NAME: produto.nome, UNIT_VOLUME: produto.volume_ml ? `${fmtMl(produto.volume_ml)} ml` : '' }}
-                onFicha={(f, ia) => { setFicha(f); setOrigemIA(ia) }} onGtin={setGtin} />
+                onFicha={(f, ia) => { setFicha(f); setOrigemIA(ia) }} onGtin={setGtin}
+                fila={filaFicha} onErroSalvar={marcarErroFicha} />
               <PrecosAnuncios itens={aPublicar} cotacoes={cotacoes} calculando={calculando} erro={erroPreco}
                 onMargem={(chave, margem) => mudar(chave, { margem })}
                 onTipo={(chave, listingType: TipoML) => mudar(chave, { listingType })} />
@@ -290,7 +302,7 @@ export function NovoAnuncio() {
         </div>
 
         <LateralPublicar itens={naLateral} pendencias={pend} quantidades={quantidades} nPublicar={aPublicar.length}
-          podePublicar={podePublicar} podeSalvar={podeSalvar} motivo={motivoPreco} erro={erro} ocupado={ocupado} mensagem={mensagem} onSalvar={salvarRascunho} onPublicar={publicarTudo} />
+          podePublicar={podePublicar} podeSalvar={podeSalvar} motivo={erroFicha ?? motivoPreco} erro={erro} ocupado={ocupado} mensagem={mensagem} onSalvar={salvarRascunho} onPublicar={publicarTudo} />
       </div>
     </div>
   )

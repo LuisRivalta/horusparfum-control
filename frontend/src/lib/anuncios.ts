@@ -50,6 +50,10 @@ export function limparDescricao(t: string): string {
   return t.replace(/[\p{Extended_Pictographic}‍️]/gu, '').replace(/[<>]/g, '')
 }
 
+export function limparTitulo(t: string): string {
+  return limparDescricao(t).replace(/\s+/g, ' ').trim()
+}
+
 const CAMPOS_DESCRICAO: Array<[string, string]> = [
   ['marca', 'Marca'], ['nome', 'Perfume'], ['volume', 'Volume'], ['tipo', 'Tipo'], ['genero', 'Gênero'], ['notas', 'Notas'], ['familias', 'Famílias olfativas'],
 ]
@@ -63,7 +67,9 @@ export function descricaoPadrao(modelo: string, dados: Record<string, string>): 
 
 export function fotosDoAnuncio(fotos: Foto[], a: AlvoAnuncio): string[] {
   const por = (uso: Foto['uso']) => fotos.filter((f) => f.uso === uso).sort((x, y) => x.ordem - y.ordem).map((f) => f.url)
-  return (a.tipo === 'frasco' ? por('frasco') : [...por('frasco'), ...por('decant')]).slice(0, MAX_FOTOS)
+  if (a.tipo === 'frasco') return por('frasco').slice(0, MAX_FOTOS)
+  const decant = por('decant') // reserva lugar para até 2 fotos do decant
+  return [...por('frasco').slice(0, MAX_FOTOS - Math.min(decant.length, 2)), ...decant].slice(0, MAX_FOTOS)
 }
 
 export function quantidadeDisponivel(

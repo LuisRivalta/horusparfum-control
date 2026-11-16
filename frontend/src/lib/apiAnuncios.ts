@@ -43,7 +43,7 @@ export interface AnuncioTexto { chave: string; tipo: TipoAnuncio; ml: number | n
 export interface TextoGerado { chave: string; titulo: string; descricao: string }
 export interface ResultadoPublicar { id: string; status: string; ml_item_id?: string; erro?: string }
 export interface Qualidade {
-  score: number; nivel: string
+  score: number | null; nivel: string | null
   pendencias: { titulo: string; texto: string; link: string }[]
 }
 export interface ItemConta {

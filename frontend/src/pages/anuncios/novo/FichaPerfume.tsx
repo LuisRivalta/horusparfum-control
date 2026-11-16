@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { supabase } from '@/lib/supabase'
 import { sugerirFicha, type AtributoML } from '@/lib/apiAnuncios'
 import { Button, Input, Select } from '@/components/shared/FormControls'
@@ -18,6 +18,9 @@ interface Props {
   iaAtiva: boolean
   onFicha: (ficha: Ficha, origemIA: Set<string>) => void
   onGtin: (gtin: string) => void
+  // fila das gravações (do pai): Salvar/Publicar esperam ela antes de ler o banco
+  fila: MutableRefObject<Promise<unknown>>
+  onErroSalvar: (erro: string | null) => void
 }
 
 // Fora da lista: os do Horus aparecem à parte, GTIN tem campo próprio, o resto o backend preenche.
@@ -32,26 +35,42 @@ const Selo = ({ ia }: { ia?: boolean }) => (
   </span>
 )
 
-export function FichaPerfume({ produtoId, atributos, erroAtributos, ficha, origemIA, horus, gtin, iaAtiva, onFicha, onGtin }: Props) {
+export function FichaPerfume({ produtoId, atributos, erroAtributos, ficha, origemIA, horus, gtin, iaAtiva, onFicha, onGtin, fila, onErroSalvar }: Props) {
   const [rascunho, setRascunho] = useState<Record<string, string>>({})
   const [gtinTexto, setGtinTexto] = useState(gtin)
-  const [erro, setErro] = useState<string | null>(null)
+  const [erro, setErro] = useState<string | null>(null) // da IA: não bloqueia
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null)
   const [sugerindo, setSugerindo] = useState(false)
   // Este componente é o único que muda a ficha enquanto está montado (key = produto):
   // a última versão fica no ref para duas edições seguidas não se sobrescreverem,
   // e as gravações vão em fila para chegarem ao banco na ordem.
   const atual = useRef({ ficha, ia: origemIA })
-  const fila = useRef<Promise<unknown>>(Promise.resolve())
+  const falhas = useRef<{ ficha: string | null; gtin: string | null }>({ ficha: null, gtin: null })
   const vivo = useRef(true)
   useEffect(() => { vivo.current = true; return () => { vivo.current = false } }, [])
+
+  function marcar(campo: 'ficha' | 'gtin', msg: string | null) {
+    if (!vivo.current) return
+    falhas.current[campo] = msg
+    const m = falhas.current.ficha ?? falhas.current.gtin
+    setErroSalvar(m)
+    onErroSalvar(m)
+  }
+
+  function enfileirar(campo: 'ficha' | 'gtin', msg: string, gravar: () => PromiseLike<{ error: unknown }>, ok?: () => void) {
+    fila.current = fila.current
+      .then(async () => {
+        const { error } = await gravar()
+        marcar(campo, error ? msg : null)
+        if (!error && vivo.current) ok?.()
+      })
+      .catch(() => marcar(campo, msg)) // uma falha não trava as gravações seguintes
+  }
 
   function aplicar(nova: Ficha, ia: Set<string>) {
     atual.current = { ficha: nova, ia }
     onFicha(nova, ia)
-    fila.current = fila.current.then(async () => {
-      const { error } = await supabase.from('produtos').update({ ficha: nova }).eq('id', produtoId)
-      if (vivo.current) setErro(error ? 'Não foi possível salvar a ficha.' : null)
-    })
+    enfileirar('ficha', 'Não foi possível salvar a ficha.', () => supabase.from('produtos').update({ ficha: nova }).eq('id', produtoId))
   }
 
   function mudar(id: string, v: ValorFicha | null) {
@@ -69,14 +88,11 @@ export function FichaPerfume({ produtoId, atributos, erroAtributos, ficha, orige
     if (v !== undefined && v.trim() !== (atual.current.ficha[id]?.value_name ?? '')) mudar(id, { value_id: null, value_name: v.trim() })
   }
 
-  async function salvarGtin() {
+  function salvarGtin() {
     const v = gtinTexto.trim()
-    if (v === gtin) return
-    const { error } = await supabase.from('produtos').update({ gtin: v || null }).eq('id', produtoId)
-    if (!vivo.current) return
-    if (error) { setErro('Não foi possível salvar o código de barras.'); return }
-    setErro(null)
-    onGtin(v)
+    if (v === gtin && !falhas.current.gtin) return
+    enfileirar('gtin', 'Não foi possível salvar o código de barras.',
+      () => supabase.from('produtos').update({ gtin: v || null }).eq('id', produtoId), () => onGtin(v))
   }
 
   // A IA só preenche campo vazio: o que o Luis já pôs fica.
@@ -144,6 +160,7 @@ export function FichaPerfume({ produtoId, atributos, erroAtributos, ficha, orige
           </Button>
         )}
       </div>
+      {erroSalvar && <p className="text-sm text-down" role="alert">{erroSalvar}</p>}
       {erro && <p className="text-sm text-down" role="alert">{erro}</p>}
 
       <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3">

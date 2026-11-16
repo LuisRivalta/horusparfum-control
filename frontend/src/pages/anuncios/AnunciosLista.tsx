@@ -57,7 +57,7 @@ export function AnunciosLista() {
 
   const custoAtual = (l: Linha): number | null => {
     const p = produto(l.produto_id)
-    if (!base || !p || l.status !== 'publicado' || l.custo_base == null) return null
+    if (!base || !p || l.custo_base == null) return null
     const r = custoAnuncio({ custoMedio: p.custo_medio, volumeMl: p.volume_ml }, l, base.listas, base.custoPorInsumo)
     return 'custo' in r && Math.abs(r.custo - l.custo_base) > 0.01 ? r.custo : null
   }
@@ -125,7 +125,10 @@ export function AnunciosLista() {
                   <td className="p-3">{l.listing_type === 'gold_pro' ? 'Premium' : 'Clássico'}</td>
                   <td className="p-3 font-mono">
                     {l.preco != null ? formatBRL(l.preco) : '—'}
-                    {novoCusto != null && (
+                    {novoCusto != null && !noMl && (
+                      <div className="mt-1 text-xs text-gold font-sans">Custo mudou — edite o rascunho</div>
+                    )}
+                    {novoCusto != null && noMl && (
                       <div className="mt-1 text-xs text-gold font-sans">
                         Custo mudou: {formatBRL(l.custo_base!)} → {formatBRL(novoCusto)}
                         {!sug && <> — <button type="button" disabled={ocupado} className="underline cursor-pointer disabled:opacity-50" onClick={() => recalcular(l, novoCusto)}>recalcular</button></>}
@@ -143,7 +146,7 @@ export function AnunciosLista() {
                     {l.status === 'erro' && l.erro && <span className="block text-xs text-down">{l.erro}</span>}
                   </td>
                   <td className="p-3">
-                    {l.qualidade_score != null ? `${l.qualidade_score} · ${l.qualidade_nivel ?? ''}` : '—'}
+                    {l.qualidade_score != null || l.qualidade_nivel ? `${l.qualidade_score ?? '—'} · ${l.qualidade_nivel ?? ''}` : '—'}
                     {msgs[l.id] && <span className="block text-xs text-muted">{msgs[l.id]}</span>}
                   </td>
                   <td className="p-3">
@@ -166,7 +169,7 @@ export function AnunciosLista() {
                           })}>Atualizar nota</Button>
                         </>
                       )}
-                      {l.status === 'erro' && (
+                      {l.status === 'erro' && novoCusto == null && (
                         <Button size="sm" disabled={ocupado} onClick={() => executar(l.id, async () => {
                           const r = (await publicar([l.id])).resultados[0]
                           if (r) mudar(l.id, { status: r.status, erro: r.erro ?? null })

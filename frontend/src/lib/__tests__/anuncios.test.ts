@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  chaveAnuncio, custoAnuncio, tituloPadrao, descricaoPadrao, limparDescricao,
+  chaveAnuncio, custoAnuncio, tituloPadrao, descricaoPadrao, limparDescricao, limparTitulo,
   fotosDoAnuncio, quantidadeDisponivel, pendencias, bloqueia, type Foto,
 } from '@/lib/anuncios'
 import type { ListaInsumos } from '@/lib/insumos'
@@ -57,6 +57,13 @@ describe('anuncios', () => {
     expect(fotosDoAnuncio(fotos, dec(5))).toEqual(['f1', 'f2', 'd1'])
     const muitas = Array.from({ length: 15 }, (_, i): Foto => ({ id: `${i}`, url: `u${i}`, uso: 'frasco', ordem: i }))
     expect(fotosDoAnuncio(muitas, frasco)).toHaveLength(12)
+    const decants = [0, 1, 2].map((i): Foto => ({ id: `d${i}`, url: `d${i}`, uso: 'decant', ordem: i }))
+    const r = fotosDoAnuncio([...muitas, ...decants], dec(5))
+    expect(r).toHaveLength(12)
+    expect(r.slice(10)).toEqual(['d0', 'd1'])
+  })
+  it('título limpo: sem emoji e sem espaço duplo', () => {
+    expect(limparTitulo(' Asad ⭐  100ml <b> ')).toBe('Asad 100ml b')
   })
   it('quantidade do decant soma aberto e lacrados', () => {
     const p = (e: number) => ({ estoqueAtual: e, volumeMl: 100 })

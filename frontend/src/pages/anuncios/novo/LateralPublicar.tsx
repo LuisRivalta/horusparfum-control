@@ -46,7 +46,7 @@ export function LateralPublicar({ itens, pendencias, quantidades, nPublicar, pod
             {i.permalink && <a href={i.permalink} target="_blank" rel="noreferrer" className="text-xs text-gold hover:underline">abrir no ML</a>}
             {i.qualidade && (
               <div className="text-xs flex flex-col gap-0.5">
-                <span>Nota <span className="font-mono">{i.qualidade.score}</span> · {i.qualidade.nivel}</span>
+                <span>Nota <span className="font-mono">{i.qualidade.score ?? '—'}</span> · {i.qualidade.nivel ?? '—'}</span>
                 {i.qualidade.pendencias.map((p) => (
                   <a key={p.titulo} href={p.link} target="_blank" rel="noreferrer" className="text-warn hover:underline" title={p.texto}>{p.titulo}</a>
                 ))}

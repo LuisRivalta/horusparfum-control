@@ -54,6 +54,15 @@ describe('AnunciosConfig', () => {
     await waitFor(() => expect(updates[0]).toMatchObject({ margem_padrao: 0.45, tamanhos_decant: [2.5, 5, 10] }))
   })
 
+  it('aceita margem acima de 100%', async () => {
+    abrir()
+    const campo = await screen.findByLabelText(/Margem padrão/i)
+    await waitFor(() => expect((campo as HTMLInputElement).value).toBe('60'))
+    fireEvent.change(campo, { target: { value: '150' } })
+    fireEvent.click(screen.getByRole('button', { name: /Salvar/i }))
+    await waitFor(() => expect(updates[0]).toMatchObject({ margem_padrao: 1.5 }))
+  })
+
   it('avisa quando a conexão falhou', async () => {
     abrir('/anuncios/config?ml=erro')
     expect(await screen.findByText(/Não foi possível conectar/)).toBeInTheDocument()

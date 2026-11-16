@@ -30,6 +30,7 @@ vi.mock('../FotosPerfume', () => ({
 }))
 
 let seq = 0
+let falharUpdate: string | null = null // tabela cujo update devolve erro
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from: (tabela: string) => {
@@ -55,7 +56,9 @@ vi.mock('@/lib/supabase', () => ({
         update: (v: Row) => { update = v; return q },
         single: () => Promise.resolve({ data: executar()[0] ?? null, error: null }),
         then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
-          Promise.resolve({ data: executar(), error: null }).then(ok, ko),
+          Promise.resolve(update && falharUpdate === tabela
+            ? { data: null, error: { message: 'falhou' } }
+            : { data: executar(), error: null }).then(ok, ko),
       }
       return q
     },
@@ -64,6 +67,7 @@ vi.mock('@/lib/supabase', () => ({
 
 beforeEach(() => {
   seq = 0
+  falharUpdate = null
   Object.keys(db).forEach((k) => delete db[k])
   Object.assign(db, {
     anuncios_config: [{ id: 1, margem_padrao: 0.6, tipo_padrao: 'gold_special', modelo_descricao: '', ia_ativa: false, tamanhos_decant: [2.5, 5, 10], canal_id: 'c1' }],
@@ -226,6 +230,20 @@ describe('NovoAnuncio', () => {
       LINE: { value_id: null, value_name: 'Oud' },
       GENDER: { value_id: 'g1', value_name: 'Masculino' },
     }))
+  })
+
+  it('falha ao salvar a ficha deixa Publicar desabilitado com o motivo', async () => {
+    await escolherPerfume()
+    fireEvent.click(screen.getByRole('button', { name: 'subir foto teste' }))
+    await waitFor(() => expect(botaoPublicar()).toBeEnabled())
+    falharUpdate = 'produtos'
+    escolher(screen.getByLabelText('Gênero'), 'g1')
+    const lateral = screen.getByRole('complementary')
+    expect(await within(lateral).findByText('Não foi possível salvar a ficha.')).toBeInTheDocument()
+    expect(botaoPublicar()).toBeDisabled()
+    falharUpdate = null // nova edição que grava limpa o erro
+    escolher(screen.getByLabelText('Gênero'), 'g2')
+    await waitFor(() => expect(botaoPublicar()).toBeEnabled())
   })
 
   it('salvar de novo um rascunho existente atualiza a mesma linha', async () => {

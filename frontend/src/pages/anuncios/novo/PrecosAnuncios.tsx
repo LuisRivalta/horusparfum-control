@@ -37,7 +37,7 @@ export function PrecosAnuncios({ itens, cotacoes, calculando, erro, onMargem, on
                 aria-label={`Margem ${rotulo(i.alvo)}`}
                 onBlur={(e) => {
                   const v = Number(e.target.value.replace(',', '.'))
-                  if (e.target.value.trim() !== '' && Number.isFinite(v) && v >= 0) onMargem(i.chave, Math.round(v * 100) / 10000)
+                  if (e.target.value.trim() !== '' && Number.isFinite(v) && v >= 0 && v <= 9999.99) onMargem(i.chave, Math.round(v * 100) / 10000)
                   else e.target.value = pct(i.margem)
                 }}
                 className="w-full px-2.5 py-1.5 rounded-lg border border-line bg-surface-2 text-text text-sm font-mono focus:outline-none focus:border-gold/60"

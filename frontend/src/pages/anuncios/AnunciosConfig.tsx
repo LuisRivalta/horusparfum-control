@@ -61,7 +61,7 @@ export function AnunciosConfig() {
 
   async function salvar() {
     const pct = Number(margem.replace(',', '.'))
-    if (margem.trim() === '' || !Number.isFinite(pct) || pct < 0 || pct >= 100) { setErro('Margem deve ficar entre 0 e 100%'); return }
+    if (margem.trim() === '' || !Number.isFinite(pct) || pct < 0 || pct > 9999.99) { setErro('Margem deve ficar entre 0 e 9999%'); return }
     const { data, error } = await supabase.from('anuncios_config').update({
       margem_padrao: Math.round(pct * 100) / 10000,
       tipo_padrao: tipo,

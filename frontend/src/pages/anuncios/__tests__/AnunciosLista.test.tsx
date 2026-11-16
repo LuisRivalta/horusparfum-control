@@ -81,6 +81,21 @@ describe('AnunciosLista', () => {
     expect(api.alterarStatus).toHaveBeenCalledWith('a1', 'paused')
   })
 
+  it('erro com custo mudado não oferece Tentar de novo, só editar', async () => {
+    linhas[0] = { ...base, status: 'erro', erro: 'Foto recusada', permalink: null, qualidade_score: null, qualidade_nivel: null }
+    abrir()
+    expect(await screen.findByText('Custo mudou — edite o rascunho')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
+    expect(screen.queryByText('recalcular')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Editar rascunho/ })).toBeInTheDocument()
+  })
+
+  it('erro com o mesmo custo oferece Tentar de novo', async () => {
+    linhas[0] = { ...base, status: 'erro', custo_base: 27, permalink: null }
+    abrir()
+    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
+  })
+
   it('rascunho tem link de edição pelo id do perfume', async () => {
     linhas[0] = { ...base, status: 'rascunho', permalink: null }
     abrir()
