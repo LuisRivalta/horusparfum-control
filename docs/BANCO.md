@@ -116,8 +116,8 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 |--------|------|-----------|
 | id | uuid (PK) | — |
 | produto_id | uuid (FK → produtos) | Índice único parcial onde status='ativo' |
-| ml_total | int | Volume copiado de produto.volume_ml ao abrir (> 0) |
-| ml_restante | int | ML disponíveis (≥ 0) |
+| ml_total | numeric(6,1) | Volume copiado de produto.volume_ml ao abrir (> 0) |
+| ml_restante | numeric(6,1) | ML disponíveis (≥ 0) |
 | status | text | 'ativo' ou 'esgotado' |
 | aberto_em | timestamptz | — |
 
@@ -128,7 +128,7 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | id | uuid (PK) | — |
 | frasco_id | uuid (FK → frascos_abertos, cascade) | — |
 | produto_id | uuid (FK → produtos) | Desnormalizado para relatórios |
-| ml | int | Quantidade do decant (> 0) |
+| ml | numeric(6,1) | Quantidade do decant (> 0). Soma das `decant_origens`; `frasco_id` é a primeira origem |
 | classificacao | text (nullable) | Tipo de consumo não-faturável: `perda`, `amostra`, `brinde`, `marketing`, `uso_interno` ou `outro`. Null para decants de venda (gerados via Vendas) |
 | custo | numeric(12,2) | Custo total do consumo (perfume + embalagem). Default 0 |
 | custo_embalagem | numeric(12,2) | Parcela de embalagem incluída no custo. Zero para `perda` (sem embalagem). Default 0 |
@@ -141,15 +141,18 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | id | uuid (PK) | — |
 | nome | text | Ex: "Shopee", "Loja física", "Instagram/WhatsApp" |
 | taxa_padrao | numeric(5,2) | Percentual padrão de taxa do canal (≥ 0) |
+| usa_envio | boolean | Se a venda no canal baixa os insumos de envio (false para "Loja física"). Default true |
 | ativo | boolean | Se o canal aparece nas opções de nova venda |
 | created_at | timestamptz | — |
 
 ### `embalagens_decant`
 
+> Sem uso pelas telas desde a feature Insumos (substituída por `insumo_listas`); mantida no banco.
+
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | id | uuid (PK) | — |
-| tamanho_ml | int | Volume da embalagem em ml (único, > 0) |
+| tamanho_ml | numeric(6,1) | Volume da embalagem em ml (único, > 0) |
 | custo | numeric(12,2) | Custo da embalagem em BRL (≥ 0) |
 | ativo | boolean | Se a embalagem está disponível para seleção |
 
@@ -165,6 +168,7 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | cliente | text | Nome do cliente (opcional) |
 | taxa_total | numeric(12,2) | Valor total de taxa do canal (≥ 0) |
 | frete | numeric(12,2) | Custo de frete (≥ 0) |
+| custo_envio | numeric(12,2) | Custo dos insumos de envio baixados na venda. Default 0 |
 | total_bruto | numeric(12,2) | Soma dos preços de venda dos itens |
 | total_custo | numeric(12,2) | Soma dos custos (produto + embalagem) dos itens |
 | lucro_bruto | numeric(12,2) | total_bruto − taxa_total − frete − total_custo |
@@ -256,6 +260,56 @@ Restrição: `unique (conta_id, numero)`.
 | periodo | text | Ex: "2026-Q2" |
 | created_at | timestamptz | — |
 
+### `insumos`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| nome | text (unique) | Ex: "Etiqueta 5 ml" |
+| unidade | text | Default 'un' |
+| estoque_atual | numeric(12,2) | Pode ficar negativo na baixa |
+| estoque_minimo | numeric(12,2) | Limite do alerta |
+| custo_medio | numeric(12,4) | Custo médio ponderado |
+| ativo | boolean | — |
+| created_at | timestamptz | — |
+
+### `insumo_movimentacoes`
+
+Ledger dos insumos. `quantidade`: + entra, − sai.
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| insumo_id | uuid (FK → insumos, restrict) | — |
+| tipo | text | `compra`, `consumo`, `perda`, `acerto` ou `estorno` |
+| quantidade | numeric(12,2) | Com sinal |
+| custo_unitario | numeric(12,4) | Custo no momento |
+| venda_id | uuid (FK → vendas, set null) | Venda que consumiu |
+| decant_id | uuid (FK → decants, set null) | Decant que consumiu |
+| responsavel | text | — |
+| created_at | timestamptz | — |
+
+### `insumo_listas` e `insumo_lista_itens`
+
+`insumo_listas`: `tipo` (`decant`, `frasco`, `envio_decant`, `envio_frasco`), `tamanho_ml` (só para `decant`), `peso_g`, `altura_cm`, `largura_cm`, `comprimento_cm`. Único por (`tipo`, `tamanho_ml`).
+`insumo_lista_itens`: PK (`lista_id`, `insumo_id`), `quantidade` > 0; cascade ao apagar a lista, restrict ao apagar o insumo.
+
+### `decant_origens`
+
+De onde saíram os ml de um decant (frasco aberto e/ou lacrado aberto na hora).
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid (PK) | — |
+| decant_id | uuid (FK → decants, cascade) | — |
+| frasco_id | uuid (FK → frascos_abertos, nullable) | Frasco de onde saiu |
+| produto_id | uuid (FK → produtos) | — |
+| ml | numeric(6,1) | > 0 |
+| custo | numeric(12,2) | Custo do perfume nessa origem |
+| abriu_frasco | boolean | Se esta origem abriu um lacrado (esse ml nunca volta ao estoque lacrado) |
+
+`transacoes.origem` passa a aceitar também `'insumo'` (compra de insumo). Ver [[features/INSUMOS]].
+
 ## Relações
 
 ```
@@ -301,6 +355,13 @@ Lógica de negócio atômica em PL/pgSQL, chamada via `supabase.rpc(...)`. Cada 
 | `registrar_venda(p_canal_id, p_data_venda, p_forma_pagamento, p_cliente, p_taxa_total, p_frete, p_responsavel, p_observacao, p_itens)` | Baixa estoque (produto/decant), grava `vendas`/`venda_itens` com snapshot de custo e rateio de taxa/frete, lança receita/taxa/frete em `transacoes`. Retorna `{id, numero}` | 20260616_vendas |
 | `cancelar_venda(p_venda_id)` | Estorno completo: devolve estoque/ml, apaga decant, remove `transacoes` da venda, marca `status='cancelada'` | 20260616_vendas |
 | `registrar_consumo_decant(p_frasco_id, p_ml, p_classificacao, p_custo_embalagem, p_responsavel)` | Consumo não-faturável: baixa ml do frasco, grava decant com custo (perfume + embalagem, exceto perda), lança despesa em `transacoes` (`origem='decant'`). Retorna `{id, custo, esgotado}` | 20260617_consumo_decant |
+| `acertar_estoque_insumo(p_insumo_id, p_saldo_contado, p_responsavel)` | Ajusta o saldo do insumo à contagem e grava `perda`/`acerto` | 20261116100000_insumos_schema |
+| `registrar_compra_insumo(p_insumo_id, p_qtd, p_valor_total, p_saldo_contado, p_forma_pagamento, p_responsavel)` | Acerto opcional, entrada, custo médio e despesa em `transacoes` (`origem='insumo'`) | 20261116100000_insumos_schema |
+| `registrar_venda(..., p_titulo, p_insumos_envio)` | Reescrita: baixa insumos das listas (decant/frasco/envio), decant com várias origens, grava `custo_envio` | 20261116110000_insumos_rpcs |
+| `editar_venda(..., p_titulo, p_insumos_envio)`, `cancelar_venda`, `excluir_venda` | Reescritas: estornam e rebaixam insumos; decant inalterado não é refeito | 20261116110000_insumos_rpcs |
+| `registrar_consumo_decant(..., p_origens, p_insumos)`, `corrigir_consumo_decant(..., p_origens, p_insumos)`, `cancelar_consumo_decant(p_decant_id)` | Consumo não faturável com várias origens e insumos; correção e reversão completas | 20261116110000_insumos_rpcs |
+| `_baixar_insumos`, `_estornar_insumos`, `_novo_decant`, `_consumir_origens`, `_devolver_origens`, `_decant_inalterado` | Helpers internos das RPCs acima | 20261116110000_insumos_rpcs |
+
 
 ## SQL de criação
 

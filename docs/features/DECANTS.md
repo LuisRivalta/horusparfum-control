@@ -317,6 +317,13 @@ Operação atômica que registra um consumo interno de decant.
 
 ---
 
+## Origens múltiplas e insumos (feature Insumos)
+
+- Um decant pode sair de **várias origens**: o frasco aberto ativo e, se faltar, um frasco lacrado aberto na hora. `lib/decantOrigens.ts` (`planejarOrigens`) monta o plano; cada origem fica em `decant_origens` (`abriu_frasco` marca o lacrado aberto, cujo ml nunca volta ao estoque lacrado). `decants.ml` é a soma das origens.
+- `ml` é decimal (`numeric(6,1)`), então 2,5 ml é válido.
+- O consumo não faturável baixa os **insumos** da lista do tamanho (`decant`) via `registrar_consumo_decant(..., p_origens, p_insumos)`. O custo de embalagem vem do custo dos insumos (`embalagens_decant` ficou sem uso). `corrigir_consumo_decant` replaneja as origens considerando os ml devolvidos e zera a embalagem se não houver insumos; `cancelar_consumo_decant` reverte tudo.
+- Detalhes: [[features/INSUMOS]].
+
 ## Documentos Relacionados
 
 - [[features/ESTOQUE]] — Integração com estoque (abertura de frascos consome estoque)
@@ -325,3 +332,4 @@ Operação atômica que registra um consumo interno de decant.
 - [[BANCO]] — Estrutura das tabelas de frascos, decants e embalagens
 - [[REGRAS_NEGOCIO]] — Regras de fracionamento e custo unitário
 - [[GLOSSARIO]] — Definições de termos como decant, frasco, classificação
+- [[features/INSUMOS]] — Insumos, listas e origens do decant

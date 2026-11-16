@@ -37,6 +37,7 @@ Abaixo estão os guias detalhados de cada módulo funcional do sistema, explican
 - [[features/PEDIDOS]] — Gestão de compras com fornecedores, conferência física de recebimento e registro de divergências.
 - [[features/VENDAS]] — Nova venda (produtos/decants) com rateio proporcional de taxas/fretes e dashboard de rentabilidade (ROI).
 - [[features/DECANTS]] — Fracionamento de frascos originais e controle de consumo não-faturável (amostras/perdas).
+- [[features/INSUMOS]] — Estoque de insumos (embalagem/envio), compra, acerto e listas que baixam na venda e no decant.
 - [[features/AUTENTICACAO]] — Fluxo de login e políticas RLS de segurança e controle de acessos.
 
 ---

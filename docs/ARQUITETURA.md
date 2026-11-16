@@ -37,7 +37,9 @@ C:\Horus\
 │       ├── 20260616_registrar_entrada.sql
 │       ├── 20260616_vendas.sql
 │       ├── 20260617_consumo_decant.sql
-│       └── 20260622142718_fix_cancelar_venda_decant_fk.sql
+│       ├── 20260622142718_fix_cancelar_venda_decant_fk.sql
+│       ├── 20261116100000_insumos_schema.sql
+│       └── 20261116110000_insumos_rpcs.sql
 ├── frontend\
 │   ├── vercel.json             → Rewrite SPA para o deploy na Vercel
 │   └── src\
@@ -58,11 +60,12 @@ C:\Horus\
 │       │       │               → Relatorios
 │       │       │               → Cadastros.tsx = rota-layout com <Outlet/>; abas Produtos/Categorias/Fornecedores
 │       │       ├── pedidos\    → NovoPedidoModal, ConferenciaModal
-│       │       ├── decants\    → FrascoViewer, AbrirFrascoModal, DecantModal
-│       │       ├── vendas\     → NovaVendaModal, VendaDetalheModal, VendasConfig
+│       │       ├── decants\    → FrascoViewer, AbrirFrascoModal, DecantModal, CorrigirConsumoDecantModal
+│       ├── insumos\    → CompraInsumoModal, ListasInsumos (página Insumos.tsx)
+│       │       ├── vendas\     → VendaFormModal, InsumosVenda, VendaDetalheModal, VendasConfig
 │       │       └── __tests__\  → testes de componente (colocados por área)
 │       ├── lib\                → utils, supabase, financeiro, pedidos, estoque,
-│       │   │                   → decants, vendas (lógica pura, testável)
+│       │   │                   → decants, vendas, insumos, decantOrigens (lógica pura, testável)
 │       │   └── __tests__\      → financeiro, pedidos, estoque, decants, vendas (TDD)
 │       ├── test\               → setup.ts (Vitest)
 │       ├── styles\             → globals.css (Tailwind + tema dark/light)
@@ -90,6 +93,10 @@ Operações que tocam várias tabelas de forma atômica são funções PL/pgSQL 
 | `registrar_venda(canal, data, pgto, cliente, taxa, frete, resp, obs, itens)` | Baixa estoque (produto/decant) + grava `vendas`/`venda_itens` com snapshot de custo + rateio de taxa/frete + lança receita/taxa/frete em `transacoes` | 20260616_vendas |
 | `cancelar_venda(venda)` | Estorno completo: devolve estoque/ml, apaga decant, remove lançamentos do caixa, marca `status='cancelada'` | 20260616_vendas |
 | `registrar_consumo_decant(frasco, ml, classificacao, embalagem, resp)` | Consumo não-faturável de decant: baixa ml do frasco + grava decant com custo + lança despesa em `transacoes` (`origem='decant'`) | 20260617_consumo_decant |
+| `acertar_estoque_insumo(insumo, saldo_contado, resp)` | Ajusta o saldo do insumo à contagem + ledger | 20261116100000_insumos_schema |
+| `registrar_compra_insumo(insumo, qtd, valor, saldo_contado, pgto, resp)` | Entrada de insumo + custo médio + despesa em `transacoes` (`origem='insumo'`) | 20261116100000_insumos_schema |
+| `registrar_venda` / `editar_venda` / `cancelar_venda` / `excluir_venda` (reescritas) | Baixam/estornam insumos pelas listas, decant com várias origens, `custo_envio` | 20261116110000_insumos_rpcs |
+| `registrar_consumo_decant` / `corrigir_consumo_decant` / `cancelar_consumo_decant` (reescritas) | Consumo não faturável com origens múltiplas e insumos; correção e reversão completas | 20261116110000_insumos_rpcs |
 
 > Operações de uma tabela só (CRUDs simples, abrir frasco, config de canais/embalagens) são feitas direto via `supabase.from(...)` no frontend, sem RPC.
 
@@ -104,6 +111,8 @@ Cálculo testável em TypeScript com `decimal.js`, separado da UI. Muitas funç�
 | `lib/pedidos.ts` | Custo médio ponderado, total do pedido, validação de conferência |
 | `lib/decants.ts` | `podeFrasco`, `calcularNovoML`, `statusAposDecant`, `resumoConsumo` (custo por classificação no período) |
 | `lib/vendas.ts` | Custo de decant, rateio proporcional, lucro por item, ROI, margem, resumo da venda |
+| `lib/insumos.ts` | Compra de insumo (custo médio), escolha das listas, soma e custo de itens, alerta de mínimo |
+| `lib/decantOrigens.ts` | Planejar origens do decant (frasco aberto + lacrado), custo previsto, devoluções |
 
 ## Lógica de relatório no backend
 
@@ -193,6 +202,7 @@ Browser (React SPA)
 | /estoque | Estoque (EstoqueView) |
 | /estoque/vendas · /estoque/vendas/config | Vendas · Config de canais/embalagens |
 | /estoque/decants | Decants |
+| /estoque/insumos | Insumos (estoque, compra, acerto, listas) |
 | /estoque/cadastros (+ /produtos · /categorias · /fornecedores) | Cadastros (abas: Produtos, Categorias, Fornecedores) — as rotas antigas `/estoque/produtos`, `/estoque/categorias`, `/estoque/fornecedores` redirecionam para as novas |
 | /estoque/pedidos · /divergencias | Pedidos · Divergências |
 | /estoque/relatorios | Relatório de giro |

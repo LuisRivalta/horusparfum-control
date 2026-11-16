@@ -346,6 +346,14 @@ Cancela uma venda existente, revertendo todas as operações.
 
 ---
 
+## Insumos, envio e decant de várias origens (feature Insumos)
+
+- `VendaFormModal` ganhou o bloco `InsumosVenda`: mostra e permite editar os insumos baixados por item (listas `decant`/`frasco`) e os de envio (`envio_decant`/`envio_frasco`), com o custo no custo da venda.
+- Canais têm `usa_envio`; só os que usam envio baixam as listas de envio. `vendas.custo_envio` guarda o custo; `registrar_venda`/`editar_venda` recebem `p_insumos_envio` e `p_titulo`.
+- Decant vendido pode vir de várias origens (frasco aberto + lacrado aberto na hora); 2,5 ml disponível. Edição replaneja o decant com os ml devolvidos pela própria venda; decant inalterado não é refeito.
+- Cancelar/excluir devolve estoque, ml e insumos. As embalagens de decant deram lugar às listas de insumos em `/estoque/insumos`.
+- Detalhes: [[features/INSUMOS]].
+
 ## Documentos Relacionados
 
 - [[features/FINANCEIRO]] — Módulo financeiro (recebe transações de vendas)
@@ -354,3 +362,4 @@ Cancela uma venda existente, revertendo todas as operações.
 - [[BANCO]] — Schema completo do banco de dados
 - [[REGRAS_NEGOCIO]] — Regras de negócio globais
 - [[API]] — Documentação da API backend
+- [[features/INSUMOS]] — Insumos, listas e custo de envio
