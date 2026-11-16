@@ -30,6 +30,7 @@ export function AnunciosConfig() {
   const [modelo, setModelo] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [salvo, setSalvo] = useState(false)
+  const [carregado, setCarregado] = useState(false)
 
   const carregarConexao = () =>
     conexaoML().then(setConexao).catch((e: Error) => setErro(e.message))
@@ -37,9 +38,10 @@ export function AnunciosConfig() {
   useEffect(() => {
     carregarConexao()
     supabase.from('canais').select('*').order('nome').then(({ data }) => setCanais((data as Canal[]) || []))
-    supabase.from('anuncios_config').select('*').eq('id', 1).single().then(({ data }) => {
+    supabase.from('anuncios_config').select('*').eq('id', 1).single().then(({ data, error }) => {
       const c = data as Config | null
-      if (!c) return
+      if (!c) { setErro(error?.message ?? 'Configuração dos anúncios não encontrada'); return }
+      setCarregado(true)
       setMargem(String(Math.round(Number(c.margem_padrao) * 10000) / 100))
       setTipo(c.tipo_padrao)
       setCanalId(c.canal_id ?? '')
@@ -59,17 +61,18 @@ export function AnunciosConfig() {
 
   async function salvar() {
     const pct = Number(margem.replace(',', '.'))
-    if (!Number.isFinite(pct) || pct < 0 || pct >= 100) { setErro('Margem deve ficar entre 0 e 100%'); return }
-    const { error } = await supabase.from('anuncios_config').update({
+    if (margem.trim() === '' || !Number.isFinite(pct) || pct < 0 || pct >= 100) { setErro('Margem deve ficar entre 0 e 100%'); return }
+    const { data, error } = await supabase.from('anuncios_config').update({
       margem_padrao: Math.round(pct * 100) / 10000,
       tipo_padrao: tipo,
       canal_id: canalId || null,
       tamanhos_decant: [...tamanhos].sort((a, b) => a - b),
       ia_ativa: iaAtiva,
       modelo_descricao: modelo,
-    }).eq('id', 1)
-    setErro(error ? error.message : null)
-    setSalvo(!error)
+    }).eq('id', 1).select()
+    const ok = !error && !!data?.length
+    setErro(error ? error.message : ok ? null : 'Nada foi salvo: configuração não encontrada')
+    setSalvo(ok)
   }
 
   const alternar = (t: number) =>
@@ -137,7 +140,7 @@ export function AnunciosConfig() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button onClick={salvar}>Salvar</Button>
+          <Button onClick={salvar} disabled={!carregado}>Salvar</Button>
           {salvo && <span className="text-sm text-up">Salvo</span>}
         </div>
       </section>

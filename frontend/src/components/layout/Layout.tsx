@@ -187,7 +187,7 @@ export function Layout() {
                 key={m.id}
                 onClick={() => navigate('/' + m.id)}
                 className={cn(
-                  'relative z-10 w-24 sm:w-28 py-1.5 rounded-2xl text-xs sm:text-sm font-medium transition-colors duration-300 cursor-pointer text-center',
+                  'relative z-10 w-[4.5rem] sm:w-28 py-1.5 rounded-2xl text-xs sm:text-sm font-medium transition-colors duration-300 cursor-pointer text-center',
                   modulo === m.id ? 'text-[#1A1407]' : 'text-muted hover:text-text'
                 )}
               >

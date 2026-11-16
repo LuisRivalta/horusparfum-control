@@ -1,9 +1,11 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AnunciosConfig } from '../AnunciosConfig'
 
 const updates: unknown[] = []
+let liberar: (() => void) | null = null
+let segurar = false
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
@@ -14,8 +16,13 @@ vi.mock('@/lib/supabase', () => ({
         : { id: 1, margem_padrao: 0.6, tipo_padrao: 'gold_special', modelo_descricao: 'x', ia_ativa: true, tamanhos_decant: [2.5, 5, 10], canal_id: 'c1' }
       const b: Record<string, unknown> = {}
       for (const op of ['select', 'eq', 'order', 'single']) b[op] = () => b
-      b.update = (v: unknown) => { updates.push(v); return b }
-      b.then = (res: (v: unknown) => unknown) => res({ data: dados, error: null })
+      let atualizou = false
+      b.update = (v: unknown) => { updates.push(v); atualizou = true; return b }
+      b.then = (res: (v: unknown) => unknown) => {
+        const r = () => res({ data: atualizou ? [dados] : dados, error: null })
+        if (segurar && tabela === 'anuncios_config' && !atualizou) { liberar = r; return }
+        r()
+      }
       return b
     },
   },
@@ -23,6 +30,7 @@ vi.mock('@/lib/supabase', () => ({
 
 beforeEach(() => {
   updates.length = 0
+  segurar = false; liberar = null
   vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
     ok: true, json: () => Promise.resolve({ conectado: true, nickname: 'LOJA', user_product: false }),
   })))
@@ -43,11 +51,22 @@ describe('AnunciosConfig', () => {
     await waitFor(() => expect((campo as HTMLInputElement).value).toBe('60'))
     fireEvent.change(campo, { target: { value: '45' } })
     fireEvent.click(screen.getByRole('button', { name: /Salvar/i }))
-    await waitFor(() => expect(updates[0]).toMatchObject({ margem_padrao: 0.45 }))
+    await waitFor(() => expect(updates[0]).toMatchObject({ margem_padrao: 0.45, tamanhos_decant: [2.5, 5, 10] }))
   })
 
   it('avisa quando a conexão falhou', async () => {
     abrir('/anuncios/config?ml=erro')
     expect(await screen.findByText(/Não foi possível conectar/)).toBeInTheDocument()
+  })
+
+  it('mantém Salvar desabilitado até a configuração carregar', async () => {
+    segurar = true
+    abrir()
+    expect(screen.getByRole('button', { name: /Salvar/i })).toBeDisabled()
+    const campo = await screen.findByLabelText(/Margem padrão/i)
+    await waitFor(() => expect(liberar).not.toBeNull())
+    act(() => liberar!())
+    await waitFor(() => expect((campo as HTMLInputElement).value).toBe('60'))
+    expect(screen.getByRole('button', { name: /Salvar/i })).toBeEnabled()
   })
 })
