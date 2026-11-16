@@ -6,3 +6,4 @@ pydantic-settings
 httpx
 pypdf
 python-multipart
+anthropic
