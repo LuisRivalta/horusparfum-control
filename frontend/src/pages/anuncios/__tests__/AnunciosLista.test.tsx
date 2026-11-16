@@ -61,6 +61,18 @@ describe('AnunciosLista', () => {
     expect(screen.queryByText(/Custo mudou/)).not.toBeInTheDocument()
   })
 
+  it('aplicarPreco falha: custo_base não é gravado e o erro aparece', async () => {
+    api.calcularPrecos.mockResolvedValue({ itens: [{ chave: 'frasco', gold_special: { preco: 110 }, gold_pro: { preco: 120 } }] })
+    api.aplicarPreco.mockRejectedValue(new Error('ML recusou o preço'))
+    abrir()
+    fireEvent.click(await screen.findByText('recalcular'))
+    fireEvent.click(await screen.findByRole('button', { name: /Aplicar R\$\s110,00/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('ML recusou o preço')
+    expect(updates).toEqual([])
+    expect(screen.getByText('R$ 100,00')).toBeInTheDocument()
+    expect(screen.getByText('Publicado')).toBeInTheDocument()
+  })
+
   it('pausa o anúncio e mostra o erro da API', async () => {
     api.alterarStatus.mockRejectedValue(new Error('Conecte a conta do Mercado Livre'))
     abrir()

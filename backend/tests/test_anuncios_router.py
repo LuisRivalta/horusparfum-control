@@ -1,5 +1,5 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-155817-f934
+# ID                 : 20261116-160556-a9bd
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Testes rotas anuncios
@@ -7,7 +7,7 @@
 # Origem             : automatico (hook)
 # Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:24:58
-# Ultima modificacao : 2026-11-16 15:58:17
+# Ultima modificacao : 2026-11-16 16:05:56
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import sys
@@ -336,6 +336,38 @@ class AnunciosRouterTest(unittest.TestCase):
         self.usar(db, FakeML(respostas={"/items/MLB7": {"id": "MLB7", "status": "active", "listing_type_id": "free"}}))
         r = self.http.post("/api/anuncios/ligar", json={"ml_item_id": "MLB7", "produto_id": "p1", "tipo": "frasco", "ml": None})
         self.assertEqual((r.status_code, r.json()["detail"]), (400, "Tipo de anúncio não suportado"))
+
+    def test_ligar_valida_entrada_e_status(self):
+        db = banco([])
+        self.usar(db, FakeML(respostas={
+            "/items/MLB7": {"id": "MLB7", "status": "closed", "listing_type_id": "gold_pro"}}))
+        corpo = {"ml_item_id": "MLB7", "produto_id": "p1", "tipo": "frasco", "ml": None}
+        casos = [
+            ({**corpo, "tipo": "decant"}, "Decant precisa do tamanho em ml"),
+            ({**corpo, "ml": 5}, "Frasco não tem tamanho em ml"),
+            ({**corpo, "produto_id": "zzz"}, "Perfume não encontrado"),
+            (corpo, "Anúncio encerrado ou em revisão no ML"),
+        ]
+        for body, msg in casos:
+            r = self.http.post("/api/anuncios/ligar", json=body)
+            self.assertEqual((r.status_code, r.json()["detail"]), (400, msg))
+        self.assertEqual(db.tabelas["anuncios"], [])
+
+    def test_ligar_simultaneo_unique_409(self):
+        db = banco([])
+        self.usar(db, FakeML(respostas={"/items/MLB7": {"id": "MLB7", "status": "active", "listing_type_id": "gold_pro"}}))
+
+        class Violacao(Exception):
+            code = "23505"
+        original = FakeQuery.execute
+
+        def falha(self):
+            if self.op == "insert":
+                raise Violacao("duplicate key")
+            return original(self)
+        with patch.object(FakeQuery, "execute", falha):
+            r = self.http.post("/api/anuncios/ligar", json={"ml_item_id": "MLB7", "produto_id": "p1", "tipo": "frasco", "ml": None})
+        self.assertEqual(r.status_code, 409)
 
     def test_ligar_duplicado_409(self):
         db = banco([anuncio(1, ml_item_id="MLB7")])

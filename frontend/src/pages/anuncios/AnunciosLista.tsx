@@ -139,7 +139,7 @@ export function AnunciosLista() {
                     )}
                   </td>
                   <td className="p-3">
-                    {l.status}
+                    {STATUS.find((s) => s.value === l.status)?.label ?? l.status}
                     {l.status === 'erro' && l.erro && <span className="block text-xs text-down">{l.erro}</span>}
                   </td>
                   <td className="p-3">

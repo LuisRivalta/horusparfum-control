@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-153011-683f
+# ID                 : 20261116-160554-a597
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Rotas de anuncios
 # Assunto            : Atributos, precos, IA, publicar, qualidade, quantidade, status e preco no ML
-# Origem             : solicitacao do usuario
-# Motivo             : Revisao pediu nao trocar o status para erro quando o anuncio ja tem ml_item_id.
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
 # Criado em          : 2026-11-16 15:25:55
-# Ultima modificacao : 2026-11-16 15:30:11
+# Ultima modificacao : 2026-11-16 16:05:54
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import re
@@ -302,18 +302,31 @@ class LigarIn(BaseModel):
 
 @router.post('/ligar')
 def ligar(body: LigarIn, db=Depends(obter_db), cliente: MLCliente = Depends(obter_cliente_ml)):
+    if body.tipo == 'decant' and not (body.ml and body.ml > 0):
+        raise HTTPException(status_code=400, detail='Decant precisa do tamanho em ml')
+    if body.tipo == 'frasco' and body.ml is not None:
+        raise HTTPException(status_code=400, detail='Frasco não tem tamanho em ml')
+    if not carregar_produto(db, body.produto_id):
+        raise HTTPException(status_code=400, detail='Perfume não encontrado')
     if db.table('anuncios').select('id').eq('ml_item_id', body.ml_item_id).execute().data:
         raise HTTPException(status_code=409, detail='Anúncio já ligado')
     item = cliente.get(f'/items/{body.ml_item_id}')
+    if item.get('status') not in ('active', 'paused'):
+        raise HTTPException(status_code=400, detail='Anúncio encerrado ou em revisão no ML')
     if item.get('listing_type_id') not in TIPOS_ML:
         raise HTTPException(status_code=400, detail='Tipo de anúncio não suportado')
     canal = db.table('anuncios_config').select('canal_id').eq('id', 1).execute().data
     linha = {
         'produto_id': body.produto_id, 'tipo': body.tipo, 'ml': body.ml if body.tipo == 'decant' else None,
         'canal_id': canal[0].get('canal_id') if canal else None,
-        'status': 'publicado' if item.get('status') == 'active' else 'pausado',
+        'status': 'publicado' if item['status'] == 'active' else 'pausado',
         'preco': item.get('price'), 'titulo': item.get('title'), 'permalink': item.get('permalink'),
         'listing_type': item['listing_type_id'], 'ml_item_id': body.ml_item_id,
     }
-    db.table('anuncios').insert(linha).execute()
+    try:
+        db.table('anuncios').insert(linha).execute()
+    except Exception as e:  # ligação simultânea: ml_item_id é único (23505)
+        if '23505' in f"{getattr(e, 'code', '')} {e}":
+            raise HTTPException(status_code=409, detail='Anúncio já ligado')
+        raise
     return {'status': linha['status']}
