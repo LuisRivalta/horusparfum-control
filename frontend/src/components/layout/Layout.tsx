@@ -24,6 +24,7 @@ const EST_NAV = [
   { id: 'estoque', label: 'Estoque', icon: 'box', path: '/estoque' },
   { id: 'vendas', label: 'Vendas', icon: 'cart', path: '/estoque/vendas' },
   { id: 'decants', label: 'Decants', icon: 'droplet', path: '/estoque/decants' },
+  { id: 'insumos', label: 'Insumos', icon: 'box', path: '/estoque/insumos' },
   { id: 'cadastros', label: 'Cadastros', icon: 'tag', path: '/estoque/cadastros' },
   { id: 'pedidos', label: 'Pedidos', icon: 'swap', path: '/estoque/pedidos' },
   { id: 'relatorios', label: 'Relatório de giro', icon: 'report', path: '/estoque/relatorios' },
