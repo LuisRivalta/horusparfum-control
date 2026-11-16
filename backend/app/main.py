@@ -1,12 +1,12 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-152623-b8fe
+# ID                 : 20261116-162848-69ec
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : main.py
 # Assunto            : 
 # Origem             : solicitacao do usuario
-# Motivo             : Brief da Task 7 pede registrar o router /api/anuncios e mapear erros do ML para 409/502.
-# Ultima modificacao : 2026-11-16 15:26:23
+# Motivo             : Adicionar configuracao e rotas do modulo Anuncios (Mercado Livre)
+# Ultima modificacao : 2026-11-16 16:28:48
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 from fastapi import FastAPI

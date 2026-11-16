@@ -1,11 +1,11 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-145140-2b21
+# ID                 : 20261116-162847-7a93
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
-# Titulo             : Testes conexao ML
-# Assunto            : Testes unitarios da conexao OAuth e do cliente ML
+# Titulo             : Horus Anuncios: test_mercadolivre_conexao.py
+# Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
 # Origem             : solicitacao do usuario
-# Motivo             : Brief da Task 2 do plano de Anuncios pede a conexao do backend com o Mercado Livre.
+# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
 # Criado em          : 2026-11-16 14:50:34
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]

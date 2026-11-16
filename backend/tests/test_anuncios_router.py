@@ -1,11 +1,11 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162709-e7fe
+# ID                 : 20261116-162846-5426
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
-# Titulo             : Testes rotas anuncios
-# Assunto            : Testes das rotas de anuncios com banco e ML falsos
+# Titulo             : Horus Anuncios: test_anuncios_router.py
+# Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
 # Origem             : solicitacao do usuario
-# Motivo             : Testes de recusa do ML por tipo, consulta unica de taxas e id nao UUID pedidos pela revisao.
+# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
 # Criado em          : 2026-11-16 15:24:58
 # Ultima modificacao : 2026-11-16 16:27:09
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log

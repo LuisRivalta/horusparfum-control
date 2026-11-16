@@ -1,11 +1,12 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162710-de13
+# ID                 : 20261116-162846-3d52
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
-# Titulo             : test_anuncios_preco.py
-# Assunto            : 
+# Titulo             : Horus Anuncios: test_anuncios_preco.py
+# Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
 # Origem             : solicitacao do usuario
-# Motivo             : Teste das taxas compartilhadas entre tipos pedido pela revisao.
+# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
+# Criado em          : 2026-11-16 16:28:46
 # Ultima modificacao : 2026-11-16 16:27:10
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]

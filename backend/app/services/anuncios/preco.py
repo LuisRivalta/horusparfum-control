@@ -1,11 +1,12 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162708-a65e
+# ID                 : 20261116-162843-abce
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
-# Titulo             : preco.py
-# Assunto            : 
+# Titulo             : Horus Anuncios: preco.py
+# Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
 # Origem             : solicitacao do usuario
-# Motivo             : Revisao pediu reduzir chamadas ao ML no calculo de preco compartilhando listing_prices entre os tipos de anuncio.
+# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
+# Criado em          : 2026-11-16 16:28:43
 # Ultima modificacao : 2026-11-16 16:27:08
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]

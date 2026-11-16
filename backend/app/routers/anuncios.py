@@ -1,11 +1,11 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162710-d003
+# ID                 : 20261116-162842-95e1
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
-# Titulo             : Rotas de anuncios
-# Assunto            : Atributos, precos, IA, publicar, qualidade, quantidade, status e preco no ML
+# Titulo             : Horus Anuncios: anuncios.py
+# Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
 # Origem             : solicitacao do usuario
-# Motivo             : Revisao apontou recusa do ML derrubando todo o calculo de preco e id nao UUID gerando erro 500.
+# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
 # Criado em          : 2026-11-16 15:25:55
 # Ultima modificacao : 2026-11-16 16:27:10
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log

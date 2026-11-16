@@ -1,11 +1,11 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162709-3506
+# ID                 : 20261116-162845-8d4e
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
-# Titulo             : backend\tests\test_anuncios_ia.py
-# Assunto            : IA opcional de ficha e textos dos anuncios ML
+# Titulo             : Horus Anuncios: test_anuncios_ia.py
+# Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
 # Origem             : solicitacao do usuario
-# Motivo             : Teste da limpeza de setas, estrelas e espaco duplo pedido pela revisao.
+# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
 # Criado em          : 2026-11-16 15:00:59
 # Ultima modificacao : 2026-11-16 16:27:09
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log

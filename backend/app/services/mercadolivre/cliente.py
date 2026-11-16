@@ -1,11 +1,11 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-145141-3b12
+# ID                 : 20261116-162844-941a
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
-# Titulo             : Cliente API Mercado Livre
-# Assunto            : Chamadas autenticadas ao ML com renovacao do token
+# Titulo             : Horus Anuncios: cliente.py
+# Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
 # Origem             : solicitacao do usuario
-# Motivo             : Brief da Task 2 do plano de Anuncios pede a conexao do backend com o Mercado Livre.
+# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
 # Criado em          : 2026-11-16 14:51:06
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
