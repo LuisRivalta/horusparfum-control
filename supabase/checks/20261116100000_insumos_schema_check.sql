@@ -25,6 +25,15 @@ begin
   assert exists (select 1 from insumo_movimentacoes
                  where insumo_id = v_id and tipo = 'acerto' and quantidade = 5), 'mov acerto';
 
+  -- estoque negativo + compra: base 0, sem divisão por zero nem custo negativo
+  insert into insumos (nome, estoque_atual, custo_medio) values ('teste-check-neg', -10, 3) returning id into v_id;
+  r := registrar_compra_insumo(v_id, 10, 50, null, 'Pix', 'check');
+  assert (r->>'estoque_atual')::numeric = 10, 'estoque negativo + compra (-10 + 10)';
+  assert (r->>'custo_medio')::numeric = 5, 'custo medio com base 0';
+  update insumos set estoque_atual = -50 where id = v_id;
+  r := registrar_compra_insumo(v_id, 10, 40, null, 'Pix', 'check');
+  assert (r->>'estoque_atual')::numeric = 10 and (r->>'custo_medio')::numeric = 4, 'estoque -50 + compra';
+
   assert (select data_type from information_schema.columns
           where table_name = 'decants' and column_name = 'ml') = 'numeric', 'decants.ml numeric';
   assert (select count(*) from insumo_listas) = 6, 'seeds das listas';

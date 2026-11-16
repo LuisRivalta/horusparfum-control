@@ -154,6 +154,7 @@ as $$
 declare
   v_ins    insumos%rowtype;
   v_saldo  numeric;
+  v_base   numeric;
   v_dif    numeric;
   v_novo   numeric;
   v_custo  numeric;
@@ -181,8 +182,10 @@ begin
             v_dif, v_ins.custo_medio, p_responsavel);
   end if;
 
-  v_novo := v_saldo + p_qtd;
-  v_custo := (v_saldo * v_ins.custo_medio + p_valor_total) / v_novo;
+  -- saldo negativo conta como 0 (igual a aplicarCompra em frontend/src/lib/insumos.ts)
+  v_base := greatest(v_saldo, 0);
+  v_novo := v_base + p_qtd;
+  v_custo := round((v_base * v_ins.custo_medio + p_valor_total) / v_novo, 4);
 
   insert into insumo_movimentacoes (insumo_id, tipo, quantidade, custo_unitario, responsavel)
   values (p_insumo_id, 'compra', p_qtd, p_valor_total / p_qtd, p_responsavel);
