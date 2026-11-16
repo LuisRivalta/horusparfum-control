@@ -1,3 +1,14 @@
+# [CLAUDE-CODE-AUDIT]
+# ID                 : 20261116-114137-0219
+# Tipo de item       : Script Python
+# Autores            : luisgfr; MS125; Claude Code
+# Titulo             : test_pedido_pdf_import.py
+# Assunto            : 
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Stop, varredura da pasta de trabalho): arquivo criado ou alterado durante este prompt sem o caminho aparecer no comando (saida impl...
+# Ultima modificacao : 2026-11-16 11:41:37
+# Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
+# [/CLAUDE-CODE-AUDIT]
 import sys
 import types
 import unittest
@@ -66,7 +77,67 @@ Total de produtos
 """
 
 
+# Planilha de estoque/lucratividade: pypdf solta uma celula por linha.
+PLANILHA_TEXT = """
+HORUS PARFUM  |  CONTROLE FINANCEIRO
+1
+UNIDADES
+INVESTIMENTO
+30
+R$ 7.611,75
+R$ 11.311,75
+R$ 3.114,65
+Inventário e preços sugeridos
+Qtd.
+Perfume
+Custo unit.
+Venda unit.
+Lucro unit.*
+Lucro total*
+1
+Valentino
+R$ 499,99
+R$ 669,99
+R$ 141,70
+R$ 141,70
+2
+Club de Nuit
+R$ 189,99
+R$ 299,99
+R$ 92,80
+R$ 185,60
+1
+212 VIP Black
+R$ 399,99
+R$ 549,99
+R$ 125,30
+R$ 125,30
+
+HORUS PARFUM  |  CONTROLE FINANCEIRO
+2
+Lucro total*
+2 Armaf CDN Overdose 105ml R$ 319,00 R$ 459,00 R$ 118,03 R$ 236,06
+RESUMO FINANCEIRO
+Investimento em perfumes
+R$ 7.611,75
+"""
+
+
 class PedidoPdfImportTest(unittest.TestCase):
+    def test_parseia_planilha_com_custo_unitario(self):
+        resultado = parse_pedido_pdf_text(PLANILHA_TEXT)
+
+        self.assertEqual(resultado["avisos"], [])
+        self.assertEqual(
+            resultado["itens"],
+            [
+                {"nome": "Valentino", "codigo": None, "qtd": 1.0, "preco_unitario": 499.99, "total": 499.99},
+                {"nome": "Club de Nuit", "codigo": None, "qtd": 2.0, "preco_unitario": 189.99, "total": 379.98},
+                {"nome": "212 VIP Black", "codigo": None, "qtd": 1.0, "preco_unitario": 399.99, "total": 399.99},
+                {"nome": "Armaf CDN Overdose 105ml", "codigo": None, "qtd": 2.0, "preco_unitario": 319.0, "total": 638.0},
+            ],
+        )
+
     def test_normaliza_numero_brasileiro(self):
         self.assertEqual(normalizar_numero_br("1,00"), 1.0)
         self.assertEqual(normalizar_numero_br("169,99"), 169.99)

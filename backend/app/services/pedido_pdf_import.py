@@ -1,3 +1,14 @@
+# [CLAUDE-CODE-AUDIT]
+# ID                 : 20261116-114136-ebdc
+# Tipo de item       : Script Python
+# Autores            : luisgfr; MS125; Claude Code
+# Titulo             : pedido_pdf_import.py
+# Assunto            : 
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Stop, varredura da pasta de trabalho): arquivo criado ou alterado durante este prompt sem o caminho aparecer no comando (saida impl...
+# Ultima modificacao : 2026-11-16 11:41:36
+# Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
+# [/CLAUDE-CODE-AUDIT]
 from __future__ import annotations
 
 import io
@@ -23,6 +34,13 @@ NCM_RE = re.compile(r"\bNCM:\s*\d{4}\.\d{2}\.\d{2}\b", re.I)
 GTIN_RE = re.compile(r"^\d{8,14}$")
 CODE_RE = re.compile(r"^[A-Z]{1,4}-[A-Z0-9]+$", re.I)
 TRAILING_CODE_RE = re.compile(r"^(?P<nome>.+?)\s+(?P<codigo>[A-Z]{1,4}-[A-Z0-9]+)$", re.I)
+# Planilha "Qtd | Perfume | Custo unit. | Venda unit. | Lucro unit. | Lucro total":
+# \s+ casa tanto a linha inteira quanto uma celula por linha (como o pypdf extrai).
+PLANILHA_ROW_RE = re.compile(
+    rf"^(?P<qtd>\d+)\s+(?P<nome>(?!R\$)[^\n]+?)\s+R\$\s*(?P<preco>{MONEY_RE})"
+    rf"(?:\s+R\$\s*(?:{MONEY_RE})){{3}}$",
+    re.M,
+)
 
 
 def normalizar_numero_br(valor: str) -> float:
@@ -127,7 +145,27 @@ def _parse_inline_row(line: str) -> dict[str, Any] | None:
     return _build_item(prefix, codigo, match)
 
 
+def _parse_planilha(texto: str) -> list[dict[str, Any]]:
+    itens = []
+    for match in PLANILHA_ROW_RE.finditer(texto):
+        qtd = float(match.group("qtd"))
+        preco = normalizar_numero_br(match.group("preco"))
+        itens.append({
+            "nome": _clean_name(match.group("nome")),
+            "codigo": None,
+            "qtd": qtd,
+            "preco_unitario": preco,
+            "total": round(qtd * preco, 2),
+        })
+    return itens
+
+
 def parse_pedido_pdf_text(texto: str) -> dict[str, Any]:
+    if "CUSTO UNIT" in texto.upper():
+        itens_planilha = _parse_planilha(texto)
+        if itens_planilha:
+            return {"itens": itens_planilha, "avisos": []}
+
     linhas = [linha.strip() for linha in texto.splitlines()]
     itens: list[dict[str, Any]] = []
     avisos: list[str] = []
