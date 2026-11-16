@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Select } from '@/components/shared/FormControls'
@@ -8,7 +8,7 @@ import {
   quantidadeDisponivel, tituloPadrao, type AlvoAnuncio, type Foto,
 } from '@/lib/anuncios'
 import {
-  atributosCategoria, calcularPrecos, gerarTextos, publicar, qualidade, type AtributoML, type TipoML,
+  atributosCategoria, calcularPrecos, gerarTextos, publicar, qualidade, type AtributoML, type ItemPreco, type TipoML,
 } from '@/lib/apiAnuncios'
 import { FotosPerfume } from './FotosPerfume'
 import { FichaPerfume, type Ficha } from './novo/FichaPerfume'
@@ -17,7 +17,7 @@ import { TextosAnuncios } from './novo/TextosAnuncios'
 import { LateralPublicar } from './novo/LateralPublicar'
 import { OQueAnunciar } from './novo/OQueAnunciar'
 import { carregarBase, carregarDoProduto, type AnuncioDb, type Base, type Produto } from './novo/carregar'
-import { card, editavel, fmtMl, precoEscolhido, tituloSecao, type Cotacoes, type ItemAnuncio } from './novo/item'
+import { card, editavel, fmtMl, precoEscolhido, rotulo, sigPreco, tituloSecao, type Cotacoes, type ItemAnuncio } from './novo/item'
 
 const erroMsg = (e: unknown) => (e instanceof Error ? e.message : 'Erro inesperado')
 
@@ -95,18 +95,30 @@ export function NovoAnuncio() {
   const pacotes = base?.pacotes
 
   // Recalcula só quando muda o que entra no preço (custo, margem, tipo do anúncio).
-  const pedido = JSON.stringify(aPublicar.filter((i) => i.custo != null)
-    .map((i) => ({ chave: i.chave, custo: i.custo!, margem: i.margem, tipo: i.alvo.tipo })))
+  const comCusto = aPublicar.filter((i) => i.custo != null)
+  const pedido = JSON.stringify(comCusto.map((i) => ({ chave: i.chave, custo: i.custo!, margem: i.margem, tipo: i.alvo.tipo })))
+  const sigs = JSON.stringify(Object.fromEntries(comCusto.map((i) => [i.chave, sigPreco(i)])))
   useEffect(() => {
-    const corpo = JSON.parse(pedido)
+    const corpo = JSON.parse(pedido) as ItemPreco[]
     if (!corpo.length || !pacotes) return
+    const sig: Record<string, string> = JSON.parse(sigs)
     let vivo = true
     calcularPrecos({ itens: corpo, pacotes })
-      .then((r) => { if (vivo) { setErroPreco(null); setCotacoes((c) => ({ ...c, ...Object.fromEntries(r.itens.map((x) => [x.chave, x])) })) } })
-      .catch((e) => vivo && setErroPreco(erroMsg(e)))
+      .then((r) => {
+        if (!vivo) return
+        setErroPreco(null)
+        setCotacoes((c) => ({ ...c, ...Object.fromEntries(r.itens.map((x) => [x.chave, { ...x, sig: sig[x.chave] }])) }))
+      })
+      .catch((e) => {
+        if (!vivo) return
+        setErroPreco(erroMsg(e))
+        setCotacoes((c) => Object.fromEntries(Object.entries(c).filter(([k]) => !corpo.some((x) => x.chave === k))))
+      })
       .finally(() => vivo && setCalculadoPara(pedido))
     return () => { vivo = false }
-  }, [pedido, pacotes])
+  }, [pedido, sigs, pacotes])
+  const calculando = pedido !== '[]' && pedido !== calculadoPara
+  const motivoPreco = calculando ? 'Calculando preço…' : erroPreco ? `Erro no preço: ${erroPreco}` : null
 
   const fichaCompleta = (alvo: AlvoAnuncio): Ficha => {
     const ml = alvo.tipo === 'decant' ? alvo.ml : produto?.volume_ml
@@ -128,7 +140,12 @@ export function NovoAnuncio() {
   const mudar = (chave: string, patch: Partial<ItemAnuncio>) =>
     setItens((xs) => xs.map((x) => (x.chave === chave ? { ...x, ...patch } : x)))
 
+  // Itens casam por chave (igual em todo perfume): resposta que chega depois da troca é descartada.
+  const produtoAtual = useRef(produtoId)
+  const mesmoProduto = (pid: string) => produtoAtual.current === pid
+
   function trocarProduto(id: string) {
+    produtoAtual.current = id
     setProdutoId(id)
     setItens([]); setCotacoes({}); setFotos([]); setMensagem(null); setErro(null); setOrigemIA(new Set())
   }
@@ -139,9 +156,11 @@ export function NovoAnuncio() {
   }
 
   async function gerarIA() {
+    const pid = produtoId
     setGerando(true); setErroTexto(null)
     try {
-      const { textos } = await gerarTextos(produtoId, aPublicar.map((i) => ({ chave: i.chave, tipo: i.alvo.tipo, ml: i.alvo.ml })))
+      const { textos } = await gerarTextos(pid, aPublicar.map((i) => ({ chave: i.chave, tipo: i.alvo.tipo, ml: i.alvo.ml })))
+      if (!mesmoProduto(pid)) return
       const porChave = new Map(textos.map((t) => [t.chave, t]))
       setItens((xs) => xs.map((x) => {
         const t = porChave.get(x.chave)
@@ -153,21 +172,30 @@ export function NovoAnuncio() {
   // Upsert por produto + tipo + ml: a linha existente (carregada com o produto) é atualizada.
   async function salvar(): Promise<string[] | null> {
     if (!base) return null
+    const pid = produtoId
     const ids: string[] = []
     for (const i of aPublicar) {
       const row = {
-        produto_id: produtoId, canal_id: base.config.canal_id, tipo: i.alvo.tipo, ml: i.alvo.ml,
+        produto_id: pid, canal_id: base.config.canal_id, tipo: i.alvo.tipo, ml: i.alvo.ml,
         listing_type: i.listingType, margem: i.margem, custo_base: i.custo, preco: precoEscolhido(i, cotacoes),
-        titulo: i.titulo, descricao: i.descricao, fotos: fotosDoAnuncio(fotos, i.alvo),
+        titulo: i.titulo, descricao: limparDescricao(i.descricao), fotos: fotosDoAnuncio(fotos, i.alvo),
         status: 'rascunho', erro: null, updated_at: new Date().toISOString(),
       }
-      const r = i.id
-        ? await supabase.from('anuncios').update(row).eq('id', i.id).in('status', ['rascunho', 'erro']).select('id').single()
-        : await supabase.from('anuncios').insert(row).select('id').single()
-      if (r.error || !r.data) { setErro(`Não foi possível salvar ${i.chave}: ${r.error?.message ?? 'anúncio já publicado'}`); return null }
-      const id = (r.data as { id: string }).id
+      let id: string | undefined
+      if (i.id) {
+        // só mexe em rascunho/erro: publicado ou pausado não volta para rascunho
+        const r = await supabase.from('anuncios').update(row).eq('id', i.id).in('status', ['rascunho', 'erro']).select('id')
+        if (r.error) { setErro(`Não foi possível salvar ${rotulo(i.alvo)}: ${r.error.message}`); return null }
+        id = (r.data as { id: string }[] | null)?.[0]?.id
+        if (!id) { setErro(`${rotulo(i.alvo)}: anúncio já publicado — não foi alterado`); return null }
+      } else {
+        const r = await supabase.from('anuncios').insert(row).select('id').single()
+        if (r.error || !r.data) { setErro(`Não foi possível salvar ${rotulo(i.alvo)}: ${r.error?.message ?? 'sem resposta'}`); return null }
+        id = (r.data as { id: string }).id
+      }
+      if (!mesmoProduto(pid)) return null
       ids.push(id)
-      mudar(i.chave, { id, status: 'rascunho', erro: null })
+      mudar(i.chave, { id, status: 'rascunho', erro: null, descricao: row.descricao })
     }
     return ids
   }
@@ -180,11 +208,13 @@ export function NovoAnuncio() {
   const salvarRascunho = () => executar(async () => { if (await salvar()) setMensagem('Rascunho salvo.') })
 
   const publicarTudo = () => executar(async () => {
+    const pid = produtoId
     const ids = await salvar()
     if (!ids) return
     const { resultados } = await publicar(ids)
     const porId = new Map(resultados.map((r) => [r.id, r]))
     const links = await supabase.from('anuncios').select('id, permalink').in('id', ids)
+    if (!mesmoProduto(pid)) return
     const linkPorId = new Map(((links.data ?? []) as { id: string; permalink: string | null }[]).map((l) => [l.id, l.permalink]))
     setItens((xs) => xs.map((x) => {
       const r = x.id ? porId.get(x.id) : undefined
@@ -193,6 +223,7 @@ export function NovoAnuncio() {
     const ok = resultados.filter((r) => r.status === 'publicado')
     setMensagem(`${ok.length} de ${ids.length} publicados.`)
     const notas = await Promise.allSettled(ok.map((r) => qualidade(r.id)))
+    if (!mesmoProduto(pid)) return
     setItens((xs) => xs.map((x) => {
       const n = ok.findIndex((r) => r.id === x.id)
       const q = notas[n]
@@ -200,7 +231,8 @@ export function NovoAnuncio() {
     }))
   })
 
-  const podePublicar = aPublicar.length > 0 && !aPublicar.some((i) => bloqueia(pend[i.chave] ?? []))
+  const podeSalvar = aPublicar.length > 0 && !motivoPreco
+  const podePublicar = podeSalvar && !aPublicar.some((i) => bloqueia(pend[i.chave] ?? []))
   const naLateral = itens.filter((i) => (i.marcado && !i.bloqueio) || !editavel(i))
 
   return (
@@ -220,7 +252,7 @@ export function NovoAnuncio() {
             <h2 className={tituloSecao}>1 · Perfume</h2>
             <Select label="Perfume" placeholder="Digite o nome do perfume..." value={produtoId}
               options={(base?.produtos ?? []).map((p) => ({ value: p.id, label: p.marca ? `${p.nome} · ${p.marca}` : p.nome }))}
-              onChange={(e) => trocarProduto(e.target.value)} />
+              disabled={ocupado || gerando} onChange={(e) => trocarProduto(e.target.value)} />
             {base && produtoId && !produto && <p className="text-sm text-down">Perfume não encontrado.</p>}
             <p className="text-xs text-muted">
               Não achou? <Link to="/estoque" className="text-gold hover:underline">Cadastre o perfume no Estoque</Link>
@@ -244,7 +276,7 @@ export function NovoAnuncio() {
                 ficha={ficha} origemIA={origemIA} gtin={gtin} iaAtiva={!!base?.config.ia_ativa}
                 horus={{ BRAND: produto.marca, PERFUME_NAME: produto.nome, UNIT_VOLUME: produto.volume_ml ? `${fmtMl(produto.volume_ml)} ml` : '' }}
                 onFicha={(f, ia) => { setFicha(f); setOrigemIA(ia) }} onGtin={setGtin} />
-              <PrecosAnuncios itens={aPublicar} cotacoes={cotacoes} calculando={pedido !== '[]' && pedido !== calculadoPara} erro={erroPreco}
+              <PrecosAnuncios itens={aPublicar} cotacoes={cotacoes} calculando={calculando} erro={erroPreco}
                 onMargem={(chave, margem) => mudar(chave, { margem })}
                 onTipo={(chave, listingType: TipoML) => mudar(chave, { listingType })} />
               <section className="flex flex-col gap-2">
@@ -258,7 +290,7 @@ export function NovoAnuncio() {
         </div>
 
         <LateralPublicar itens={naLateral} pendencias={pend} quantidades={quantidades} nPublicar={aPublicar.length}
-          podePublicar={podePublicar} ocupado={ocupado} mensagem={mensagem} onSalvar={salvarRascunho} onPublicar={publicarTudo} />
+          podePublicar={podePublicar} podeSalvar={podeSalvar} motivo={motivoPreco} erro={erro} ocupado={ocupado} mensagem={mensagem} onSalvar={salvarRascunho} onPublicar={publicarTudo} />
       </div>
     </div>
   )

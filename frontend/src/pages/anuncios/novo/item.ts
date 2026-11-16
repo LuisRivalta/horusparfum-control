@@ -19,7 +19,9 @@ export interface ItemAnuncio {
   qualidade?: Qualidade
 }
 
-export type Cotacoes = Record<string, Partial<Record<TipoML, CotacaoOuErro>>>
+// sig: custo|margem|tipo usados no cálculo; cotação de outro sig é velha e não vale
+export type Cotacoes = Record<string, Partial<Record<TipoML, CotacaoOuErro>> & { sig?: string }>
+export const sigPreco = (i: { custo: number | null; margem: number; alvo: AlvoAnuncio }) => `${i.custo}|${i.margem}|${i.alvo.tipo}`
 
 export const fmtMl = (n: number) => String(n).replace('.', ',')
 export const rotulo = (a: AlvoAnuncio) => (a.tipo === 'frasco' ? 'Frasco' : `Decant ${fmtMl(a.ml ?? 0)} ml`)
@@ -32,6 +34,7 @@ export const card = 'gold-hairline bg-surface border border-line rounded-xl p-5 
 export const tituloSecao = 'text-sm font-medium uppercase tracking-[.08em] text-muted'
 
 export function precoEscolhido(i: ItemAnuncio, cotacoes: Cotacoes): number | null {
-  const c = cotacoes[i.chave]?.[i.listingType]
+  const linha = cotacoes[i.chave]
+  const c = linha?.sig === sigPreco(i) ? linha[i.listingType] : undefined
   return c && 'preco' in c ? c.preco : null
 }

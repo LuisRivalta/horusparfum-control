@@ -9,6 +9,9 @@ interface Props {
   quantidades: Record<string, number>
   nPublicar: number
   podePublicar: boolean
+  podeSalvar: boolean
+  motivo: string | null // preço calculando ou com erro: bloqueia salvar e publicar
+  erro: string | null
   ocupado: boolean
   mensagem: string | null
   onSalvar: () => void
@@ -17,7 +20,7 @@ interface Props {
 
 const corStatus: Record<string, string> = { publicado: 'text-up', pausado: 'text-warn', erro: 'text-down', rascunho: 'text-muted' }
 
-export function LateralPublicar({ itens, pendencias, quantidades, nPublicar, podePublicar, ocupado, mensagem, onSalvar, onPublicar }: Props) {
+export function LateralPublicar({ itens, pendencias, quantidades, nPublicar, podePublicar, podeSalvar, motivo, erro, ocupado, mensagem, onSalvar, onPublicar }: Props) {
   return (
     <aside className="gold-hairline bg-surface border border-line rounded-xl p-5 flex flex-col gap-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
       <h2 className={tituloSecao}>Antes de publicar</h2>
@@ -52,12 +55,14 @@ export function LateralPublicar({ itens, pendencias, quantidades, nPublicar, pod
           </li>
         ))}
       </ul>
+      {motivo && <p className="text-sm text-warn" role="status">{motivo}</p>}
+      {erro && <p className="text-sm text-down" role="alert">{erro}</p>}
       {mensagem && <p className="text-sm text-muted" role="status">{mensagem}</p>}
       <div className="flex flex-col gap-2">
         <Button type="button" disabled={!podePublicar || ocupado} onClick={onPublicar}>
           Publicar {nPublicar} {nPublicar === 1 ? 'anúncio' : 'anúncios'}
         </Button>
-        <Button type="button" variant="secondary" disabled={ocupado || nPublicar === 0} onClick={onSalvar}>Salvar rascunho</Button>
+        <Button type="button" variant="secondary" disabled={ocupado || !podeSalvar} onClick={onSalvar}>Salvar rascunho</Button>
       </div>
     </aside>
   )

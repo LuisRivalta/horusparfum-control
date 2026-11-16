@@ -167,4 +167,76 @@ describe('NovoAnuncio', () => {
     expect(within(lateral).getAllByText('erro').length).toBeGreaterThan(0)
     await waitFor(() => expect(api.qualidade).toHaveBeenCalledTimes(3))
   })
+
+  it('mudar a margem desabilita Publicar até chegar o preço novo', async () => {
+    await escolherPerfume()
+    fireEvent.click(screen.getByRole('button', { name: 'subir foto teste' }))
+    await waitFor(() => expect(botaoPublicar()).toBeEnabled())
+    let liberar!: () => void
+    api.calcularPrecos.mockImplementationOnce((body: { itens: { chave: string }[] }) => new Promise((ok) => {
+      liberar = () => ok({ itens: body.itens.map((i) => ({
+        chave: i.chave,
+        gold_special: { preco: 120.9, comissao: 10, taxa_fixa: 6, frete: 0, lucro: 40 },
+        gold_pro: { preco: 130.9, comissao: 15, taxa_fixa: 6, frete: 0, lucro: 41 },
+      })) })
+    }))
+    const margem = screen.getByLabelText('Margem Frasco')
+    fireEvent.change(margem, { target: { value: '80' } })
+    fireEvent.blur(margem)
+    await waitFor(() => expect(botaoPublicar()).toBeDisabled())
+    expect(screen.getByRole('button', { name: /Salvar rascunho/ })).toBeDisabled()
+    expect(screen.getByText('Calculando preço…')).toBeInTheDocument()
+    expect(screen.queryAllByText('R$ 99,90')).toHaveLength(3) // só os decants: o preço velho do frasco some
+    liberar()
+    await waitFor(() => expect(botaoPublicar()).toBeEnabled())
+    expect(screen.getAllByText('R$ 120,90')).toHaveLength(4)
+  })
+
+  it('falha no cálculo do preço deixa Publicar desabilitado', async () => {
+    api.calcularPrecos.mockRejectedValue(new Error('ML fora do ar'))
+    await escolherPerfume()
+    fireEvent.click(screen.getByRole('button', { name: 'subir foto teste' }))
+    expect(await screen.findByText('Erro no preço: ML fora do ar')).toBeInTheDocument()
+    expect(botaoPublicar()).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Salvar rascunho/ })).toBeDisabled()
+  })
+
+  it('descrição com emoji e < é salva limpa', async () => {
+    await escolherPerfume()
+    await waitFor(() => expect(screen.getByRole('button', { name: /Salvar rascunho/ })).toBeEnabled())
+    fireEvent.change(screen.getByLabelText('Descrição Frasco'), { target: { value: 'Ótimo 🌸 <b>forte</b>' } })
+    fireEvent.click(screen.getByRole('button', { name: /Salvar rascunho/ }))
+    await waitFor(() => expect(db.anuncios).toHaveLength(4))
+    const desc = db.anuncios[0].descricao as string
+    expect(desc).toContain('Ótimo')
+    expect(desc).not.toMatch(/[<>]|🌸/)
+  })
+
+  it('duas edições rápidas da ficha ficam salvas', async () => {
+    api.atributosCategoria.mockResolvedValue([
+      { id: 'LINE', name: 'Linha', value_type: 'string' },
+      { id: 'GENDER', name: 'Gênero', value_type: 'list', values: [{ id: 'g1', name: 'Masculino' }, { id: 'g2', name: 'Feminino' }] },
+    ])
+    await escolherPerfume()
+    const linha = await screen.findByLabelText('Linha')
+    fireEvent.change(linha, { target: { value: 'Oud' } })
+    fireEvent.blur(linha)
+    escolher(screen.getByLabelText('Gênero'), 'g1')
+    await waitFor(() => expect(db.produtos[0].ficha).toEqual({
+      LINE: { value_id: null, value_name: 'Oud' },
+      GENDER: { value_id: 'g1', value_name: 'Masculino' },
+    }))
+  })
+
+  it('salvar de novo um rascunho existente atualiza a mesma linha', async () => {
+    db.anuncios.push({ id: 'x1', produto_id: 'p1', tipo: 'frasco', ml: null, listing_type: 'gold_pro', margem: 0.6, titulo: 'Título salvo', descricao: 'Desc salva', status: 'rascunho', permalink: null, erro: null })
+    await escolherPerfume()
+    expect(await screen.findByDisplayValue('Título salvo')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: /Salvar rascunho/ })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: /Salvar rascunho/ }))
+    expect(await screen.findByText('Rascunho salvo.')).toBeInTheDocument()
+    expect(db.anuncios.filter((a) => a.tipo === 'frasco')).toHaveLength(1)
+    expect(db.anuncios[0]).toMatchObject({ id: 'x1', titulo: 'Título salvo', listing_type: 'gold_pro', preco: 109.9, status: 'rascunho' })
+    expect(db.anuncios).toHaveLength(4) // x1 + 3 decants novos
+  })
 })

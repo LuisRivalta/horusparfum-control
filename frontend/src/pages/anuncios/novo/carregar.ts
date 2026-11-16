@@ -36,6 +36,8 @@ export async function carregarBase(): Promise<Base> {
     supabase.from('insumo_listas').select('tipo, tamanho_ml, peso_g, altura_cm, largura_cm, comprimento_cm, insumo_lista_itens(insumo_id, quantidade)'),
     supabase.from('insumos').select('id, custo_medio, ativo'),
   ])
+  const falha = [prods, marcas, listas, insumos].find((r) => r.error)?.error
+  if (falha) throw new Error(`Não foi possível carregar os dados: ${falha.message}`)
   if (!cfg.data) throw new Error('Configuração dos anúncios não encontrada')
   const c = cfg.data as Config
   const nomeMarca = new Map(((marcas.data ?? []) as { id: string; nome: string }[]).map((m) => [m.id, m.nome]))
@@ -62,7 +64,8 @@ export async function carregarDoProduto(produtoId: string): Promise<{
     supabase.from('anuncios').select('*').eq('produto_id', produtoId),
     supabase.from('produtos').select('ficha, gtin').eq('id', produtoId).single(),
   ])
-  if (anuncios.error) throw new Error(anuncios.error.message)
+  const falha = [abertos, anuncios, prod].find((r) => r.error)?.error
+  if (falha) throw new Error(`Não foi possível carregar o perfume: ${falha.message}`)
   const p = (prod.data ?? {}) as { ficha?: Ficha | null; gtin?: string | null }
   const mlAberto = ((abertos.data ?? []) as { ml_restante: number }[])
     .reduce((s, f) => s.add(f.ml_restante ?? 0), new Decimal(0)).toNumber()

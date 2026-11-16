@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { sugerirFicha, type AtributoML } from '@/lib/apiAnuncios'
 import { Button, Input, Select } from '@/components/shared/FormControls'
@@ -37,33 +37,43 @@ export function FichaPerfume({ produtoId, atributos, erroAtributos, ficha, orige
   const [gtinTexto, setGtinTexto] = useState(gtin)
   const [erro, setErro] = useState<string | null>(null)
   const [sugerindo, setSugerindo] = useState(false)
+  // Este componente é o único que muda a ficha enquanto está montado (key = produto):
+  // a última versão fica no ref para duas edições seguidas não se sobrescreverem,
+  // e as gravações vão em fila para chegarem ao banco na ordem.
+  const atual = useRef({ ficha, ia: origemIA })
+  const fila = useRef<Promise<unknown>>(Promise.resolve())
+  const vivo = useRef(true)
+  useEffect(() => { vivo.current = true; return () => { vivo.current = false } }, [])
 
-  async function gravar(nova: Ficha, ia: Set<string>) {
-    const { error } = await supabase.from('produtos').update({ ficha: nova }).eq('id', produtoId)
-    if (error) { setErro('Não foi possível salvar a ficha.'); return }
-    setErro(null)
+  function aplicar(nova: Ficha, ia: Set<string>) {
+    atual.current = { ficha: nova, ia }
     onFicha(nova, ia)
+    fila.current = fila.current.then(async () => {
+      const { error } = await supabase.from('produtos').update({ ficha: nova }).eq('id', produtoId)
+      if (vivo.current) setErro(error ? 'Não foi possível salvar a ficha.' : null)
+    })
   }
 
   function mudar(id: string, v: ValorFicha | null) {
-    const nova = { ...ficha }
+    const nova = { ...atual.current.ficha }
     if (v && v.value_name.trim()) nova[id] = v
     else delete nova[id]
-    const ia = new Set(origemIA)
+    const ia = new Set(atual.current.ia)
     ia.delete(id) // editado: deixa de ser da IA
-    gravar(nova, ia)
+    aplicar(nova, ia)
   }
 
   function sairDoCampo(id: string) {
     const v = rascunho[id]
     setRascunho((r) => { const resto = { ...r }; delete resto[id]; return resto })
-    if (v !== undefined && v !== (ficha[id]?.value_name ?? '')) mudar(id, { value_id: null, value_name: v.trim() })
+    if (v !== undefined && v.trim() !== (atual.current.ficha[id]?.value_name ?? '')) mudar(id, { value_id: null, value_name: v.trim() })
   }
 
   async function salvarGtin() {
     const v = gtinTexto.trim()
     if (v === gtin) return
     const { error } = await supabase.from('produtos').update({ gtin: v || null }).eq('id', produtoId)
+    if (!vivo.current) return
     if (error) { setErro('Não foi possível salvar o código de barras.'); return }
     setErro(null)
     onGtin(v)
@@ -74,39 +84,53 @@ export function FichaPerfume({ produtoId, atributos, erroAtributos, ficha, orige
     setSugerindo(true)
     try {
       const r = (await sugerirFicha(produtoId)).ficha as Ficha
-      const novos = Object.entries(r ?? {}).filter(([k, v]) => !ficha[k] && !FORA.includes(k) && v?.value_name)
+      if (!vivo.current) return // trocou de perfume no meio
+      const { ficha: f, ia } = atual.current
+      const novos = Object.entries(r ?? {}).filter(([k, v]) => !f[k] && !FORA.includes(k) && v?.value_name)
       if (!novos.length) { setErro('A IA não sugeriu nada novo.'); return }
-      await gravar({ ...ficha, ...Object.fromEntries(novos) }, new Set([...origemIA, ...novos.map(([k]) => k)]))
+      aplicar({ ...f, ...Object.fromEntries(novos) }, new Set([...ia, ...novos.map(([k]) => k)]))
     } catch (e) {
-      setErro((e as Error).message)
+      if (vivo.current) setErro((e as Error).message)
     } finally {
-      setSugerindo(false)
+      if (vivo.current) setSugerindo(false)
     }
   }
 
   function campo(a: AtributoML) {
-    const atual = ficha[a.id]
-    if (a.values?.length) {
+    const v = ficha[a.id]
+    const lista = a.value_type === 'list' || a.value_type === 'boolean'
+    if (lista && a.values?.length) {
+      const opcoes = a.values.map((x) => ({ value: x.id, label: x.name }))
+      // valor salvo fora da lista (texto livre ou opção que o ML tirou) continua aparecendo
+      const chave = v ? (v.value_id ?? `texto:${v.value_name}`) : ''
+      if (v && !opcoes.some((o) => o.value === chave)) opcoes.unshift({ value: chave, label: v.value_name })
       return (
-        <Select label={a.name} value={atual?.value_id ?? ''}
-          options={a.values.map((v) => ({ value: v.id, label: v.name }))}
+        <Select label={a.name} value={chave} options={opcoes}
           onChange={(e) => {
-            const v = a.values!.find((x) => x.id === e.target.value)
-            mudar(a.id, v ? { value_id: v.id, value_name: v.name } : null)
+            if (e.target.value === chave) return
+            const x = a.values!.find((y) => y.id === e.target.value)
+            mudar(a.id, x ? { value_id: x.id, value_name: x.name } : null)
           }} />
       )
     }
     if (a.value_type === 'boolean') {
       return (
-        <Select label={a.name} value={atual?.value_name ?? ''} options={SIM_NAO}
+        <Select label={a.name} value={v?.value_name ?? ''} options={SIM_NAO}
           onChange={(e) => mudar(a.id, e.target.value ? { value_id: null, value_name: e.target.value } : null)} />
       )
     }
+    // texto/número: valores do ML (se houver) são só sugestão
     return (
-      <Input label={a.name} type={a.value_type === 'number' ? 'number' : 'text'}
-        value={rascunho[a.id] ?? atual?.value_name ?? ''}
-        onChange={(e) => setRascunho((r) => ({ ...r, [a.id]: e.target.value }))}
-        onBlur={() => sairDoCampo(a.id)} />
+      <>
+        <Input label={a.name} type={a.value_type === 'number' ? 'number' : 'text'}
+          list={a.values?.length ? `sugestoes-${a.id}` : undefined}
+          value={rascunho[a.id] ?? v?.value_name ?? ''}
+          onChange={(e) => setRascunho((r) => ({ ...r, [a.id]: e.target.value }))}
+          onBlur={() => sairDoCampo(a.id)} />
+        {a.values?.length ? (
+          <datalist id={`sugestoes-${a.id}`}>{a.values.map((x) => <option key={x.id} value={x.name} />)}</datalist>
+        ) : null}
+      </>
     )
   }
 

@@ -1,6 +1,6 @@
 import { formatBRL, cn } from '@/lib/utils'
 import type { TipoML } from '@/lib/apiAnuncios'
-import { card, rotulo, tituloSecao, TIPOS_ML, type Cotacoes, type ItemAnuncio } from './item'
+import { card, rotulo, sigPreco, tituloSecao, TIPOS_ML, type Cotacoes, type ItemAnuncio } from './item'
 
 interface Props {
   itens: ItemAnuncio[]
@@ -44,7 +44,8 @@ export function PrecosAnuncios({ itens, cotacoes, calculando, erro, onMargem, on
               />
             </label>
             {TIPOS_ML.map((t) => {
-              const c = cotacoes[i.chave]?.[t.id]
+              const linha = cotacoes[i.chave]
+              const c = linha?.sig === sigPreco(i) ? linha[t.id] : undefined // velha: some até chegar a nova
               const ativo = i.listingType === t.id
               return (
                 <button
