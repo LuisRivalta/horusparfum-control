@@ -5,12 +5,15 @@ import { Modal } from '@/components/shared/Modal'
 import { Button, Input, Select } from '@/components/shared/FormControls'
 import { Icon } from '@/components/shared/Icon'
 import { formatBRL } from '@/lib/utils'
-import { resumoVenda, custoDecantUnitario, type ItemVenda } from '@/lib/vendas'
+import Decimal from 'decimal.js'
+import { resumoVenda, type ItemVenda } from '@/lib/vendas'
+import { custoInsumos, listaDoItem, listaEnvio, somarItens, type ItemInsumo, type ListaInsumos } from '@/lib/insumos'
+import { custoPrevistoOrigens, origemParaJson, planejarOrigens, totalOrigens, type Origem } from '@/lib/decantOrigens'
+import { InsumosVenda, type GrupoInsumos, type InsumoOpt } from './InsumosVenda'
 
-export interface Canal { id: string; nome: string; taxa_padrao: number }
-export interface ProdutoOpt { id: string; nome: string; estoque_atual: number; custo_medio: number | null; preco_referencia: number | null }
+export interface Canal { id: string; nome: string; taxa_padrao: number; usa_envio: boolean }
+export interface ProdutoOpt { id: string; nome: string; estoque_atual: number; custo_medio: number | null; preco_referencia: number | null; volume_ml: number | null }
 export interface FrascoOpt { id: string; produto_id: string; ml_restante: number; ml_total: number; produtos: { nome: string; custo_medio: number | null } | null }
-export interface Embalagem { tamanho_ml: number; custo: number }
 
 export interface LinhaForm {
   tipo: 'produto' | 'decant'
@@ -20,7 +23,45 @@ export interface LinhaForm {
   quantidade: string
   preco: string
   custo_unitario: string
-  custo_embalagem: string
+  custo_embalagem: string      // só venda antiga sem insumos gravados; '0' nas demais
+  decant_id: string            // decant gravado e ainda inalterado (edição)
+  origens: Origem[] | null     // null = planejadas a partir do frasco escolhido
+  legado?: boolean             // decant antigo sem decant_origens
+  insumos: ItemInsumo[] | null // null = lista padrão do item
+}
+
+interface LinhaListaDb { tipo: ListaInsumos['tipo']; tamanho_ml: number | null; insumo_lista_itens: { insumo_id: string; quantidade: number }[] }
+interface OrigemDb { decant_id: string; frasco_id: string | null; produto_id: string; ml: number; abriu_frasco: boolean }
+interface ConsumoDb { decant_id: string | null; insumo_id: string; quantidade: number }
+
+type ItemPayload = {
+  tipo: 'produto' | 'decant'
+  produto_id?: string
+  frasco_id: string | null
+  ml: number | null
+  quantidade: number
+  preco_unitario: number
+  custo_unitario?: number
+  custo_embalagem?: number
+  decant_id?: string
+  origens?: ReturnType<typeof origemParaJson>[]
+  insumos?: { insumo_id: string; quantidade: number }[]
+}
+
+const fmtMl = (n: number) => String(n).replace('.', ',')
+const RESET_ITEM = { origens: null, decant_id: '', insumos: null, custo_embalagem: '0' } as const
+
+// Reparte o consumo gravado entre os pedidos (na ordem); o que sobra é devolvido em resto.
+function repartir(pool: ItemInsumo[], pedidos: ItemInsumo[][]) {
+  const saldo = new Map(pool.map((i) => [i.insumoId, new Decimal(i.quantidade)]))
+  const partes = pedidos.map((ped) => ped.flatMap((i) => {
+    const q = Decimal.min(i.quantidade, saldo.get(i.insumoId) ?? 0)
+    if (q.lte(0)) return []
+    saldo.set(i.insumoId, saldo.get(i.insumoId)!.sub(q))
+    return [{ insumoId: i.insumoId, quantidade: q.toNumber() }]
+  }))
+  const resto = [...saldo].filter(([, q]) => q.gt(0)).map(([insumoId, q]) => ({ insumoId, quantidade: q.toNumber() }))
+  return { partes, resto }
 }
 
 export interface VendaFormModalProps {
@@ -32,7 +73,7 @@ export interface VendaFormModalProps {
 }
 
 const LINHA_VAZIA: LinhaForm = {
-  tipo: 'produto', produto_id: '', frasco_id: '', ml: '5', quantidade: '1', preco: '', custo_unitario: '', custo_embalagem: '0',
+  tipo: 'produto', produto_id: '', frasco_id: '', ml: '5', quantidade: '1', preco: '', custo_unitario: '', ...RESET_ITEM,
 }
 
 export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaFormModalProps) {
@@ -40,7 +81,10 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
   const [canais, setCanais] = useState<Canal[]>([])
   const [produtos, setProdutos] = useState<ProdutoOpt[]>([])
   const [frascos, setFrascos] = useState<FrascoOpt[]>([])
-  const [embalagens, setEmbalagens] = useState<Embalagem[]>([])
+  const [listas, setListas] = useState<ListaInsumos[]>([])
+  const [insumos, setInsumos] = useState<InsumoOpt[]>([])
+  const [insumosEnvio, setInsumosEnvio] = useState<ItemInsumo[] | null>(null) // null = lista de envio do canal
+  const [completando, setCompletando] = useState<number | null>(null)
 
   const [titulo, setTitulo] = useState('')
   const [canalId, setCanalId] = useState('')
@@ -59,40 +103,42 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
     if (!open) return
     setErro(null)
     setSubmitting(false)
+    setCompletando(null)
+    setInsumosEnvio(null)
+
+    const base = Promise.all([
+      supabase.from('canais').select('id, nome, taxa_padrao, usa_envio').eq('ativo', true).order('nome'),
+      supabase.from('produtos').select('id, nome, estoque_atual, custo_medio, preco_referencia, volume_ml').order('nome'),
+      supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, produtos(nome, custo_medio)').eq('status', 'ativo'),
+      supabase.from('insumo_listas').select('tipo, tamanho_ml, insumo_lista_itens(insumo_id, quantidade)'),
+      supabase.from('insumos').select('id, nome, custo_medio, ativo').order('nome'),
+    ]).then(([c, p, f, l, ins]) => {
+      const listasData: ListaInsumos[] = ((l.data as LinhaListaDb[]) || []).map((x) => ({
+        tipo: x.tipo,
+        tamanhoMl: x.tamanho_ml != null ? Number(x.tamanho_ml) : null,
+        itens: (x.insumo_lista_itens || []).map((i) => ({ insumoId: i.insumo_id, quantidade: Number(i.quantidade) })),
+      }))
+      const prodsData = (p.data as ProdutoOpt[]) || []
+      setCanais((c.data as Canal[]) || [])
+      setProdutos(prodsData)
+      setListas(listasData)
+      setInsumos((ins.data as InsumoOpt[]) || [])
+      return { prodsData, listasData, frascosData: (f.data as unknown as FrascoOpt[]) || [] }
+    })
 
     if (mode === 'create') {
       setTitulo(''); setCanalId(''); setDataVenda(''); setFormaPagamento(''); setCliente('')
       setTaxa(''); setFrete(''); setVendaNumero(null); setLinhas([{ ...LINHA_VAZIA }])
-      
-      Promise.all([
-        supabase.from('canais').select('id, nome, taxa_padrao').eq('ativo', true).order('nome'),
-        supabase.from('produtos').select('id, nome, estoque_atual, custo_medio, preco_referencia').order('nome'),
-        supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, produtos(nome, custo_medio)').eq('status', 'ativo'),
-        supabase.from('embalagens_decant').select('tamanho_ml, custo').eq('ativo', true),
-      ]).then(([c, p, f, e]) => {
-        setCanais((c.data as Canal[]) || [])
-        setProdutos((p.data as ProdutoOpt[]) || [])
-        setFrascos((f.data as unknown as FrascoOpt[]) || [])
-        setEmbalagens((e.data as Embalagem[]) || [])
-      })
+      base.then(({ frascosData }) => setFrascos(frascosData))
     } else if (mode === 'edit' && vendaId) {
       setLoadingData(true)
       Promise.all([
-        supabase.from('canais').select('id, nome, taxa_padrao').eq('ativo', true).order('nome'),
-        supabase.from('produtos').select('id, nome, estoque_atual, custo_medio, preco_referencia').order('nome'),
-        supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, produtos(nome, custo_medio)').eq('status', 'ativo'),
-        supabase.from('embalagens_decant').select('tamanho_ml, custo').eq('ativo', true),
+        base,
         supabase.from('vendas').select('*').eq('id', vendaId).single(),
         supabase.from('venda_itens').select('*').eq('venda_id', vendaId),
-      ]).then(async ([c, p, f, e, vRes, viRes]) => {
-        const canaisData = (c.data as Canal[]) || []
-        const prodsData = (p.data as ProdutoOpt[]) || []
-        let frascosData = (f.data as unknown as FrascoOpt[]) || []
-        const embData = (e.data as Embalagem[]) || []
-
-        setCanais(canaisData)
-        setProdutos(prodsData)
-        setEmbalagens(embData)
+        supabase.from('insumo_movimentacoes').select('decant_id, insumo_id, quantidade').eq('venda_id', vendaId).eq('tipo', 'consumo'),
+      ]).then(async ([{ prodsData, listasData, frascosData: ativos }, vRes, viRes, movRes]) => {
+        let frascosData = ativos
 
         if (vRes.error || !vRes.data) {
           setErro(vRes.error?.message || 'Venda não encontrada')
@@ -127,20 +173,41 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
         }
         setFrascos(frascosData)
 
+        const decantIds = viItems.map(i => i.decant_id).filter(Boolean) as string[]
+        const origensDb: OrigemDb[] = decantIds.length > 0
+          ? ((await supabase.from('decant_origens').select('decant_id, frasco_id, produto_id, ml, abriu_frasco').in('decant_id', decantIds)).data as OrigemDb[]) || []
+          : []
+
+        // consumo gravado: o do decant é do item; o resto vai primeiro aos itens de produto e o que sobra é envio
+        const consumo = ((movRes.data as ConsumoDb[]) || []).map(m => ({ decantId: m.decant_id, insumoId: m.insumo_id, quantidade: -Number(m.quantidade) }))
+        const semDecant = somarItens(consumo.filter(m => !m.decantId))
+        const produtosItens = viItems.filter(i => i.tipo !== 'decant')
+        const { partes, resto } = repartir(semDecant, produtosItens.map(i => listaDoItem(listasData, 'produto', null, Number(i.quantidade) || 1)))
+        setInsumosEnvio(resto)
+
         if (viItems.length > 0) {
           const novassLinhas: LinhaForm[] = viItems.map(item => {
+            const qtd = Number(item.quantidade) || 1
             if (item.tipo === 'decant') {
-              const fObj = frascosData.find(fr => fr.id === item.frasco_id)
-              const fallbackCusto = fObj ? custoDecantUnitario(item.ml || 5, fObj.produtos?.custo_medio ?? 0, fObj.ml_total) : 0
+              const doDecant = origensDb.filter(o => o.decant_id === item.decant_id)
+              const origens: Origem[] = doDecant.length > 0
+                ? doDecant.map((o): Origem => o.abriu_frasco || !o.frasco_id
+                  ? { tipo: 'abrir', produtoId: o.produto_id, ml: Number(o.ml) }
+                  : { tipo: 'frasco', frascoId: o.frasco_id, produtoId: o.produto_id, ml: Number(o.ml) })
+                : [{ tipo: 'frasco', frascoId: item.frasco_id || '', produtoId: item.produto_id, ml: new Decimal(Number(item.ml) || 0).mul(qtd).toNumber() }]
               return {
                 tipo: 'decant',
                 produto_id: '',
                 frasco_id: item.frasco_id || '',
-                ml: item.ml != null ? String(item.ml) : '5',
-                quantidade: item.quantidade != null ? String(item.quantidade) : '1',
+                ml: item.ml != null ? String(Number(item.ml)) : '5',
+                quantidade: String(qtd),
                 preco: item.preco_unitario != null ? String(item.preco_unitario) : '',
-                custo_unitario: item.custo_unitario != null ? String(item.custo_unitario) : String(fallbackCusto),
+                custo_unitario: item.custo_unitario != null ? String(item.custo_unitario) : '',
                 custo_embalagem: item.custo_embalagem != null ? String(item.custo_embalagem) : '0',
+                decant_id: item.decant_id || '',
+                origens,
+                legado: doDecant.length === 0,
+                insumos: item.decant_id ? somarItens(consumo.filter(m => m.decantId === item.decant_id)) : [],
               }
             } else {
               const pObj = prodsData.find(pr => pr.id === item.produto_id)
@@ -149,10 +216,13 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                 produto_id: item.produto_id || '',
                 frasco_id: '',
                 ml: '5',
-                quantidade: item.quantidade != null ? String(item.quantidade) : '1',
+                quantidade: String(qtd),
                 preco: item.preco_unitario != null ? String(item.preco_unitario) : '',
                 custo_unitario: item.custo_unitario != null ? String(item.custo_unitario) : (pObj?.custo_medio != null ? String(pObj.custo_medio) : '0'),
-                custo_embalagem: '0',
+                custo_embalagem: item.custo_embalagem != null ? String(item.custo_embalagem) : '0',
+                decant_id: '',
+                origens: null,
+                insumos: partes[produtosItens.indexOf(item)],
               }
             }
           })
@@ -176,6 +246,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
 
   function onCanalChange(id: string) {
     setCanalId(id)
+    setInsumosEnvio(null)
     const canal = canais.find(c => c.id === id)
     if (canal && taxa === '') {
       const bruto = brutoTotal()
@@ -183,33 +254,98 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
     }
   }
 
+  const custoPorInsumo = Object.fromEntries(insumos.map(i => [i.id, Number(i.custo_medio)]))
+  const custoMedioPorProduto = Object.fromEntries(produtos.map(p => [p.id, p.custo_medio ?? 0]))
+  const volumePorProduto = Object.fromEntries(produtos.map(p => [p.id, Number(p.volume_ml) || 0]))
+  const nomeProduto = (id: string) => produtos.find(p => p.id === id)?.nome ?? 'outro perfume'
+  const selecionada = (l: LinhaForm) => Boolean(l.tipo === 'produto' ? l.produto_id : l.frasco_id)
+
+  function mlNecessario(l: LinhaForm): number {
+    return new Decimal(Number(l.ml) || 0).mul(Number(l.quantidade) || 0).toNumber()
+  }
+
+  // Origens gravadas/completadas, ou o caminho padrão: frasco aberto e depois um lacrado.
+  // Sem caminho padrão, devolve o que o frasco aberto cobre (falta o resto).
+  function origensDaLinha(l: LinhaForm): Origem[] {
+    if (l.origens) return l.origens
+    const f = frascos.find(x => x.id === l.frasco_id)
+    const need = mlNecessario(l)
+    if (!f || need <= 0) return []
+    const p = produtos.find(x => x.id === f.produto_id)
+    const aberto = { id: f.id, produtoId: f.produto_id, mlRestante: Number(f.ml_restante), mlTotal: Number(f.ml_total) }
+    return planejarOrigens(need, aberto, f.produto_id, p?.estoque_atual ?? 0, Number(p?.volume_ml) || 0)
+      ?? planejarOrigens(Math.min(need, aberto.mlRestante), aberto, f.produto_id, 0, 0)
+      ?? []
+  }
+
+  function faltaMl(l: LinhaForm): number {
+    return new Decimal(mlNecessario(l)).sub(totalOrigens(origensDaLinha(l))).toNumber()
+  }
+
+  function descreverOrigens(l: LinhaForm): string {
+    const origens = origensDaLinha(l)
+    const produtoLinha = frascos.find(x => x.id === l.frasco_id)?.produto_id ?? origens[0]?.produtoId
+    if (origens.length === 1 && origens[0].tipo === 'frasco' && origens[0].produtoId === produtoLinha) return 'do frasco aberto'
+    return origens.map(o => o.tipo === 'abrir'
+      ? `abrir 1 lacrado (${fmtMl(o.ml)} ml)`
+      : o.produtoId === produtoLinha ? `${fmtMl(o.ml)} ml do aberto` : `${fmtMl(o.ml)} ml de ${nomeProduto(o.produtoId)}`,
+    ).join(' + ')
+  }
+
+  function completarCom(i: number, frascoId: string) {
+    const l = linhas[i]
+    const f = frascos.find(x => x.id === frascoId)
+    if (!f) return
+    const ml = Decimal.min(faltaMl(l), Number(f.ml_restante)).toNumber()
+    setLinha(i, { origens: [...origensDaLinha(l), { tipo: 'frasco', frascoId: f.id, produtoId: f.produto_id, ml }] })
+    setCompletando(null)
+  }
+
+  function insumosDaLinha(l: LinhaForm): ItemInsumo[] {
+    return l.insumos ?? listaDoItem(listas, l.tipo, l.tipo === 'decant' ? Number(l.ml) : null, Number(l.quantidade) || 0)
+  }
+
+  // venda antiga, sem insumos gravados: mantém o custo de embalagem que já tinha
+  const embalagemLegada = (l: LinhaForm) => l.insumos !== null && l.insumos.length === 0 && Number(l.custo_embalagem) > 0
+
+  const canalAtual = canais.find(c => c.id === canalId)
+  const itensEnvio = insumosEnvio
+    ?? listaEnvio(listas, linhas.filter(selecionada).map(l => l.tipo), canalAtual?.usa_envio ?? false)
+  const custoEnvio = custoInsumos(itensEnvio, custoPorInsumo)
+
   function custoUnitarioDaLinha(l: LinhaForm): number {
+    if (l.tipo === 'decant') {
+      if (l.decant_id && l.custo_unitario !== '') return Number(l.custo_unitario) || 0
+      const qtd = Number(l.quantidade) || 0
+      return qtd > 0 ? new Decimal(custoPrevistoOrigens(origensDaLinha(l), custoMedioPorProduto, volumePorProduto)).div(qtd).toNumber() : 0
+    }
     if (l.custo_unitario !== '' && !isNaN(Number(l.custo_unitario)) && Number(l.custo_unitario) >= 0) {
       return Number(l.custo_unitario)
     }
-    if (l.tipo === 'produto') {
-      const p = produtos.find(x => x.id === l.produto_id)
-      return p?.custo_medio ?? 0
-    }
-    const f = frascos.find(x => x.id === l.frasco_id)
-    if (!f) return 0
-    return custoDecantUnitario(Number(l.ml) || 0, f.produtos?.custo_medio ?? 0, f.ml_total)
+    return produtos.find(x => x.id === l.produto_id)?.custo_medio ?? 0
   }
 
   function linhaParaItem(l: LinhaForm): ItemVenda {
+    const qtd = Number(l.quantidade) || 0
     return {
       tipo: l.tipo,
-      quantidade: Number(l.quantidade) || 0,
+      quantidade: qtd,
       precoUnitario: Number(l.preco) || 0,
       custoUnitario: custoUnitarioDaLinha(l),
-      custoEmbalagem: l.tipo === 'decant' ? (Number(l.custo_embalagem) || 0) : 0,
+      custoEmbalagem: embalagemLegada(l)
+        ? Number(l.custo_embalagem)
+        : qtd > 0 ? new Decimal(custoInsumos(insumosDaLinha(l), custoPorInsumo)).div(qtd).toNumber() : 0,
     }
   }
 
   const itensPreview = linhas
-    .filter(l => (l.tipo === 'produto' ? l.produto_id : l.frasco_id) && l.preco !== '' && Number(l.preco) >= 0)
+    .filter(l => selecionada(l) && l.preco !== '' && Number(l.preco) >= 0)
     .map(linhaParaItem)
-  const resumo = resumoVenda(itensPreview, Number(taxa) || 0, Number(frete) || 0)
+  // envio entra como custo da venda (igual ao lucro_bruto da RPC)
+  const resumo = resumoVenda(
+    custoEnvio > 0 ? [...itensPreview, { tipo: 'produto', quantidade: 1, precoUnitario: 0, custoUnitario: custoEnvio, custoEmbalagem: 0 }] : itensPreview,
+    Number(taxa) || 0, Number(frete) || 0,
+  )
   const taxaPct = resumo.totalBruto > 0 ? ((Number(taxa) || 0) / resumo.totalBruto) * 100 : 0
 
   function estoqueDisponivel(l: LinhaForm): string {
@@ -218,8 +354,11 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
       return p ? `${p.estoque_atual} un.` : ''
     }
     const f = frascos.find(x => x.id === l.frasco_id)
-    return f ? `${f.ml_restante} ml` : ''
+    return f ? `${fmtMl(Number(f.ml_restante))} ml` : ''
   }
+
+  const insumosJson = (itens: ItemInsumo[]) =>
+    itens.filter(i => i.quantidade > 0).map(i => ({ insumo_id: i.insumoId, quantidade: i.quantidade }))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -227,25 +366,38 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
     setErro(null)
     if (!canalId) { setErro('Selecione o canal'); return }
     const validas = linhas.filter(l =>
-      (l.tipo === 'produto' ? l.produto_id : l.frasco_id) && Number(l.quantidade) >= 1 && Number(l.preco) >= 0 && l.preco !== ''
+      selecionada(l) && Number(l.quantidade) >= 1 && Number(l.preco) >= 0 && l.preco !== ''
     )
     if (validas.length === 0) { setErro('Adicione ao menos um item válido (produto/frasco e preço)'); return }
     if (validas.length !== linhas.filter(l => l.produto_id || l.frasco_id || l.preco).length) {
       setErro('Há linhas incompletas — preencha produto/frasco e preço, ou remova a linha'); return
     }
+    if (validas.some(l => l.tipo === 'decant' && faltaMl(l) !== 0)) {
+      setErro('As origens do decant não somam o ml do item: complete com outro perfume ou ajuste o ml'); return
+    }
 
-    const itensPayload = validas.map(l => ({
-      tipo: l.tipo,
-      produto_id: l.tipo === 'produto'
-        ? l.produto_id
-        : frascos.find(f => f.id === l.frasco_id)?.produto_id,
-      frasco_id: l.tipo === 'decant' ? l.frasco_id : null,
-      ml: l.tipo === 'decant' ? Number(l.ml) : null,
-      quantidade: Number(l.quantidade),
-      preco_unitario: Number(l.preco) || 0,
-      custo_unitario: Number(l.custo_unitario) || 0,
-      custo_embalagem: l.tipo === 'decant' ? (Number(l.custo_embalagem) || 0) : 0,
-    }))
+    // decant: sem custo_unitario (a RPC calcula pelas origens); insumos viram custo_embalagem na RPC
+    const itensPayload: ItemPayload[] = validas.map(l => {
+      const insumosOuEmb = embalagemLegada(l)
+        ? { custo_embalagem: Number(l.custo_embalagem) }
+        : { insumos: insumosJson(insumosDaLinha(l)) }
+      const comum = { quantidade: Number(l.quantidade), preco_unitario: Number(l.preco) || 0, ...insumosOuEmb }
+      if (l.tipo === 'produto') {
+        return { tipo: 'produto', produto_id: l.produto_id, frasco_id: null, ml: null, custo_unitario: Number(l.custo_unitario) || 0, ...comum }
+      }
+      const origens = origensDaLinha(l)
+      return {
+        tipo: 'decant',
+        produto_id: frascos.find(f => f.id === l.frasco_id)?.produto_id ?? origens[0]?.produtoId,
+        frasco_id: l.frasco_id,
+        ml: Number(l.ml),
+        ...comum,
+        ...(l.decant_id ? { decant_id: l.decant_id } : {}),
+        // decant antigo inalterado vai sem origens: a RPC compara pelo frasco_id e o mantém
+        ...(l.decant_id && l.legado ? {} : { origens: origens.map(origemParaJson) }),
+      }
+    })
+    const insumosEnvioPayload = insumosJson(itensEnvio)
 
     setSubmitting(true)
     let res: { error: { message: string; code?: string } | null }
@@ -262,6 +414,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
         p_responsavel: user?.email || null,
         p_observacao: null,
         p_itens: itensPayload,
+        p_insumos_envio: insumosEnvioPayload,
         p_titulo: titulo || null,
       })
 
@@ -332,7 +485,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
             }
 
             const itemBruto = Number((item.preco_unitario * item.quantidade).toFixed(2))
-            const itemCusto = Number(((custoUnit + item.custo_embalagem) * item.quantidade).toFixed(2))
+            const itemCusto = Number(((custoUnit + (item.custo_embalagem ?? 0)) * item.quantidade).toFixed(2))
             totalBrutoAcc += itemBruto
             totalCustoAcc += itemCusto
 
@@ -346,7 +499,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
               quantidade: item.quantidade,
               preco_unitario: item.preco_unitario,
               custo_unitario: custoUnit,
-              custo_embalagem: item.custo_embalagem,
+              custo_embalagem: item.custo_embalagem ?? 0,
             }).select('id').single()
 
             if (insertedItem) {
@@ -456,6 +609,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
         p_responsavel: user?.email || null,
         p_observacao: null,
         p_itens: itensPayload,
+        p_insumos_envio: insumosEnvioPayload,
         p_titulo: titulo || null,
       })
     }
@@ -468,6 +622,18 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
     onSaved()
     onClose()
   }
+
+  const tamanhosDecant = [...new Set(listas.filter(x => x.tipo === 'decant' && x.tamanhoMl != null).map(x => x.tamanhoMl as number))]
+    .sort((a, b) => a - b)
+  const gruposInsumos: GrupoInsumos[] = [
+    ...linhas.flatMap((l, i) => selecionada(l) ? [{
+      chave: String(i),
+      rotulo: `Item ${i + 1}`,
+      titulo: `Item ${i + 1} · ${l.tipo === 'decant' ? `Decant ${fmtMl(Number(l.ml))} ml` : nomeProduto(l.produto_id)}`,
+      itens: insumosDaLinha(l),
+    }] : []),
+    ...(canalAtual?.usa_envio || itensEnvio.length > 0 ? [{ chave: 'envio', rotulo: 'Envio', titulo: 'Envio', itens: itensEnvio }] : []),
+  ]
 
   const modalTitle = mode === 'edit'
     ? (vendaNumero != null ? `Editar venda #${vendaNumero}` : 'Editar venda')
@@ -507,12 +673,12 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                     label="Tipo"
                     options={[{ value: 'produto', label: 'Produto (frasco cheio)' }, { value: 'decant', label: 'Decant' }]}
                     value={l.tipo}
-                    onChange={(e) => setLinha(i, { tipo: e.target.value as 'produto' | 'decant', produto_id: '', frasco_id: '', custo_unitario: '' })}
+                    onChange={(e) => setLinha(i, { tipo: e.target.value as 'produto' | 'decant', produto_id: '', frasco_id: '', custo_unitario: '', ...RESET_ITEM })}
                   />
                   <span className="text-xs text-muted pb-2.5 ml-auto">{estoqueDisponivel(l)}</span>
                   <button
                     type="button"
-                    onClick={() => setLinhas(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : prev)}
+                    onClick={() => { setCompletando(null); setLinhas(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : prev) }}
                     className="pb-2.5 text-muted hover:text-down cursor-pointer"
                     title="Remover item"
                   >
@@ -535,41 +701,60 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                         })
                       }}
                     />
-                    <Input label="Qtd" type="number" min="1" value={l.quantidade} onChange={(e) => setLinha(i, { quantidade: e.target.value })} />
+                    <Input label="Qtd" type="number" min="1" value={l.quantidade} onChange={(e) => setLinha(i, { quantidade: e.target.value, ...RESET_ITEM })} />
                     <Input label="Custo un." type="number" step="0.01" min="0" value={l.custo_unitario} onChange={(e) => setLinha(i, { custo_unitario: e.target.value })} placeholder="0.00" />
                     <Input label="Preço un." type="number" step="0.01" min="0" value={l.preco} onChange={(e) => setLinha(i, { preco: e.target.value })} placeholder="0.00" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_50px_50px_85px_85px_75px] gap-2 items-end">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_90px_60px_95px] gap-2 items-end">
                     <Select
                       label="Frasco aberto"
-                      options={frascos.map(f => ({ value: f.id, label: `${f.produtos?.nome} (${f.ml_restante}ml)` }))}
+                      options={frascos.map(f => ({ value: f.id, label: `${f.produtos?.nome} (${fmtMl(Number(f.ml_restante))}ml)` }))}
                       value={l.frasco_id}
-                      onChange={(e) => {
-                        const f = frascos.find(x => x.id === e.target.value)
-                        const cUnit = f ? custoDecantUnitario(Number(l.ml) || 0, f.produtos?.custo_medio ?? 0, f.ml_total) : 0
-                        setLinha(i, { frasco_id: e.target.value, custo_unitario: String(cUnit) })
-                      }}
+                      onChange={(e) => setLinha(i, { frasco_id: e.target.value, origens: null, decant_id: '' })}
                     />
-                    <Input
+                    <Select
                       label="ml"
-                      type="number" min="1"
+                      options={(!l.ml || tamanhosDecant.includes(Number(l.ml)) ? tamanhosDecant : [...tamanhosDecant, Number(l.ml)])
+                        .map(t => ({ value: String(t), label: `${fmtMl(t)} ml` }))}
                       value={l.ml}
-                      onChange={(e) => {
-                        const f = frascos.find(x => x.id === l.frasco_id)
-                        const emb = embalagens.find(x => x.tamanho_ml === Number(e.target.value))
-                        const cUnit = f ? custoDecantUnitario(Number(e.target.value) || 0, f.produtos?.custo_medio ?? 0, f.ml_total) : 0
-                        setLinha(i, {
-                          ml: e.target.value,
-                          custo_unitario: String(cUnit),
-                          custo_embalagem: emb ? String(emb.custo) : l.custo_embalagem,
-                        })
-                      }}
+                      onChange={(e) => setLinha(i, { ml: e.target.value, ...RESET_ITEM })}
                     />
-                    <Input label="Qtd" type="number" min="1" value={l.quantidade} onChange={(e) => setLinha(i, { quantidade: e.target.value })} />
-                    <Input label="Custo un." type="number" step="0.01" min="0" value={l.custo_unitario} onChange={(e) => setLinha(i, { custo_unitario: e.target.value })} placeholder="0.00" />
+                    <Input label="Qtd" type="number" min="1" value={l.quantidade} onChange={(e) => setLinha(i, { quantidade: e.target.value, ...RESET_ITEM })} />
                     <Input label="Preço un." type="number" step="0.01" min="0" value={l.preco} onChange={(e) => setLinha(i, { preco: e.target.value })} placeholder="0.00" />
-                    <Input label="Emb. (R$)" type="number" step="0.01" min="0" value={l.custo_embalagem} onChange={(e) => setLinha(i, { custo_embalagem: e.target.value })} />
+                  </div>
+                )}
+
+                {l.tipo === 'decant' && l.frasco_id && (
+                  <div className="flex flex-col gap-1.5 text-xs">
+                    {origensDaLinha(l).length > 0 && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-muted">Origem:</span>
+                        <span>{descreverOrigens(l)}</span>
+                        <span className="text-muted ml-auto font-mono">Perfume {formatBRL(custoUnitarioDaLinha(l))}/un.</span>
+                      </div>
+                    )}
+                    {faltaMl(l) > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 text-down">
+                        <span>Sem ml suficiente e sem lacrado: faltam {fmtMl(faltaMl(l))} ml</span>
+                        {completando === i ? (
+                          <Select
+                            label="Outro perfume"
+                            options={frascos
+                              .filter(f => f.produto_id !== frascos.find(x => x.id === l.frasco_id)?.produto_id
+                                && Number(f.ml_restante) > 0
+                                && !origensDaLinha(l).some(o => o.tipo === 'frasco' && o.frascoId === f.id))
+                              .map(f => ({ value: f.id, label: `${f.produtos?.nome} (${fmtMl(Number(f.ml_restante))} ml)` }))}
+                            value=""
+                            onChange={(e) => e.target.value && completarCom(i, e.target.value)}
+                          />
+                        ) : (
+                          <Button type="button" variant="secondary" size="sm" onClick={() => setCompletando(i)}>
+                            Completar com outro perfume
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -582,6 +767,16 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
             </Button>
           </div>
 
+          {gruposInsumos.length > 0 && (
+            <InsumosVenda
+              grupos={gruposInsumos}
+              insumos={insumos}
+              onChange={(chave, itens) => chave === 'envio'
+                ? setInsumosEnvio(itens)
+                : setLinha(Number(chave), { insumos: itens, custo_embalagem: '0' })}
+            />
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Taxa do pedido (R$)" type="number" step="0.01" min="0" value={taxa} onChange={(e) => setTaxa(e.target.value)} />
             <Input label="Frete absorvido (R$)" type="number" step="0.01" min="0" value={frete} onChange={(e) => setFrete(e.target.value)} />
@@ -590,7 +785,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
           {/* Prévia ao vivo */}
           <div className="flex flex-col gap-1.5 border-t border-line pt-3 text-sm">
             <div className="flex justify-between"><span className="text-muted">Bruto (Receita total)</span><span className="font-mono">{formatBRL(resumo.totalBruto)}</span></div>
-            <div className="flex justify-between"><span className="text-muted">Custo (Produtos + Embalagens)</span><span className="font-mono">{formatBRL(resumo.totalCusto)}</span></div>
+            <div className="flex justify-between"><span className="text-muted">Custo (Produtos + Insumos + Envio)</span><span className="font-mono">{formatBRL(resumo.totalCusto)}</span></div>
             <div className="flex justify-between"><span className="text-muted">Receita líquida (após taxa e frete)</span><span className="font-mono">{formatBRL(resumo.receitaLiquida)}</span></div>
             <div className="flex justify-between text-base">
               <span>Lucro</span>
