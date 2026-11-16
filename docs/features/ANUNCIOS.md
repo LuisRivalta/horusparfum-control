@@ -6,26 +6,27 @@ Módulo que cria, publica e acompanha anúncios de perfumes (frasco lacrado e de
 
 Parte 2 do módulo (spec: `docs/superpowers/specs/2026-11-16-anuncios-design.md`; plano: `docs/superpowers/plans/2026-11-16-anuncios.md`). A Parte 3 ("Vendas do ML": receber venda do ML e baixar estoque) ainda precisa de plano próprio.
 
-> Migration `20261117100000_anuncios_schema.sql` aplicada no Supabase em 16/11/2026. Tabelas em [[BANCO]] (`anuncios`, `anuncios_config`, `ml_conexao`; `produtos.ficha`/`produtos.fotos`).
+> Migration `20261117100000_anuncios_schema.sql` aplicada no Supabase em 16/11/2026. Tabelas em [[BANCO]] (`anuncios`, `anuncios_config`, `ml_conexao`, `produto_fotos`; `produtos.ficha`).
 
 ## Telas
 
 | Rota | Página | O que faz |
 |------|--------|-----------|
-| `/anuncios` | `AnunciosLista` | Lista com status, preço, quantidade, qualidade; ações de quantidade, preço, pausar/reativar |
-| `/anuncios/novo` | `NovoAnuncio` | Passo a passo: o que anunciar, ficha, fotos, preços, textos, publicar (`novo/*`) |
+| `/anuncios` | `AnunciosLista` | Lista com perfume, tipo, tipo de anúncio, preço, status e nota (não mostra a quantidade; o botão "Atualizar quantidade" envia ao ML e mostra o número enviado); ações de quantidade, preço, pausar/reativar |
+| `/anuncios/novo` | `NovoAnuncio` | Passo a passo: perfume, o que anunciar, ficha, preço, fotos, título e descrição, publicar (`novo/*`) |
 | `/anuncios/:id` | `NovoAnuncio` | Reabre um rascunho ou anúncio com erro |
 | `/anuncios/ligar` | `LigarAnuncios` | Liga anúncios que já existem no ML a um perfume do Horus |
 | `/anuncios/config` | `AnunciosConfig` | Conectar/desconectar o ML, margem padrão, IA, tamanhos de decant |
 
 ## Fluxo
 
-1. **O que anunciar** (`OQueAnunciar`): escolhe o perfume, o tipo (frasco ou decant com os ml) e o tipo de anúncio (`gold_special` Clássico / `gold_pro` Premium). Cada combinação vira um rascunho em `anuncios`.
-2. **Ficha** (`FichaPerfume`): atributos da categoria `MLB6284` (perfumes), salvos em `produtos.ficha`. Com IA ligada, "Sugerir" preenche a ficha.
-3. **Fotos** (`FotosPerfume`): até 12, salvas em `produtos.fotos` e copiadas para o anúncio. Lembrete: a 1ª foto precisa de fundo branco.
-4. **Preços** (`PrecosAnuncios`): o backend consulta comissão, taxa fixa e frete no ML e devolve o menor preço que fecha a margem. O `custo_base` do anúncio guarda o custo usado.
-5. **Textos** (`TextosAnuncios`): título e descrição (template ou IA).
-6. **Publicar** (`LateralPublicar`): `POST /api/anuncios/publicar`; mostra resultado por anúncio.
+1. **Perfume**: escolhe o perfume do estoque (lacrados, frasco aberto, custo médio).
+2. **O que anunciar** (`OQueAnunciar`): marca frasco e/ou decants (tamanhos da configuração). Os rascunhos em `anuncios` só são criados ao clicar **Salvar rascunho** ou **Publicar** (um por combinação marcada).
+3. **Ficha** (`FichaPerfume`): atributos da categoria `MLB6284` (perfumes) e código de barras, salvos em `produtos.ficha`/`produtos.gtin` ao editar. Com IA ligada, "Sugerir com IA" preenche campos vazios. Salvar e Publicar esperam essas gravações; se uma falhar, Publicar fica bloqueado com o motivo.
+4. **Preço** (`PrecosAnuncios`): margem e tipo de anúncio (`gold_special` Clássico / `gold_pro` Premium) por anúncio; o backend consulta comissão, taxa fixa e frete no ML e devolve o menor preço que fecha a margem. O `custo_base` do anúncio guarda o custo usado.
+5. **Fotos** (`FotosPerfume`): salvas em `produto_fotos` (uso frasco ou decant) e copiadas para o anúncio, máx. 12; o decant leva as do frasco e reserva lugar para até 2 fotos de decant. Lembrete: a 1ª foto precisa de fundo branco.
+6. **Título e descrição** (`TextosAnuncios`): template ou IA; emoji e `<`/`>` são removidos ao salvar.
+7. **Publicar** (`LateralPublicar`): `POST /api/anuncios/publicar`; mostra resultado por anúncio.
 
 ## Regra de preço
 
@@ -56,7 +57,9 @@ Contas do ML em **User Products** exigem `family_name` e rejeitam `title`; conta
 | Preço mínimo | R$ 8 |
 | Frete grátis obrigatório | a partir de R$ 79 |
 
-Decant nunca leva o GTIN do frasco: vai com `EMPTY_GTIN_REASON` (`17055160`). Frasco sem código de barras gera aviso (perde nota), não bloqueia.
+Decant nunca leva o GTIN do frasco: vai com `EMPTY_GTIN_REASON` (`17055160`). Frasco sem código de barras também vai com `EMPTY_GTIN_REASON` e gera aviso na tela (perde nota), não bloqueia.
+
+Na lista, anúncio com erro ou rascunho cujo custo mudou desde o rascunho não tem "Tentar de novo": aparece "Custo mudou — edite o rascunho".
 
 ## O que o Horus muda depois de publicar
 
@@ -87,6 +90,9 @@ Claude Haiku (`claude-haiku-5-5`, `services/anuncios/ia.py`) sugere a ficha e es
 - A sincronização de quantidade é manual (botão) até a Parte 3.
 - O ML não tem chave de idempotência na criação: se a rede falhar ao publicar, o anúncio fica com erro e a mensagem pede conferir no ML antes de tentar de novo.
 - O refresh token do ML é de uso único; uma renovação simultânea é tratada em `services/mercadolivre/cliente.py`, mas se a conexão cair basta reconectar.
+- Não há restrição única em `anuncios (produto_id, tipo, ml)`: evite editar o mesmo perfume em duas abas (pode criar rascunho duplicado).
+- `/api/anuncios/precos` faz várias chamadas ao ML em sequência (uma consulta de taxas por preço candidato, compartilhada entre Clássico e Premium, mais o frete acima de R$ 79). Cronometrar uma chamada real antes de ativar, por causa do limite de tempo da função na Vercel.
+- Antes de ativar: conferir `select count(*) from produto_fotos where url = ''` e apagar as linhas se houver.
 
 ## Arquivos
 
