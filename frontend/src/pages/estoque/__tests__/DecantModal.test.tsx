@@ -123,6 +123,27 @@ describe('DecantModal', () => {
     expect(rpcMock).toHaveBeenCalledWith('registrar_consumo_decant', expect.objectContaining({ p_insumos: [], p_custo_embalagem: 0 }))
   })
 
+  it('insumo inativo da lista não é pré-preenchido nem consumido', async () => {
+    tabelas.insumos = [{ id: 'i1', nome: 'Frasquinho', custo_medio: 2, ativo: false }]
+    render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
+    fireEvent.click(await screen.findByText('5ml'))
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'brinde' } })
+    expect(screen.queryByLabelText('Decant: Frasquinho')).toBeNull()
+    fireEvent.click(screen.getByText('Registrar consumo'))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
+    expect(rpcMock).toHaveBeenCalledWith('registrar_consumo_decant', expect.objectContaining({ p_insumos: [], p_custo_embalagem: 0 }))
+  })
+
+  it('ml custom é arredondado para 1 casa (coluna numeric(6,1))', async () => {
+    render(<DecantModal frasco={mockFrasco} onClose={mockOnClose} onSaved={mockOnSaved} />)
+    await screen.findByText('5ml')
+    fireEvent.change(screen.getByPlaceholderText('ML'), { target: { value: '2.55' } })
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'amostra' } })
+    fireEvent.click(screen.getByText('Registrar consumo'))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
+    expect(rpcMock).toHaveBeenCalledWith('registrar_consumo_decant', expect.objectContaining({ p_ml: 2.6 }))
+  })
+
   it('frasco insuficiente envia p_origens com abrir lacrado', async () => {
     tabelas.produtos = { estoque_atual: 2 }
     const pouco = { ...mockFrasco, ml_restante: 3 }

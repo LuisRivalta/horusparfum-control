@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import Decimal from 'decimal.js'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Modal } from '@/components/shared/Modal'
 import { Button, Input, Select } from '@/components/shared/FormControls'
 import { custoInsumos, somarItens, type ItemInsumo } from '@/lib/insumos'
-import { aplicarDevolucoes, origemParaJson, planejarOrigens } from '@/lib/decantOrigens'
+import { aplicarDevolucoes, origemParaJson, planejarOrigens, type Devolucao } from '@/lib/decantOrigens'
 import { InsumosVenda, type InsumoOpt } from '../vendas/InsumosVenda'
 
 export interface TransacaoDecantParaCorrigir {
@@ -22,7 +23,7 @@ interface Props {
   onSaved: () => void
 }
 
-interface OrigemDb { frasco_id: string | null; produto_id: string; ml: number; abriu_frasco: boolean }
+interface OrigemDb { frasco_id: string | null; ml: number }
 interface FrascoDb { id: string; produto_id: string; ml_restante: number; ml_total: number; status: string }
 
 const CLASSIFICACOES = ['amostra', 'brinde', 'marketing', 'uso_interno', 'perda', 'outro']
@@ -34,7 +35,7 @@ export function CorrigirConsumoDecantModal({ open, transacao, onClose, onSaved }
   const { user } = useAuth()
   const [ml, setMl] = useState('')
   const [classificacao, setClassificacao] = useState('')
-  const [origens, setOrigens] = useState<OrigemDb[]>([])
+  const [devolver, setDevolver] = useState<Devolucao[]>([]) // ml que a RPC devolve aos frascos antes de regravar
   const [produtoId, setProdutoId] = useState('')
   const [frascos, setFrascos] = useState<FrascoDb[]>([])
   const [lacrados, setLacrados] = useState(0)
@@ -49,11 +50,11 @@ export function CorrigirConsumoDecantModal({ open, transacao, onClose, onSaved }
     if (!open || !decantId) return
     setErro(null)
     ;(async () => {
-      const d = await supabase.from('decants').select('ml, classificacao, produto_id').eq('id', decantId).single()
-      const dec = d.data as { ml: number; classificacao: string; produto_id: string } | null
+      const d = await supabase.from('decants').select('ml, classificacao, produto_id, frasco_id').eq('id', decantId).single()
+      const dec = d.data as { ml: number; classificacao: string; produto_id: string; frasco_id: string | null } | null
       const pid = dec?.produto_id ?? ''
       const [o, m, ins, f, p] = await Promise.all([
-        supabase.from('decant_origens').select('frasco_id, produto_id, ml, abriu_frasco').eq('decant_id', decantId),
+        supabase.from('decant_origens').select('frasco_id, ml').eq('decant_id', decantId),
         supabase.from('insumo_movimentacoes').select('insumo_id, quantidade').eq('decant_id', decantId),
         supabase.from('insumos').select('id, nome, custo_medio, ativo').order('nome'),
         supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, status').eq('produto_id', pid),
@@ -62,7 +63,10 @@ export function CorrigirConsumoDecantModal({ open, transacao, onClose, onSaved }
       setMl(String(Number(dec?.ml ?? '')))
       setClassificacao(dec?.classificacao ?? '')
       setProdutoId(pid)
-      setOrigens((o.data as OrigemDb[]) ?? [])
+      // igual a _devolver_origens: decant antigo sem decant_origens devolve decants.frasco_id/ml
+      const origensDb = (o.data as OrigemDb[]) ?? []
+      const fonte = origensDb.length > 0 ? origensDb : [{ frasco_id: dec?.frasco_id ?? null, ml: Number(dec?.ml) || 0 }]
+      setDevolver(fonte.filter((x) => x.frasco_id).map((x) => ({ frascoId: x.frasco_id as string, ml: Number(x.ml) })))
       setItens(somarItens(((m.data as { insumo_id: string; quantidade: number }[]) ?? [])
         .map((x) => ({ insumoId: x.insumo_id, quantidade: -Number(x.quantidade) }))))
       setInsumos((ins.data as InsumoOpt[]) ?? [])
@@ -74,7 +78,7 @@ export function CorrigirConsumoDecantModal({ open, transacao, onClose, onSaved }
   }, [open, decantId])
 
   const isPerda = classificacao === 'perda'
-  const mlNum = Number(ml) || 0
+  const mlNum = new Decimal(Number(ml) || 0).toDecimalPlaces(1).toNumber() // coluna numeric(6,1)
   const custoPorInsumo = Object.fromEntries(insumos.map((i) => [i.id, Number(i.custo_medio)]))
   const lista = isPerda ? [] : itens.filter((i) => i.quantidade > 0)
 
@@ -82,7 +86,7 @@ export function CorrigirConsumoDecantModal({ open, transacao, onClose, onSaved }
   function planejar() {
     const estado = aplicarDevolucoes(
       frascos.map((f) => ({ id: f.id, produtoId: f.produto_id, mlRestante: Number(f.ml_restante), mlTotal: Number(f.ml_total), ativo: f.status === 'ativo' })),
-      origens.filter((o) => o.frasco_id).map((o) => ({ frascoId: o.frasco_id as string, ml: Number(o.ml) })),
+      devolver,
     )
     return planejarOrigens(mlNum, estado.find((f) => f.produtoId === produtoId && f.ativo) ?? null, produtoId, lacrados, volume)
   }

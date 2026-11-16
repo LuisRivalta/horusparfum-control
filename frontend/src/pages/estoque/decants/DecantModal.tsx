@@ -7,7 +7,7 @@ import { cn, formatBRL } from '@/lib/utils'
 import { Modal } from '@/components/shared/Modal'
 import { Button, Select, Input } from '@/components/shared/FormControls'
 import { FrascoViewer } from './FrascoViewer'
-import { custoInsumos, listaDoItem, type ItemInsumo, type ListaInsumos } from '@/lib/insumos'
+import { custoInsumos, listaDoItem, listasAtivas, type ItemInsumo, type ListaDb, type ListaInsumos } from '@/lib/insumos'
 import { custoPrevistoOrigens, origemParaJson, planejarOrigens, totalOrigens, type Origem } from '@/lib/decantOrigens'
 import { InsumosVenda, type InsumoOpt } from '../vendas/InsumosVenda'
 
@@ -21,7 +21,6 @@ interface FrascoComProduto {
   produtos: { nome: string; foto_url: string | null; volume_ml: number; custo_medio: number | null }
 }
 
-interface LinhaListaDb { tipo: ListaInsumos['tipo']; tamanho_ml: number | null; insumo_lista_itens: { insumo_id: string; quantidade: number }[] }
 interface FrascoOutro { id: string; produto_id: string; ml_restante: number; ml_total: number; produtos: { nome: string; custo_medio: number | null; volume_ml: number } }
 
 interface Props {
@@ -63,11 +62,7 @@ export function DecantModal({ frasco, onClose, onSaved }: Props) {
       supabase.from('produtos').select('estoque_atual').eq('id', frasco.produto_id).single(),
       supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, produtos(nome, custo_medio, volume_ml)').eq('status', 'ativo'),
     ]).then(([l, ins, p, f]) => {
-      setListas(((l.data as LinhaListaDb[]) ?? []).map((x) => ({
-        tipo: x.tipo,
-        tamanhoMl: x.tamanho_ml != null ? Number(x.tamanho_ml) : null,
-        itens: (x.insumo_lista_itens ?? []).map((i) => ({ insumoId: i.insumo_id, quantidade: Number(i.quantidade) })),
-      })))
+      setListas(listasAtivas((l.data as ListaDb[]) ?? [], (ins.data as InsumoOpt[]) ?? []))
       setInsumos((ins.data as InsumoOpt[]) ?? [])
       setLacrados(Number((p.data as { estoque_atual: number } | null)?.estoque_atual) || 0)
       setOutros(((f.data as unknown as FrascoOutro[]) ?? []).filter((x) => x.produto_id !== frasco.produto_id && Number(x.ml_restante) > 0))
@@ -75,7 +70,8 @@ export function DecantModal({ frasco, onClose, onSaved }: Props) {
   }, [frasco.produto_id])
 
   const tamanhos = [...new Set(listas.filter((l) => l.tipo === 'decant' && l.tamanhoMl != null).map((l) => l.tamanhoMl as number))].sort((a, b) => a - b)
-  const mlValor = mlRapido ?? (mlCustom !== '' ? (Number(mlCustom) || 0) : 0)
+  // colunas de ml são numeric(6,1)
+  const mlValor = mlRapido ?? (mlCustom !== '' ? new Decimal(Number(mlCustom) || 0).toDecimalPlaces(1).toNumber() : 0)
   const isPerda = classificacao === 'perda'
 
   const volume = Number(frasco.produtos.volume_ml) || frasco.ml_total

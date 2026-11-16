@@ -73,7 +73,9 @@ function SecaoLista({ lista, insumos, depois }: {
   const itens = lista.insumo_lista_itens
   const porId = Object.fromEntries(insumos.map((i) => [i.id, i]))
   const custos = Object.fromEntries(insumos.map((i) => [i.id, i.custo_medio]))
-  const total = custoInsumos(itens.map((i) => ({ insumoId: i.insumo_id, quantidade: i.quantidade })), custos)
+  // inativo segue na lista (para poder removê-lo), mas não é consumido: fora do custo
+  const total = custoInsumos(itens.filter((i) => porId[i.insumo_id]?.ativo)
+    .map((i) => ({ insumoId: i.insumo_id, quantidade: i.quantidade })), custos)
   // inativos ficam fora do picker, assim como os que já estão na lista
   const candidatos = insumos.filter((i) => i.ativo && !itens.some((x) => x.insumo_id === i.id))
 
@@ -98,7 +100,10 @@ function SecaoLista({ lista, insumos, depois }: {
       {itens.length === 0 && <p className="text-xs text-muted">Nenhum insumo na lista</p>}
       {itens.map((i) => (
         <div key={i.insumo_id} className="flex items-center justify-between text-sm">
-          <span>{porId[i.insumo_id]?.nome ?? '—'} <span className="text-muted">× {i.quantidade}</span></span>
+          <span>
+            {porId[i.insumo_id]?.nome ?? '—'} <span className="text-muted">× {i.quantidade}</span>
+            {porId[i.insumo_id] && !porId[i.insumo_id].ativo && <span className="text-muted"> (inativo)</span>}
+          </span>
           <button
             aria-label={`Remover ${porId[i.insumo_id]?.nome ?? 'insumo'}`}
             className="text-muted hover:text-down cursor-pointer"

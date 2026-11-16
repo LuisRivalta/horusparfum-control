@@ -26,7 +26,8 @@ export function CompraInsumoModal({ insumo, onClose, onSaved }: Props) {
   const [qtd, setQtd] = useState('')
   const [valor, setValor] = useState('')
   const [forma, setForma] = useState('')
-  const [contado, setContado] = useState(String(insumo.estoque_atual))
+  // saldo negativo no sistema: começa em 0 (a RPC não aceita contado < 0; a diferença vira acerto)
+  const [contado, setContado] = useState(String(Math.max(insumo.estoque_atual, 0)))
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
 

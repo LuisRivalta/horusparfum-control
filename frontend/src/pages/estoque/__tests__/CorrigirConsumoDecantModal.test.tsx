@@ -46,10 +46,34 @@ describe('CorrigirConsumoDecantModal', () => {
   })
 
   it('remover todos os insumos envia p_insumos vazio e custo 0', async () => {
+    // custo de embalagem gravado diferente de 0: o teste só passa se a tela recalcula
+    tabelas.decants = { ml: 5, classificacao: 'brinde', produto_id: 'p1', custo_embalagem: 2 }
     render(<CorrigirConsumoDecantModal open transacao={transacao} onClose={vi.fn()} onSaved={vi.fn()} />)
     fireEvent.click(await screen.findByLabelText('Remover Frasquinho'))
     fireEvent.click(screen.getByText('Salvar correção'))
     await waitFor(() => expect(rpcMock).toHaveBeenCalled())
     expect(rpcMock).toHaveBeenCalledWith('corrigir_consumo_decant', expect.objectContaining({ p_insumos: [], p_custo_embalagem: 0 }))
+  })
+
+  it('consumo antigo sem decant_origens: devolve decants.frasco_id/ml como a RPC', async () => {
+    // o consumo esvaziou fVelho; sem lacrado, só a devolução dos 5 ml permite regravar
+    tabelas.decants = { ml: 5, classificacao: 'brinde', produto_id: 'p1', frasco_id: 'fVelho' }
+    tabelas.decant_origens = []
+    tabelas.frascos_abertos = [{ id: 'fVelho', produto_id: 'p1', ml_restante: 0, ml_total: 100, status: 'esgotado' }]
+    tabelas.produtos = { estoque_atual: 0, volume_ml: 100 }
+    render(<CorrigirConsumoDecantModal open transacao={transacao} onClose={vi.fn()} onSaved={vi.fn()} />)
+    await screen.findByLabelText('Decant: Frasquinho')
+    fireEvent.click(screen.getByText('Salvar correção'))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
+    expect(rpcMock).toHaveBeenCalledWith('corrigir_consumo_decant', expect.objectContaining({ p_origens: [{ frasco_id: 'fVelho', ml: 5 }] }))
+  })
+
+  it('ml é arredondado para 1 casa (coluna numeric(6,1))', async () => {
+    render(<CorrigirConsumoDecantModal open transacao={transacao} onClose={vi.fn()} onSaved={vi.fn()} />)
+    await screen.findByLabelText('Decant: Frasquinho')
+    fireEvent.change(screen.getByLabelText('ml'), { target: { value: '4.96' } })
+    fireEvent.click(screen.getByText('Salvar correção'))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
+    expect(rpcMock).toHaveBeenCalledWith('corrigir_consumo_decant', expect.objectContaining({ p_ml: 5, p_origens: [{ frasco_id: 'fNovo', ml: 5 }] }))
   })
 })

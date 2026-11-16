@@ -183,6 +183,65 @@ describe('VendaFormModal', () => {
     expect(payload('registrar_venda').p_itens[0].origens).toEqual([{ frasco_id: 'f1', ml: 4 }, { frasco_id: 'f2', ml: 6 }])
   })
 
+  it('dois decants do mesmo frasco: o segundo só tira do aberto o que o primeiro deixou', async () => {
+    db.frascos_abertos[0].ml_restante = 7
+    await novoDecant('5')
+    fireEvent.click(screen.getByRole('button', { name: /adicionar item/i }))
+    fireEvent.change(screen.getAllByLabelText('Tipo')[1], { target: { value: 'decant' } })
+    fireEvent.change(screen.getAllByLabelText('Frasco aberto')[1], { target: { value: 'f1' } })
+    fireEvent.change(screen.getAllByLabelText('ml')[1], { target: { value: '2.5' } })
+    fireEvent.change(screen.getAllByLabelText('Preço un.')[1], { target: { value: '30' } })
+    expect(screen.getByText('2 ml do aberto + abrir 1 lacrado (0,5 ml)')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /registrar venda/i }))
+    await waitFor(() => expect(payload('registrar_venda')).toBeDefined())
+    const [a, b] = payload('registrar_venda').p_itens
+    expect(a.origens).toEqual([{ frasco_id: 'f1', ml: 5 }])
+    expect(b.origens).toEqual([{ frasco_id: 'f1', ml: 2 }, { abrir_produto_id: 'p1', ml: 0.5 }])
+  })
+
+  it('lacrados vendidos como produto na mesma venda não são abertos pelo decant', async () => {
+    db.produtos[0].estoque_atual = 1
+    await novoDecant('10')
+    fireEvent.click(screen.getByRole('button', { name: /adicionar item/i }))
+    fireEvent.change(screen.getAllByLabelText(/^Produto$/)[0], { target: { value: 'p1' } })
+    expect(screen.getByText(/faltam 6 ml/i)).toBeInTheDocument()
+  })
+
+  it('insumo inativo da lista não é pré-preenchido', async () => {
+    db.insumos[3].ativo = false // Frasco 10 ml
+    await novoDecant('10')
+    expect(screen.queryByLabelText('Item 1: Frasco 10 ml')).toBeNull()
+    expect(screen.getByLabelText('Item 1: Etiqueta')).toHaveValue(1)
+  })
+
+  it('erro do Postgres com "function" na mensagem não cai no fallback sem transação', async () => {
+    rpc.mockImplementation((fn: string) => Promise.resolve(fn === 'editar_venda'
+      ? { error: { message: 'function _consumir_origens: ml insuficiente', code: 'P0001' } }
+      : { error: null }))
+    render(<EditarVendaModal open vendaId="v1" onClose={vi.fn()} onSaved={vi.fn()} />)
+    await waitFor(() => expect(screen.getByLabelText('Forma de pagamento')).toHaveValue('Pix'))
+    fireEvent.click(screen.getByRole('button', { name: /salvar altera/i }))
+    expect(await screen.findByText(/ml insuficiente/)).toBeInTheDocument()
+    expect(rpc).not.toHaveBeenCalledWith('cancelar_venda', expect.anything())
+  })
+
+  it('origem gravada de frasco apagado: edição só de preço mantém o decant', async () => {
+    db.venda_itens = [
+      { id: 'vi-decant', venda_id: 'v1', tipo: 'decant', produto_id: 'p1', frasco_id: 'f1', decant_id: 'd1', ml: 5, quantidade: 1, preco_unitario: 50, custo_unitario: 5, custo_embalagem: 0 },
+    ]
+    db.decant_origens = [
+      { decant_id: 'd1', frasco_id: null, produto_id: 'p1', ml: 3, abriu_frasco: false },
+      { decant_id: 'd1', frasco_id: 'f1', produto_id: 'p1', ml: 2, abriu_frasco: false },
+    ]
+    render(<EditarVendaModal open vendaId="v1" onClose={vi.fn()} onSaved={vi.fn()} />)
+    await waitFor(() => expect(screen.getByLabelText('Preço un.')).toHaveValue(50))
+    fireEvent.change(screen.getByLabelText('Preço un.'), { target: { value: '60' } })
+    fireEvent.click(screen.getByRole('button', { name: /salvar altera/i }))
+    await waitFor(() => expect(payload('editar_venda')).toBeDefined())
+    expect(payload('editar_venda').p_itens[0]).toMatchObject({ decant_id: 'd1', origens: [{ frasco_id: null, ml: 3 }, { frasco_id: 'f1', ml: 2 }] })
+  })
+
   it('pré-preenche insumos com a lista do item e a de envio do canal', async () => {
     await novoDecant('10')
     expect(screen.getByLabelText('Item 1: Frasco 10 ml')).toHaveValue(1)

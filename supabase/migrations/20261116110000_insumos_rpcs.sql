@@ -953,7 +953,7 @@ begin
       descricao, tipo, valor, categoria, responsavel, origem, decant_id
     )
     values (
-      v_label || ' - ' || v_decant.ml || 'ml ' || v_produto.nome,
+      v_label || ' - ' || trim_scale(v_decant.ml) || 'ml ' || v_produto.nome,
       'saida', v_custo_total, v_label, p_responsavel, 'decant', v_decant_id
     )
     returning id into v_transacao_id;
@@ -1071,7 +1071,7 @@ begin
 
   if v_custo_total > 0 then
     update transacoes set
-      descricao = v_label || ' - ' || v_novo.ml || 'ml ' || v_produto.nome,
+      descricao = v_label || ' - ' || trim_scale(v_novo.ml) || 'ml ' || v_produto.nome,
       categoria = v_label,
       valor = v_custo_total,
       responsavel = p_responsavel,

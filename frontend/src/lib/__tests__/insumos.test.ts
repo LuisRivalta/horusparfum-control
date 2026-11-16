@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aplicarCompra, listaDoItem, listaEnvio, somarItens, custoInsumos, abaixoDoMinimo, type ListaInsumos } from '../insumos'
+import { aplicarCompra, listaDoItem, listaEnvio, somarItens, custoInsumos, abaixoDoMinimo, listasAtivas, type ListaInsumos } from '../insumos'
 
 describe('aplicarCompra', () => {
   it('compra sem diferença: 1000 por R$ 2.000 em estoque zerado', () => {
@@ -45,5 +45,15 @@ describe('listas', () => {
   })
   it('abaixoDoMinimo só quando mínimo > 0', () => {
     expect(abaixoDoMinimo(2, 5)).toBe(true); expect(abaixoDoMinimo(0, 0)).toBe(false)
+  })
+})
+
+describe('listasAtivas', () => {
+  it('tira os insumos inativos e converte os números', () => {
+    const r = listasAtivas(
+      [{ tipo: 'decant', tamanho_ml: '5' as unknown as number, insumo_lista_itens: [{ insumo_id: 'a', quantidade: 1 }, { insumo_id: 'b', quantidade: 2 }] }],
+      [{ id: 'a', ativo: true }, { id: 'b', ativo: false }],
+    )
+    expect(r).toEqual([{ tipo: 'decant', tamanhoMl: 5, itens: [{ insumoId: 'a', quantidade: 1 }] }])
   })
 })

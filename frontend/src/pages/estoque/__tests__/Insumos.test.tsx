@@ -56,6 +56,16 @@ describe('EstInsumos', () => {
     expect(screen.getByLabelText('Quantos sobraram?')).toHaveValue(40)
   })
 
+  it('estoque negativo no sistema pré-preenche "quantos sobraram" com 0', async () => {
+    tabelas.insumos[0] = { ...(tabelas.insumos[0] as object), estoque_atual: -3 }
+    await abrirCompra()
+    expect(screen.getByLabelText('Quantos sobraram?')).toHaveValue(0)
+    fireEvent.change(screen.getByLabelText('Quantidade comprada'), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText('Valor total (R$)'), { target: { value: '5' } })
+    fireEvent.click(screen.getByText('Confirmar compra'))
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('registrar_compra_insumo', expect.objectContaining({ p_saldo_contado: 0 })))
+  })
+
   it('mostra perda na prévia quando o contado é menor', async () => {
     await abrirCompra()
     fireEvent.change(screen.getByLabelText('Quantidade comprada'), { target: { value: '200' } })
@@ -95,6 +105,18 @@ describe('EstInsumos', () => {
       const upd = chamadas.find((c) => c.tabela === 'insumo_listas' && c.op === 'update')
       expect(upd?.args[0]).toMatchObject({ peso_g: 300, altura_cm: 10 })
     })
+  })
+
+  it('insumo inativo na lista aparece como (inativo) e fica fora do custo', async () => {
+    tabelas.insumo_listas[0] = { ...(tabelas.insumo_listas[0] as object), insumo_lista_itens: [
+      { insumo_id: 'i2', quantidade: 1 }, { insumo_id: 'i3', quantidade: 1 },
+    ] }
+    tabelas.insumos[2] = { ...(tabelas.insumos[2] as object), custo_medio: 10 }
+    render(<EstInsumos />)
+    const secao = await screen.findByTestId('lista-l1')
+    expect(within(secao).getByText(/\(inativo\)/).parentElement).toHaveTextContent('Fita Velha')
+    expect(within(secao).getByText(/Etiqueta/)).not.toHaveTextContent('inativo')
+    expect(within(secao).getByText(/^Custo/)).toHaveTextContent(/0,50$/) // só a Etiqueta; a inativa custaria 10
   })
 
   it('insumo inativo não aparece para adicionar nas listas', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { planejarOrigens, totalOrigens, custoPrevistoOrigens, origemParaJson, aplicarDevolucoes, type Origem } from '../decantOrigens'
+import { planejarOrigens, totalOrigens, custoPrevistoOrigens, origemParaJson, aplicarDevolucoes, planejarDecants, type Origem } from '../decantOrigens'
 
 const frasco = { id: 'f1', produtoId: 'p1', mlRestante: 4, mlTotal: 100 }
 
@@ -64,5 +64,54 @@ describe('aplicarDevolucoes', () => {
   it('não altera a lista recebida', () => {
     aplicarDevolucoes([f1], [{ frascoId: 'f1', ml: 4 }])
     expect(f1.mlRestante).toBe(0)
+  })
+})
+
+describe('origemParaJson com frasco apagado', () => {
+  it('frascoId vazio vai como frasco_id null', () => {
+    expect(origemParaJson({ tipo: 'frasco', frascoId: '', produtoId: 'p1', ml: 5 })).toEqual({ frasco_id: null, ml: 5 })
+  })
+})
+
+describe('planejarDecants', () => {
+  const aberto7 = { id: 'f1', produtoId: 'p1', mlRestante: 7, mlTotal: 100, ativo: true }
+  const vol = { p1: 100 }
+  it('dois itens do mesmo frasco: o segundo vê o que sobrou do primeiro', () => {
+    const [a, b] = planejarDecants([aberto7], { p1: 2 }, vol, [
+      { frascoId: 'f1', ml: 5, origens: null }, { frascoId: 'f1', ml: 2.5, origens: null },
+    ])
+    expect(a.origens).toEqual([{ tipo: 'frasco', frascoId: 'f1', produtoId: 'p1', ml: 5 }])
+    expect(b.origens).toEqual([
+      { tipo: 'frasco', frascoId: 'f1', produtoId: 'p1', ml: 2 },
+      { tipo: 'abrir', produtoId: 'p1', ml: 0.5 },
+    ])
+    expect(b.frascos[0].mlRestante).toBe(2)
+  })
+  it('frasco esgotado pelo item anterior: abre lacrado, contando os já abertos', () => {
+    const [, b] = planejarDecants([{ ...aberto7, mlRestante: 5 }], { p1: 1 }, vol, [
+      { frascoId: 'f1', ml: 5, origens: null }, { frascoId: 'f1', ml: 5, origens: null },
+    ])
+    expect(b.origens).toEqual([{ tipo: 'abrir', produtoId: 'p1', ml: 5 }])
+  })
+  it('frasco aberto por item anterior não é origem nem deixa abrir outro', () => {
+    const [a, b] = planejarDecants([{ ...aberto7, mlRestante: 3 }], { p1: 5 }, vol, [
+      { frascoId: 'f1', ml: 5, origens: null }, { frascoId: 'f1', ml: 5, origens: null },
+    ])
+    expect(a.origens.map((o) => o.tipo)).toEqual(['frasco', 'abrir'])
+    expect(b.origens).toEqual([])
+  })
+  it('sem lacrado sobrando: segundo item fica só com o que resta', () => {
+    const [, b] = planejarDecants([aberto7], { p1: 0 }, vol, [
+      { frascoId: 'f1', ml: 5, origens: null }, { frascoId: 'f1', ml: 5, origens: null },
+    ])
+    expect(b.origens).toEqual([{ tipo: 'frasco', frascoId: 'f1', produtoId: 'p1', ml: 2 }])
+  })
+  it('decant gravado inalterado não consome de novo; origens dadas são respeitadas', () => {
+    const dadas = [{ tipo: 'frasco', frascoId: 'f1', produtoId: 'p1', ml: 5 }] as Origem[]
+    const [a, b] = planejarDecants([aberto7], { p1: 0 }, vol, [
+      { frascoId: 'f1', ml: 5, origens: dadas, jaConsumido: true }, { frascoId: 'f1', ml: 7, origens: null },
+    ])
+    expect(a.origens).toBe(dadas)
+    expect(b.origens).toEqual([{ tipo: 'frasco', frascoId: 'f1', produtoId: 'p1', ml: 7 }])
   })
 })
