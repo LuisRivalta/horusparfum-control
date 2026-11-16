@@ -485,7 +485,6 @@
 
 ## Decisões pendentes
 
-
 - **Próximo grande passo:** escrever o plano da Parte 3 do spec `2026-11-16-anuncios-design.md` ("Vendas do ML": receber vendas do ML, baixar estoque, sincronizar quantidade sozinho). Só depois da Parte 2 ativada e conectada.
 - ~~Aplicar as migrations de Insumos~~ (feito em 16/11/2026); plano da Parte 2 (Anúncios) concluído, falta o da Parte 3.
 
