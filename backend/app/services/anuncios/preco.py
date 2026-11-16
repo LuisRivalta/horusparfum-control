@@ -1,3 +1,14 @@
+# [CLAUDE-CODE-AUDIT]
+# ID                 : 20261116-145826-85d5
+# Tipo de item       : Script Python
+# Autores            : luisgfr; MS125; Claude Code
+# Titulo             : preco.py
+# Assunto            : 
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
+# Ultima modificacao : 2026-11-16 14:58:26
+# Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
+# [/CLAUDE-CODE-AUDIT]
 import math
 from dataclasses import dataclass
 from decimal import Decimal
@@ -71,7 +82,9 @@ def consulta_ml(cliente: MLCliente, listing_type: str,
             'shipping_mode': 'me2',
         })
         if isinstance(r, list):
-            r = next((x for x in r if x.get('listing_type_id') == listing_type), r[0])
+            r = next((x for x in r if x.get('listing_type_id') == listing_type), None)
+            if r is None:
+                raise ValueError(f'ML não devolveu taxas para o tipo de anúncio {listing_type}')
         fixa = Decimal(str(r['sale_fee_details']['fixed_fee']))
         comissao = Decimal(str(r['sale_fee_amount'])) - fixa
         if p >= FRETE_GRATIS_A_PARTIR:

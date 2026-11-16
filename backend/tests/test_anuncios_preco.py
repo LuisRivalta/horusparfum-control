@@ -1,3 +1,14 @@
+# [CLAUDE-CODE-AUDIT]
+# ID                 : 20261116-145824-7091
+# Tipo de item       : Script Python
+# Autores            : luisgfr; MS125; Claude Code
+# Titulo             : test_anuncios_preco.py
+# Assunto            : 
+# Origem             : automatico (hook)
+# Motivo             : Registro automatico (hook Edit); a razao detalhada vem no registro manual do Claude, se houver
+# Ultima modificacao : 2026-11-16 14:58:24
+# Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
+# [/CLAUDE-CODE-AUDIT]
 import unittest
 from decimal import Decimal as D
 
@@ -20,6 +31,19 @@ def consultar_falso(p: D) -> Custos:
 def liquido(p: D) -> D:
     c = consultar_falso(p)
     return p - c.comissao - c.taxa_fixa - c.frete
+
+
+def nenhum_fecha_antes(consultar, p, alvo):
+    g = D('8.90')
+    while g <= p - 1:
+        c = consultar(g)
+        assert g - c.comissao - c.taxa_fixa - c.frete < alvo, g
+        g += 1
+
+
+def consultar_taxa_so_abaixo_de_79(p: D) -> Custos:
+    comissao = (p * D('0.14')).quantize(D('0.01'))
+    return Custos(comissao, D('15') if p < 79 else D('0'), D('0'))
 
 
 class ClienteFalso:
@@ -47,6 +71,7 @@ class PrecoTest(unittest.TestCase):
         self.assertEqual(p % 1, D('0.90'))
         self.assertGreaterEqual(liquido(p), 40)
         self.assertLess(liquido(p - 1), 40)
+        nenhum_fecha_antes(consultar_falso, p, D('40'))
         self.assertEqual(r['lucro'], p - r['comissao'] - r['taxa_fixa'] - r['frete'] - 25)
 
     def test_preco_minimo_ml(self):
@@ -61,6 +86,21 @@ class PrecoTest(unittest.TestCase):
         self.assertEqual(p % 1, D('0.90'))
         self.assertGreaterEqual(liquido(p), 64)
         self.assertLess(liquido(p - 1), 64)
+        nenhum_fecha_antes(consultar_falso, p, D('64'))
+
+    def test_sonda_79_90_fecha_margem(self):
+        # alvo 68: de 68,90 o salto iria a 92,90, mas 79,90 já fecha (taxa fixa some)
+        r = calcular_preco(D('40'), D('0.7'), consultar_taxa_so_abaixo_de_79)
+        self.assertEqual(r['preco'], D('79.90'))
+
+    def test_tipo_de_anuncio_ausente_na_lista_erro(self):
+        class Cli(ClienteFalso):
+            def get(self, path, params=None):
+                return [{'listing_type_id': 'free', 'sale_fee_amount': 0,
+                         'sale_fee_details': {'fixed_fee': 0}}]
+
+        with self.assertRaises(ValueError):
+            consulta_ml(Cli(), 'gold_special', Pacote(300, D('10'), D('10'), D('10')))(D('50.90'))
 
     def test_custo_zero_erro(self):
         with self.assertRaises(ValueError):
