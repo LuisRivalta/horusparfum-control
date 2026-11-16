@@ -31,6 +31,10 @@ describe('anuncios', () => {
     expect(custoAnuncio({ custoMedio: 0, volumeMl: 100 }, frasco, listas, custos)).toEqual({ bloqueio: 'Perfume sem custo médio' })
     expect(custoAnuncio({ custoMedio: 10, volumeMl: null }, dec(10), listas, custos)).toEqual({ bloqueio: 'Perfume sem volume (ml)' })
   })
+  it('bloqueia decant sem tamanho', () => {
+    expect(custoAnuncio({ custoMedio: 10, volumeMl: 100 }, { tipo: 'decant', ml: null }, listas, custos)).toEqual({ bloqueio: 'Tamanho do decant inválido' })
+    expect(custoAnuncio({ custoMedio: 10, volumeMl: 100 }, dec(0), listas, custos)).toEqual({ bloqueio: 'Tamanho do decant inválido' })
+  })
   it('título padrão', () => {
     const f = { marca: 'Lattafa', nome: 'Asad', tipoPerfume: 'Eau de Parfum', genero: 'Masculino' }
     expect(tituloPadrao(f, dec(2.5), 100)).toBe('Decant Lattafa Asad EDP 2,5ml Masculino')
@@ -40,7 +44,7 @@ describe('anuncios', () => {
   })
   it('descrição troca placeholders e limpa emoji', () => {
     expect(descricaoPadrao('Olá {marca} 😀 <b>{x}</b>', { marca: 'Lattafa' })).toBe('Olá Lattafa  b/b')
-    expect(descricaoPadrao('', { marca: 'L', perfume: 'A', notas: '' })).toBe('Marca: L\nPerfume: A')
+    expect(descricaoPadrao('', { marca: 'L', nome: 'A', notas: '' })).toBe('Marca: L\nPerfume: A')
     expect(limparDescricao('a🌸b<c>')).toBe('abc')
   })
   it('fotos do decant = frasco + decant, máx 12', () => {

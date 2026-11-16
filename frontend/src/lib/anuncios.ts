@@ -23,8 +23,9 @@ export function custoAnuncio(
   const tipo = a.tipo === 'frasco' ? 'produto' : 'decant'
   let base = new Decimal(p.custoMedio)
   if (a.tipo === 'decant') {
+    if (!a.ml || a.ml <= 0) return { bloqueio: 'Tamanho do decant inválido' }
     if (!p.volumeMl) return { bloqueio: 'Perfume sem volume (ml)' }
-    base = base.div(p.volumeMl).mul(a.ml ?? 0)
+    base = base.div(p.volumeMl).mul(a.ml)
   }
   const insumos = custoInsumos(
     [...listaDoItem(listas, tipo, a.ml, 1), ...listaEnvio(listas, [tipo], true)], custoPorInsumo,
@@ -50,7 +51,7 @@ export function limparDescricao(t: string): string {
 }
 
 const CAMPOS_DESCRICAO: Array<[string, string]> = [
-  ['marca', 'Marca'], ['perfume', 'Perfume'], ['volume', 'Volume'], ['tipo', 'Tipo'], ['genero', 'Gênero'], ['notas', 'Notas'],
+  ['marca', 'Marca'], ['nome', 'Perfume'], ['volume', 'Volume'], ['tipo', 'Tipo'], ['genero', 'Gênero'], ['notas', 'Notas'], ['familias', 'Famílias olfativas'],
 ]
 
 export function descricaoPadrao(modelo: string, dados: Record<string, string>): string {
