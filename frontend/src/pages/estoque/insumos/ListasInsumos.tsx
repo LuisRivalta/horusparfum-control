@@ -20,14 +20,22 @@ interface Lista {
 type Resultado = PromiseLike<{ error: { message: string } | null }>
 
 const TITULO: Record<TipoLista, string> = {
-  decant: 'Decant', frasco: 'Frasco cheio', envio_decant: 'Envio de decant', envio_frasco: 'Envio de frasco',
+  decant: 'Decant', frasco: 'Kit do frasco cheio', envio_decant: 'Kit de envio (decant)', envio_frasco: 'Kit de envio (frasco)',
+}
+const DESCRICAO: Record<TipoLista, string> = {
+  decant: '',
+  frasco: 'Sai do estoque a cada frasco lacrado vendido.',
+  envio_decant: 'Sai uma vez por pedido enviado só com decants.',
+  envio_frasco: 'Sai uma vez por pedido enviado que tem frasco.',
 }
 const ORDEM: TipoLista[] = ['decant', 'frasco', 'envio_decant', 'envio_frasco']
-const titulo = (l: Lista) => l.tipo === 'decant' ? `Decant ${String(l.tamanho_ml).replace('.', ',')} ml` : TITULO[l.tipo]
+const ml = (l: Lista) => String(l.tamanho_ml).replace('.', ',')
+const titulo = (l: Lista) => l.tipo === 'decant' ? `Kit do decant ${ml(l)} ml` : TITULO[l.tipo]
+const descricao = (l: Lista) => l.tipo === 'decant' ? `Sai do estoque a cada decant de ${ml(l)} ml vendido.` : DESCRICAO[l.tipo]
 
-interface Props { insumos: Insumo[]; onChange: () => void }
+interface Props { insumos: Insumo[]; onChange: () => void; irParaEstoque: () => void }
 
-export function ListasInsumos({ insumos, onChange }: Props) {
+export function ListasInsumos({ insumos, onChange, irParaEstoque }: Props) {
   const [listas, setListas] = useState<Lista[]>([])
   const [erro, setErro] = useState<string | null>(null)
 
@@ -48,14 +56,34 @@ export function ListasInsumos({ insumos, onChange }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-2xl tracking-tight">Listas de insumos</h2>
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-muted max-w-2xl">
+        Cada kit diz quais insumos saem do estoque numa venda. Na hora de registrar a venda o kit já vem
+        preenchido, e dá para mudar o que precisar antes de confirmar.
+      </p>
       {erro && <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">{erro}</div>}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {listas.map((l) => (
-          <SecaoLista key={l.id} lista={l} insumos={insumos} depois={depois} />
-        ))}
-      </div>
+      {insumos.length === 0 ? (
+        <div className="gold-hairline bg-surface border border-line rounded-xl p-8 text-center text-sm text-muted">
+          Cadastre os insumos primeiro (frascos, etiquetas, caixas…) para montar os kits.
+          <div className="mt-4">
+            <Button variant="secondary" onClick={irParaEstoque}>Ir para Estoque</Button>
+          </div>
+        </div>
+      ) : (
+        [
+          { titulo: 'Por item vendido', tipos: ['decant', 'frasco'] },
+          { titulo: 'Por envio', tipos: ['envio_decant', 'envio_frasco'] },
+        ].map((g) => (
+          <div key={g.titulo} className="flex flex-col gap-3">
+            <h2 className="text-xl tracking-tight">{g.titulo}</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {listas.filter((l) => g.tipos.includes(l.tipo)).map((l) => (
+                <SecaoLista key={l.id} lista={l} insumos={insumos} depois={depois} />
+              ))}
+            </div>
+          </div>
+        ))
+      )}
     </div>
   )
 }
@@ -92,9 +120,12 @@ function SecaoLista({ lista, insumos, depois }: {
 
   return (
     <section data-testid={`lista-${lista.id}`} className="gold-hairline bg-surface border border-line rounded-xl p-5 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium">{titulo(lista)}</h3>
-        <span className="text-sm text-muted">Custo <span className="font-mono text-text">{formatBRL(total)}</span></span>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-medium">{titulo(lista)}</h3>
+          <p className="text-xs text-muted mt-0.5">{descricao(lista)}</p>
+        </div>
+        <span className="text-sm text-muted whitespace-nowrap">Custo <span className="font-mono text-text">{formatBRL(total)}</span></span>
       </div>
 
       {itens.length === 0 && <p className="text-xs text-muted">Nenhum insumo na lista</p>}

@@ -96,6 +96,7 @@ describe('EstInsumos', () => {
 
   it('lista de envio mostra campos de peso e medidas e salva', async () => {
     render(<EstInsumos />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kits por venda' }))
     const secao = await screen.findByTestId('lista-l2')
     fireEvent.change(within(secao).getByLabelText('Peso (g)'), { target: { value: '300' } })
     fireEvent.change(within(secao).getByLabelText('Altura (cm)'), { target: { value: '10' } })
@@ -114,6 +115,7 @@ describe('EstInsumos', () => {
     ] }
     tabelas.insumos[2] = { ...(tabelas.insumos[2] as object), custo_medio: 10 }
     render(<EstInsumos />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kits por venda' }))
     const secao = await screen.findByTestId('lista-l1')
     expect(within(secao).getByText(/\(inativo\)/).parentElement).toHaveTextContent('Fita Velha')
     expect(within(secao).getByText(/Etiqueta/)).not.toHaveTextContent('inativo')
@@ -122,6 +124,7 @@ describe('EstInsumos', () => {
 
   it('insumo inativo não aparece para adicionar nas listas', async () => {
     render(<EstInsumos />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kits por venda' }))
     const secao = await screen.findByTestId('lista-l1')
     const lista = opcoes(within(secao).getByRole('combobox'))
     expect(lista).toContain('Caixa')

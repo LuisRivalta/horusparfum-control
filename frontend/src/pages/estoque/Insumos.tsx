@@ -16,6 +16,7 @@ type Dialogo =
   | { tipo: 'editar'; insumo: Insumo | null }
 
 export function EstInsumos() {
+  const [aba, setAba] = useState<'estoque' | 'kits'>('estoque')
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [emUso, setEmUso] = useState<Set<string>>(new Set())
   const [erro, setErro] = useState<string | null>(null)
@@ -57,14 +58,34 @@ export function EstInsumos() {
             </p>
             <h1 className="text-4xl tracking-tight mt-1.5">Insumos</h1>
           </div>
-          <Button onClick={() => setDialogo({ tipo: 'editar', insumo: null })}>
-            <Icon name="plus" size={16} />
-            Novo insumo
-          </Button>
+          {aba === 'estoque' && (
+            <Button onClick={() => setDialogo({ tipo: 'editar', insumo: null })}>
+              <Icon name="plus" size={16} />
+              Novo insumo
+            </Button>
+          )}
         </div>
 
         {erro && <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">{erro}</div>}
 
+        <div role="tablist" aria-label="Seções de insumos" className="flex self-start p-0.5 border border-line-2 rounded-2xl bg-surface-2 gap-0.5">
+          {([['estoque', 'Estoque'], ['kits', 'Kits por venda']] as const).map(([id, rotulo]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={aba === id}
+              onClick={() => setAba(id)}
+              className={cn(
+                'px-4 py-1.5 rounded-xl text-sm font-medium transition-colors cursor-pointer',
+                aba === id ? 'bg-gold text-[#1A1407]' : 'text-muted hover:text-text'
+              )}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+
+        {aba === 'estoque' && (
         <div className="gold-hairline bg-surface border border-line rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -123,7 +144,9 @@ export function EstInsumos() {
           </table>
         </div>
 
-        <ListasInsumos insumos={insumos} onChange={carregar} />
+        )}
+
+        {aba === 'kits' && <ListasInsumos insumos={insumos} onChange={carregar} irParaEstoque={() => setAba('estoque')} />}
       </div>
 
       {dialogo?.tipo === 'compra' && <CompraInsumoModal insumo={dialogo.insumo} onClose={fechar} onSaved={salvou} />}
