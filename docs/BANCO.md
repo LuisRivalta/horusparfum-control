@@ -52,6 +52,8 @@ PostgreSQL hospedado no **Supabase**. Todas as tabelas ficam no schema `public` 
 | custo_medio | numeric(12,2) | Custo médio ponderado (atualizado na confirmação de pedidos) |
 | ultimo_custo | numeric(12,2) | Preço da última compra recebida |
 | preco_referencia | numeric(12,2) | Preço de venda sugerido (exibido no modal de nova venda) |
+| gtin | text | Código de barras (EAN/GTIN), nullable; usado nos anúncios do ML |
+| ficha | jsonb | Atributos do ML: chave = id do atributo (`GENDER`, `PERFUME_TYPE`...), valor = `{"value_id": string\|null, "value_name": string}`. Default `{}` |
 | created_at | timestamptz | — |
 
 ### `movimentacoes`
@@ -309,6 +311,18 @@ De onde saíram os ml de um decant (frasco aberto e/ou lacrado aberto na hora).
 | abriu_frasco | boolean | Se esta origem abriu um lacrado (esse ml nunca volta ao estoque lacrado) |
 
 `transacoes.origem` passa a aceitar também `'insumo'` (compra de insumo). Ver [[features/INSUMOS]].
+
+### Anúncios (Mercado Livre)
+
+Migration `20261117100000_anuncios_schema.sql`; conferência em `supabase/checks/20261117_anuncios_check.sql`.
+
+`produto_fotos`: `id`, `produto_id` (FK → produtos, cascade), `url`, `uso` (`frasco` ou `decant`), `ordem`, `created_at`. Seed: uma linha `frasco`/ordem 0 por produto com `foto_url`.
+
+`anuncios_config` (linha única, `id = 1`): `margem_padrao` numeric(6,4) default 0.6, `tipo_padrao` (`gold_special`/`gold_pro`), `modelo_descricao`, `ia_ativa`, `tamanhos_decant` numeric[] default `{2.5,5,10}`, `canal_id` (FK → canais; seed = canal "Mercado Livre", se existir).
+
+`anuncios`: `id`, `produto_id` (FK → produtos), `canal_id` (FK → canais, nullable), `tipo` (`frasco`/`decant`), `ml` numeric(6,1) (preenchido se, e só se, `tipo = 'decant'`), `listing_type`, `margem`, `custo_base`, `preco`, `titulo`, `descricao`, `fotos` text[], `status` (`rascunho`, `publicado`, `pausado`, `erro`), `ml_item_id` (único), `permalink`, `erro`, `qualidade_score`, `qualidade_nivel`, `qualidade_em`, `created_at`, `updated_at` (sem trigger; o backend atualiza).
+
+`ml_conexao` (linha única, `id = 1`): `ml_user_id`, `nickname`, `access_token`, `refresh_token`, `expires_at`, `user_product`, `updated_at`. RLS ligado **sem policy**: guarda tokens, só o backend (service role) acessa.
 
 ## Relações
 
