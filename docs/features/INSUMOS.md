@@ -6,7 +6,7 @@
 
 Parte 1 do módulo Anúncios (spec: `docs/superpowers/specs/2026-11-16-anuncios-design.md`, seção 5; plano: `docs/superpowers/plans/2026-11-16-insumos.md`). As Partes 2 (Anúncios) e 3 (Vendas do ML) ainda precisam de plano próprio.
 
-> ⚠️ Migrations `20261116100000_insumos_schema.sql` e `20261116110000_insumos_rpcs.sql` escritas, **ainda não aplicadas** (aplicar manualmente no SQL Editor, nessa ordem). Scripts de conferência em `supabase/checks/`.
+> Migrations `20261116100000_insumos_schema.sql` e `20261116110000_insumos_rpcs.sql` aplicadas no Supabase em 16/11/2026 (checks em `supabase/checks/` sem erro).
 
 ## Tela `/estoque/insumos` (`pages/estoque/Insumos.tsx`)
 
