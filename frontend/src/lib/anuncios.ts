@@ -66,7 +66,7 @@ export function descricaoPadrao(modelo: string, dados: Record<string, string>): 
 }
 
 export function fotosDoAnuncio(fotos: Foto[], a: AlvoAnuncio): string[] {
-  const por = (uso: Foto['uso']) => fotos.filter((f) => f.uso === uso).sort((x, y) => x.ordem - y.ordem).map((f) => f.url)
+  const por = (uso: Foto['uso']) => fotos.filter((f) => f.uso === uso && f.url.trim()).sort((x, y) => x.ordem - y.ordem).map((f) => f.url)
   if (a.tipo === 'frasco') return por('frasco').slice(0, MAX_FOTOS)
   const decant = por('decant') // reserva lugar para até 2 fotos do decant
   return [...por('frasco').slice(0, MAX_FOTOS - Math.min(decant.length, 2)), ...decant].slice(0, MAX_FOTOS)

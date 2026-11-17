@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162844-3256
+# ID                 : 20261117-134733-0219
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Anuncios: publicar.py
 # Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
-# Origem             : solicitacao do usuario
-# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
+# Origem             : iniciativa do Claude
+# Motivo             : Ignorar fotos sem endereco para o ML nao recusar o anuncio inteiro
 # Criado em          : 2026-11-16 15:25:28
-# Ultima modificacao : 2026-11-16 16:27:10
+# Ultima modificacao : 2026-11-17 13:47:33
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 """Monta o item do ML a partir do rascunho e publica um anúncio sem duplicar."""
@@ -73,7 +73,7 @@ def montar_item(anuncio: dict, produto: dict, user_product: bool, quantidade: in
         'buying_mode': 'buy_it_now',
         'condition': 'new',
         'listing_type_id': anuncio['listing_type'],
-        'pictures': [{'source': u} for u in anuncio.get('fotos') or []],
+        'pictures': [{'source': u} for u in anuncio.get('fotos') or [] if u and u.strip()],
         'attributes': list(attrs.values()),
         'shipping': {'mode': 'me2', 'free_shipping': preco >= FRETE_GRATIS_A_PARTIR},
     }
