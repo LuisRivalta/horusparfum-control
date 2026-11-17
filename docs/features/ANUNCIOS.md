@@ -75,13 +75,19 @@ Claude Haiku (`claude-haiku-5-5`, `services/anuncios/ia.py`) sugere a ficha e es
 
 ## Checklist de ativação
 
-1. O Luis cria o app em `https://developers.mercadolivre.com.br/devcenter` com:
+> **Situação em 17/11/2026:** o app do ML ainda não existe. O DevCenter não tem mais botão de criar: a doc
+> "Crie uma aplicação no Mercado Livre" manda preencher um formulário de solicitação (análise do ML), e esse
+> formulário está fechado ("não aceita mais respostas"). Caminho: pedir ao atendimento de vendedor do ML como
+> solicitar o app. Todo o resto do módulo está pronto e no ar; só falta a chave.
+
+1. Conseguir o app do ML na **conta da loja** (o ML não transfere app entre contas), com:
    - redirect URI: `https://horusparfum-control-api.vercel.app/api/mercadolivre/callback`;
-   - escopos de leitura, escrita e `offline_access`;
-   - PKCE desligado.
-2. No projeto Vercel `horusparfum-control-api`, o Luis cadastra no painel (nunca colar em chat): `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `ML_REDIRECT_URI` (igual ao redirect acima) e, opcional, `ANTHROPIC_API_KEY`.
-3. Deploy do backend: `npx vercel login` e `npx vercel --prod` dentro de `backend/`. O frontend publica sozinho no push para a `main`.
+   - escopos de leitura e escrita (usuários, publicação/sincronização, vendas e envios, métricas) e `offline_access`;
+   - PKCE desligado; unidade de negócio só Mercado Livre (sem escopos `urn:mp:...` do Mercado Pago).
+2. No projeto Vercel `horusparfum-control-api`, o Luis cadastra no painel (nunca colar em chat): `ML_CLIENT_ID` (App ID), `ML_CLIENT_SECRET` (Secret Key), `ML_REDIRECT_URI` (igual ao redirect acima) e, opcional, `ANTHROPIC_API_KEY`. Variável nova só vale depois de um **Redeploy**.
+3. Deploy do backend: o projeto `horusparfum-control-api` precisa estar ligado ao repositório (Settings › Git, Root Directory `backend`) — o `npx vercel` não funciona no PC da empresa (o antivírus derruba a conexão do Node com `api.vercel.com`). O frontend publica sozinho no push para a `main`.
 4. Em **Anúncios › Configuração**: **Conectar** ao Mercado Livre, definir a **margem padrão** e preencher **peso e medidas** dos kits de envio em **Estoque › Insumos › Kits por venda** (envio de frasco e de decant).
+5. Teste: publicar 1 anúncio, conferir preço/lucro do Clássico e do Premium e o tempo do cálculo de preço.
 
 ## Limites conhecidos
 

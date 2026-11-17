@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261116-162842-95e1
+# ID                 : 20261117-132919-c37b
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Anuncios: anuncios.py
 # Assunto            : Modulo/teste do backend do modulo Anuncios (Mercado Livre) do Horus Parfum Control
-# Origem             : solicitacao do usuario
-# Motivo             : Implementar a Parte 2 do plano de Anuncios pedida pelo Luis
+# Origem             : iniciativa do Claude
+# Motivo             : Seguir a recomendacao do ML de enviar o token tambem em chamadas publicas (atributos da categoria)
 # Criado em          : 2026-11-16 15:25:55
-# Ultima modificacao : 2026-11-16 16:27:10
+# Ultima modificacao : 2026-11-17 13:29:19
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import re
@@ -65,7 +65,11 @@ def atributos_categoria() -> list:
     global _atributos_cache
     if time.time() - _atributos_cache[0] < 3600 and _atributos_cache[1]:
         return _atributos_cache[1]
-    lista = checar(httpx.get(f'{API}/categories/MLB6284/attributes', timeout=20))
+    # ML recomenda token em toda chamada (doc "Desenvolvimento seguro"); sem conta conectada, usa a rota pública
+    try:
+        lista = MLCliente().get('/categories/MLB6284/attributes')
+    except MLDesconectado:
+        lista = checar(httpx.get(f'{API}/categories/MLB6284/attributes', timeout=20))
     visiveis = []
     for a in lista:
         tags = a.get('tags') or {}
