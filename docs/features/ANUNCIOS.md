@@ -85,7 +85,7 @@ Claude Haiku (`claude-haiku-5-5`, `services/anuncios/ia.py`) sugere a ficha e es
    - escopos de leitura e escrita (usuários, publicação/sincronização, vendas e envios, métricas) e `offline_access`;
    - PKCE desligado; unidade de negócio só Mercado Livre (sem escopos `urn:mp:...` do Mercado Pago).
 2. No projeto Vercel `horusparfum-control-api`, o Luis cadastra no painel (nunca colar em chat): `ML_CLIENT_ID` (App ID), `ML_CLIENT_SECRET` (Secret Key), `ML_REDIRECT_URI` (igual ao redirect acima) e, opcional, `ANTHROPIC_API_KEY`. Variável nova só vale depois de um **Redeploy**.
-3. Deploy do backend: o projeto `horusparfum-control-api` precisa estar ligado ao repositório (Settings › Git, Root Directory `backend`) — o `npx vercel` não funciona no PC da empresa (o antivírus derruba a conexão do Node com `api.vercel.com`). O frontend publica sozinho no push para a `main`.
+3. Deploy do backend: já é automático (o projeto `horusparfum-control-api` está ligado ao repositório e publica a cada push na `main`) — o `npx vercel` não funciona no PC da empresa (o antivírus derruba a conexão do Node com `api.vercel.com`). O frontend publica sozinho no push para a `main`.
 4. Em **Anúncios › Configuração**: **Conectar** ao Mercado Livre, definir a **margem padrão** e preencher **peso e medidas** dos kits de envio em **Estoque › Insumos › Kits por venda** (envio de frasco e de decant).
 5. Teste: publicar 1 anúncio, conferir preço/lucro do Clássico e do Premium e o tempo do cálculo de preço.
 
