@@ -22,6 +22,7 @@ const ANU_NAV = [
   { id: 'anuncios', label: 'Anúncios', icon: 'tag', path: '/anuncios' },
   { id: 'novo', label: 'Novo anúncio', icon: 'plus', path: '/anuncios/novo' },
   { id: 'ligar', label: 'Ligar anúncios', icon: 'swap', path: '/anuncios/ligar' },
+  { id: 'ligar-shopify', label: 'Ligar Shopify', icon: 'swap', path: '/anuncios/shopify/ligar' },
   { id: 'config', label: 'Configuração', icon: 'grid', path: '/anuncios/config' },
 ]
 

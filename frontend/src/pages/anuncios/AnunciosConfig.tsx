@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/shared/FormControls'
 import { conexaoML, conectarML, desconectarML, type ConexaoML } from '@/lib/apiAnuncios'
+import { apiShopify, type ConexaoShopify, type ResultadoSync } from '@/lib/apiShopify'
 import { cn } from '@/lib/utils'
 
 interface Canal { id: string; nome: string; ativo: boolean }
@@ -32,11 +33,23 @@ export function AnunciosConfig() {
   const [salvo, setSalvo] = useState(false)
   const [carregado, setCarregado] = useState(false)
 
+  const [shopify, setShopify] = useState<ConexaoShopify | null>(null)
+  const [sync, setSync] = useState<ResultadoSync | null>(null)
+  const [ocupadoShopify, setOcupadoShopify] = useState(false)
+
   const carregarConexao = () =>
     conexaoML().then(setConexao).catch((e: Error) => setErro(e.message))
 
+  async function acaoShopify(f: () => Promise<unknown>) {
+    setOcupadoShopify(true); setErro(null)
+    try { await f() } catch (e) { setErro((e as Error).message) } finally { setOcupadoShopify(false) }
+  }
+  const conectarShopify = () => acaoShopify(async () => setShopify(await apiShopify.conectar()))
+  const sincronizarShopify = () => acaoShopify(async () => setSync(await apiShopify.sincronizarTudo()))
+
   useEffect(() => {
     carregarConexao()
+    apiShopify.conexao().then(setShopify).catch((e: Error) => setErro(e.message))
     supabase.from('canais').select('*').order('nome').then(({ data }) => setCanais((data as Canal[]) || []))
     supabase.from('anuncios_config').select('*').eq('id', 1).single().then(({ data, error }) => {
       const c = data as Config | null
@@ -99,6 +112,30 @@ export function AnunciosConfig() {
             ? <Button variant="ghost" size="sm" onClick={desconectar}>Desconectar</Button>
             : <Button size="sm" onClick={conectar}>Conectar</Button>}
         </div>
+      </section>
+
+      <section className={card}>
+        <h2 className="text-sm font-medium uppercase tracking-[.08em] text-muted">Loja Shopify</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex-1 text-sm">
+            {shopify?.conectado ? `Loja conectada${shopify.loja ? `: ${shopify.loja}` : ''}` : shopify ? 'Não conectada' : 'Verificando...'}
+          </span>
+          <Button variant={shopify?.conectado ? 'ghost' : 'primary'} size="sm" disabled={ocupadoShopify} onClick={conectarShopify}>
+            {shopify?.conectado ? 'Reconectar' : 'Conectar'}
+          </Button>
+          {shopify?.conectado && (
+            <>
+              <Link to="/anuncios/shopify/ligar"><Button variant="secondary" size="sm">Ligar produtos</Button></Link>
+              <Button size="sm" disabled={ocupadoShopify} onClick={sincronizarShopify}>Sincronizar tudo</Button>
+            </>
+          )}
+        </div>
+        {sync && (
+          <div role="status" className="text-sm">
+            <p>{sync.enviados} {sync.enviados === 1 ? 'estoque enviado' : 'estoques enviados'}.</p>
+            {sync.erros.map((m) => <p key={m} className="text-down">{m}</p>)}
+          </div>
+        )}
       </section>
 
       <section className={card}>

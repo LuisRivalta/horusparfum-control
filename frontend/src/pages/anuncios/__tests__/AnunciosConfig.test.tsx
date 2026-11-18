@@ -78,4 +78,17 @@ describe('AnunciosConfig', () => {
     await waitFor(() => expect((campo as HTMLInputElement).value).toBe('60'))
     expect(screen.getByRole('button', { name: /Salvar/i })).toBeEnabled()
   })
+
+  it('sincroniza tudo na Shopify e mostra o resultado', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(url.endsWith('/sincronizar') ? { enviados: 3, erros: ['Falhou X'] }
+        : { conectado: true, nickname: 'LOJA', loja: 'horus.myshopify.com', conectado_em: '2026-11-18' }),
+    })))
+    abrir()
+    expect(await screen.findByText(/Loja conectada: horus.myshopify.com/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sincronizar tudo' }))
+    expect(await screen.findByText('3 estoques enviados.')).toBeInTheDocument()
+    expect(screen.getByText('Falhou X')).toBeInTheDocument()
+  })
 })

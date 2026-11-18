@@ -9,7 +9,7 @@ export interface Config {
   ia_ativa: boolean; tamanhos_decant: number[] | null; canal_id: string | null
 }
 export interface Produto {
-  id: string; nome: string; marca: string; volume_ml: number | null; estoque_atual: number
+  id: string; nome: string; marca: string; tipo_id?: string | null; volume_ml: number | null; estoque_atual: number
   custo_medio: number; gtin: string | null; ficha: Ficha
 }
 export interface Base {
@@ -31,7 +31,7 @@ const pacote = (ls: ListaComPacote[], tipo: string): Pacote => {
 export async function carregarBase(): Promise<Base> {
   const [cfg, prods, marcas, listas, insumos] = await Promise.all([
     supabase.from('anuncios_config').select('*').eq('id', 1).single(),
-    supabase.from('produtos').select('id, nome, marca_id, volume_ml, estoque_atual, custo_medio, gtin, ficha').order('nome'),
+    supabase.from('produtos').select('id, nome, marca_id, tipo_id, volume_ml, estoque_atual, custo_medio, gtin, ficha').order('nome'),
     supabase.from('marcas').select('id, nome'),
     supabase.from('insumo_listas').select('tipo, tamanho_ml, peso_g, altura_cm, largura_cm, comprimento_cm, insumo_lista_itens(insumo_id, quantidade)'),
     supabase.from('insumos').select('id, custo_medio, ativo'),
