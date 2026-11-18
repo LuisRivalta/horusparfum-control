@@ -85,6 +85,20 @@ begin
   assert (select status from pedidos_canal where id = v_pedido) = 'cancelado', 'status cancelado';
   assert (select alerta from pedidos_canal where id = v_pedido) is null, 'alerta limpo';
   assert (select status from vendas where id = v_venda) = 'cancelada', 'venda cancelada';
+
+  -- 5. Venda já cancelada à mão: desfazer só fecha o pedido -----------
+  v_estoque := (select estoque_atual from produtos where id = v_prod);
+  update pedidos_canal set status = 'cancelado_pos_confirmacao', alerta = 'cancelado na loja'
+  where id = v_pedido;
+  perform desfazer_pedido_canal(v_pedido);
+  assert (select status from pedidos_canal where id = v_pedido) = 'cancelado', 'já cancelada: status cancelado';
+  assert (select alerta from pedidos_canal where id = v_pedido) is null, 'já cancelada: alerta limpo';
+  assert (select estoque_atual from produtos where id = v_prod) = v_estoque, 'já cancelada: estoque igual';
+
+  -- 6. Excluir a venda deixa o pedido sem venda_id --------------------
+  perform excluir_venda(v_venda);
+  assert not exists (select 1 from vendas where id = v_venda), 'venda excluída';
+  assert (select venda_id from pedidos_canal where id = v_pedido) is null, 'venda_id null';
 end $$;
 
 rollback;

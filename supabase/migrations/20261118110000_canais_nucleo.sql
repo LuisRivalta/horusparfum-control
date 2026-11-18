@@ -58,13 +58,17 @@ create table if not exists public.pedidos_canal (
   total      numeric(12,2),
   frete      numeric(12,2) default 0,
   itens      jsonb         not null default '[]',
-  venda_id   uuid          references public.vendas(id),
+  venda_id   uuid          references public.vendas(id) on delete set null,
   alerta     text,
   created_at timestamptz   default now(),
   updated_at timestamptz   default now(),
   unique (canal, externo_id)
 );
 create index if not exists pedidos_canal_status_idx on public.pedidos_canal (status);
+-- excluir_venda apaga a venda: o pedido fica, sem venda_id (re-run: recria a FK)
+alter table public.pedidos_canal drop constraint if exists pedidos_canal_venda_id_fkey;
+alter table public.pedidos_canal add constraint pedidos_canal_venda_id_fkey
+  foreign key (venda_id) references public.vendas(id) on delete set null;
 
 create table if not exists public.canal_sync_fila (
   produto_id uuid        primary key references public.produtos(id) on delete cascade,
@@ -103,7 +107,7 @@ create or replace function public._canal_sync_marcar()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 declare
   v_linha jsonb;
@@ -208,7 +212,10 @@ begin
     raise exception 'Pedido não está cancelado após confirmação (%)', v_pedido.status;
   end if;
 
-  perform cancelar_venda(v_pedido.venda_id);
+  -- venda já cancelada à mão (tela de Vendas) ou excluída: só fecha o pedido
+  if exists (select 1 from vendas where id = v_pedido.venda_id and status <> 'cancelada') then
+    perform cancelar_venda(v_pedido.venda_id);
+  end if;
 
   update pedidos_canal set
     status = 'cancelado',
