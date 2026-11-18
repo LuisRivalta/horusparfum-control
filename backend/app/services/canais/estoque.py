@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-162907-45ef
+# ID                 : 20261118-163444-0692
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Canais: estoque.py
 # Assunto            : Reserva e sincronizacao de estoque com a Shopify
 # Origem             : solicitacao do usuario
-# Motivo             : Task 5: publicar na Shopify o estoque do Horus menos reservas de pedidos nao confirmados
+# Motivo             : Funcao enfileirar para o produto ficar na fila quando o envio apos webhook ou conferencia falhar
 # Criado em          : 2026-11-18 16:29:07
+# Ultima modificacao : 2026-11-18 16:34:44
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import math
@@ -125,6 +126,14 @@ def sincronizar(db, cliente, produto_ids: list[str] | None, ate: str | None = No
 def _limpar_fila(db, produto_ids: list[str], ate: str) -> None:
     if produto_ids:
         db.table('canal_sync_fila').delete().in_('produto_id', produto_ids).lte('criado_em', ate).execute()
+
+
+def enfileirar(db, produto_ids: list[str]) -> None:
+    """Põe os produtos na fila (sem mexer em quem já está); sincronizar tira os que enviar."""
+    if produto_ids:
+        agora = datetime.now(timezone.utc).isoformat()
+        db.table('canal_sync_fila').upsert([{'produto_id': p, 'criado_em': agora} for p in produto_ids],
+                                           on_conflict='produto_id', ignore_duplicates=True).execute()
 
 
 def drenar_fila(db, cliente) -> dict:
