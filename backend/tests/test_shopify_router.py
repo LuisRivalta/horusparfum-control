@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-163443-879c
+# ID                 : 20261118-163834-2bde
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Shopify: test_shopify_router.py
 # Assunto            : Testes das rotas da Shopify e dos canais
 # Origem             : solicitacao do usuario
-# Motivo             : TDD das rotas da integracao Shopify pedida pelo Luis
+# Motivo             : Cobrir janela da conferencia, webhook 500 e exigencia de token pedidos na revisao
 # Criado em          : 2026-11-18 16:32:45
-# Ultima modificacao : 2026-11-18 16:34:20
+# Ultima modificacao : 2026-11-18 16:38:34
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import base64
@@ -17,6 +17,7 @@ import json
 import sys
 import types
 import unittest
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -30,6 +31,7 @@ sys.modules.setdefault("supabase", fake_supabase_module)
 from app.auth.deps import get_current_user
 from app.config import settings
 from app.main import app
+from app.routers import canais as rota_canais
 from app.routers import shopify as rota
 
 SEGREDO = "segredo-app"
@@ -275,15 +277,54 @@ class RotasTest(unittest.TestCase):
         db = self.base_db(pedidos_canal=[antigo])
         loja = Shopify(pedidos=[pedido_graphql("1"), pedido_graphql("2")])
         self.usar(db, loja)
-        r = self.http.post("/api/canais/pedidos/conferir")
+        with patch.object(rota_canais, "_agora", lambda: datetime(2026, 11, 20, 12, tzinfo=timezone.utc)):
+            r = self.http.post("/api/canais/pedidos/conferir")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json(), {"novos": 1})
         self.assertEqual(sorted(p["externo_id"] for p in db.tabelas["pedidos_canal"]), ["1", "2"])
         consultas = [v for q, v in loja.queries if "orders(" in q]
         self.assertEqual(len(consultas), 2)  # paginou
-        self.assertIn("updated_at:>='2026-11-18T14:00:00Z'", consultas[0]["q"])
+        # janela de 7 dias começa antes da conexão: vale o corte
+        self.assertIn("updated_at:>='2026-11-18T12:00:00Z'", consultas[0]["q"])
         self.assertEqual(consultas[1]["cursor"], "c1")
         self.assertEqual(len(loja.mutations("inventorySetQuantities")), 1)
+
+    def test_conferir_rele_janela_mesmo_com_gravacao_recente(self):
+        # uma gravação recente no Horus não pode empurrar o início: o pedido de 5 dias atrás
+        # (webhook perdido) ainda é buscado
+        recente = {"canal": "shopify", "externo_id": "1", "status": "a_confirmar", "itens": [],
+                   "updated_at": "2026-11-30T11:00:00+00:00"}
+        db = self.base_db(pedidos_canal=[recente])
+        loja = Shopify(pedidos=[pedido_graphql("9", criado="2026-11-25T12:00:00Z")])
+        self.usar(db, loja)
+        with patch.object(rota_canais, "_agora", lambda: datetime(2026, 11, 30, 12, tzinfo=timezone.utc)):
+            r = self.http.post("/api/canais/pedidos/conferir")
+        self.assertEqual(r.json(), {"novos": 1})
+        [(_, v)] = [x for x in loja.queries if "orders(" in x[0]]
+        self.assertIn("updated_at:>='2026-11-23T12:00:00Z'", v["q"])
+        self.assertIn("9", [p["externo_id"] for p in db.tabelas["pedidos_canal"]])
+
+    def test_webhook_ingerir_falha_500(self):
+        self.usar(self.base_db(), Shopify())
+        http = TestClient(app, raise_server_exceptions=False)
+        with patch.object(rota, "ingerir", side_effect=RuntimeError("mudou 3 vezes")):
+            corpo = json.dumps(pedido_webhook()).encode()
+            r = http.post("/api/shopify/webhooks/pedidos", content=corpo,
+                          headers={"X-Shopify-Hmac-Sha256": assinar(corpo)})
+        self.assertEqual(r.status_code, 500)
+
+    def test_rotas_privadas_exigem_token_e_publicas_nao(self):
+        self.usar(self.base_db(), Shopify())
+        del app.dependency_overrides[get_current_user]
+        http = TestClient(app)
+        for metodo, url in [("get", "/api/shopify/conexao"), ("post", "/api/shopify/conectar"),
+                            ("get", "/api/shopify/variantes"), ("post", "/api/shopify/vinculos"),
+                            ("delete", "/api/shopify/vinculos/1"), ("post", "/api/canais/pedidos/conferir"),
+                            ("post", "/api/canais/sincronizar")]:
+            self.assertIn(getattr(http, metodo)(url).status_code, (401, 403), url)
+        self.assertEqual(self.postar_webhook(pedido_webhook()).status_code, 200)
+        with patch.object(settings, "horus_sync_secret", "abc"):
+            self.assertEqual(http.post("/api/canais/sync", headers={"X-Horus-Sync": "abc"}).status_code, 200)
 
     def test_vinculo_decant_em_creme_422(self):
         self.usar(self.base_db(canal_vinculos=[]), Shopify())
