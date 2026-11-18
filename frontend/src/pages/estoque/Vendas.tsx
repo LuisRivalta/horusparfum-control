@@ -9,6 +9,7 @@ import { NovaVendaModal } from './vendas/NovaVendaModal'
 import { EditarVendaModal } from './vendas/EditarVendaModal'
 import { VendaDetalheModal } from './vendas/VendaDetalheModal'
 import { VendasDashboard } from './vendas/VendasDashboard'
+import { AConfirmar, FILTRO_A_CONFIRMAR } from './vendas/AConfirmar'
 
 export interface VendaRow {
   id: string
@@ -29,7 +30,7 @@ const STATUS_BADGE: Record<VendaRow['status'], { label: string; cls: string }> =
   cancelada: { label: 'Cancelada', cls: 'bg-line text-muted' },
 }
 
-type AbaVendas = 'lista' | 'dashboard'
+type AbaVendas = 'lista' | 'dashboard' | 'aconfirmar'
 
 function pct(roi: number | null): string {
   if (roi === null) return '—'
@@ -85,7 +86,14 @@ export function EstVendas() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const [aConfirmar, setAConfirmar] = useState<number | null>(null)
+  const contarAConfirmar = useCallback(async () => {
+    const { count } = await supabase.from('pedidos_canal').select('id', { count: 'exact', head: true }).or(FILTRO_A_CONFIRMAR)
+    setAConfirmar(count ?? null)
+  }, [])
+
+  useEffect(() => { fetchData(); contarAConfirmar() }, [fetchData, contarAConfirmar])
+  const aposPedido = useCallback(() => { contarAConfirmar(); fetchData() }, [contarAConfirmar, fetchData])
 
   function formatDate(iso: string) {
     return new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
@@ -166,10 +174,15 @@ export function EstVendas() {
         <TabButton active={aba === 'dashboard'} onClick={() => setAba('dashboard')}>
           Dashboard
         </TabButton>
+        <TabButton active={aba === 'aconfirmar'} onClick={() => setAba('aconfirmar')}>
+          A confirmar{aConfirmar ? ` (${aConfirmar})` : ''}
+        </TabButton>
       </div>
 
       {aba === 'dashboard' ? (
         <VendasDashboard />
+      ) : aba === 'aconfirmar' ? (
+        <AConfirmar onMudou={aposPedido} />
       ) : (
         <>
           {erro && (

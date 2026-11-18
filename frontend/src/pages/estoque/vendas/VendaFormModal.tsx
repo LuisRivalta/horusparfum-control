@@ -10,6 +10,7 @@ import { resumoVenda, type ItemVenda } from '@/lib/vendas'
 import { custoInsumos, listaDoItem, listaEnvio, listasAtivas, somarItens, type ItemInsumo, type ListaDb, type ListaInsumos } from '@/lib/insumos'
 import { aplicarDevolucoes, custoPrevistoOrigens, origemParaJson, planejarDecants, totalOrigens, type Devolucao, type Origem } from '@/lib/decantOrigens'
 import { vendeDecant, type TipoProduto } from '@/lib/tipos'
+import { linhasDoPedido, type PedidoCanal } from '@/lib/canais'
 import { InsumosVenda, type GrupoInsumos, type InsumoOpt } from './InsumosVenda'
 
 export interface Canal { id: string; nome: string; taxa_padrao: number; usa_envio: boolean }
@@ -70,13 +71,24 @@ export interface VendaFormModalProps {
   vendaId?: string
   onClose: () => void
   onSaved: () => void
+  pedido?: PedidoCanal // create: confirma o pedido do canal (confirmar_pedido_canal)
+}
+
+const SEM_CANAL_SHOPIFY = 'Cadastre o canal "Shopify" em Canais e embalagens para confirmar pedidos'
+
+// data local (YYYY-MM-DD) do instante do pedido
+function dataLocal(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const p2 = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
 }
 
 const LINHA_VAZIA: LinhaForm = {
   tipo: 'produto', produto_id: '', frasco_id: '', ml: '5', quantidade: '1', preco: '', custo_unitario: '', ...RESET_ITEM,
 }
 
-export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaFormModalProps) {
+export function VendaFormModal({ open, mode, vendaId, onClose, onSaved, pedido }: VendaFormModalProps) {
   const { user } = useAuth()
   const [canais, setCanais] = useState<Canal[]>([])
   const [produtos, setProdutos] = useState<ProdutoOpt[]>([])
@@ -128,13 +140,32 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
       setTipos((tp.data as TipoProduto[]) || [])
       setListas(listasData)
       setInsumos((ins.data as InsumoOpt[]) || [])
-      return { prodsData, listasData, frascosData: (f.data as unknown as FrascoOpt[]) || [] }
+      return { prodsData, listasData, frascosData: (f.data as unknown as FrascoOpt[]) || [], canaisData: (c.data as Canal[]) || [] }
     })
 
     if (mode === 'create') {
       setTitulo(''); setCanalId(''); setDataVenda(''); setFormaPagamento(''); setCliente('')
       setTaxa(''); setFrete(''); setVendaNumero(null); setLinhas([{ ...LINHA_VAZIA }])
-      base.then(({ frascosData }) => setFrascos(frascosData))
+      base.then(({ frascosData, canaisData }) => {
+        setFrascos(frascosData)
+        if (!pedido) return
+        // decant: frasco aberto ativo do perfume; sem ele a linha fica sem frasco para escolher na tela
+        const novas: LinhaForm[] = linhasDoPedido(pedido).map(l => ({
+          ...LINHA_VAZIA, ...l,
+          frasco_id: l.tipo === 'decant' ? frascosData.find(f => f.produto_id === l.produto_id && (f.status ?? 'ativo') === 'ativo')?.id ?? '' : '',
+        }))
+        const shopify = canaisData.find(c => c.nome === 'Shopify')
+        const bruto = novas.reduce((s, l) => s.add(new Decimal(Number(l.preco) || 0).mul(Number(l.quantidade) || 0)), new Decimal(0))
+        setTitulo(`Shopify ${pedido.numero ?? pedido.externo_id}`)
+        setDataVenda(dataLocal(pedido.criado_em))
+        setCliente(pedido.cliente ?? '')
+        setFrete('0')
+        setLinhas(novas.length > 0 ? novas : [{ ...LINHA_VAZIA }])
+        if (!shopify) { setErro(SEM_CANAL_SHOPIFY); return }
+        setCanalId(shopify.id)
+        // mesma regra do onCanalChange (taxa vazia + canal escolhido)
+        if (bruto.gt(0)) setTaxa(bruto.mul(shopify.taxa_padrao).div(100).toFixed(2))
+      })
     } else if (mode === 'edit' && vendaId) {
       setLoadingData(true)
       Promise.all([
@@ -253,7 +284,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
         setLoadingData(false)
       })
     }
-  }, [open, mode, vendaId])
+  }, [open, mode, vendaId, pedido])
 
   function setLinha(index: number, patch: Partial<LinhaForm>) {
     setLinhas(prev => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)))
@@ -390,6 +421,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
     e.preventDefault()
     if (submitting) return
     setErro(null)
+    if (pedido && !canais.some(c => c.nome === 'Shopify')) { setErro(SEM_CANAL_SHOPIFY); return }
     if (!canalId) { setErro('Selecione o canal'); return }
     const validas = linhas.filter(l =>
       selecionada(l) && Number(l.quantidade) >= 1 && Number(l.preco) >= 0 && l.preco !== ''
@@ -620,7 +652,8 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
         }
       }
     } else {
-      res = await supabase.rpc('registrar_venda', {
+      res = await supabase.rpc(pedido ? 'confirmar_pedido_canal' : 'registrar_venda', {
+        ...(pedido ? { p_pedido_id: pedido.id } : {}),
         p_canal_id: canalId,
         p_data_venda: dataVenda || null,
         p_forma_pagamento: formaPagamento || null,
@@ -658,7 +691,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
 
   const modalTitle = mode === 'edit'
     ? (vendaNumero != null ? `Editar venda #${vendaNumero}` : 'Editar venda')
-    : 'Nova venda'
+    : pedido ? `Confirmar pedido Shopify ${pedido.numero ?? ''}`.trim() : 'Nova venda'
 
   return (
     <Modal open={open} onClose={onClose} title={modalTitle} size="lg">
@@ -746,6 +779,14 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
                   </div>
                 )}
 
+                {pedido && !selecionada(l) && (
+                  <span className="text-xs text-down">
+                    {l.tipo === 'produto' || !l.produto_id
+                      ? 'Escolha o produto (não ligado na Shopify)'
+                      : `Sem frasco aberto de ${nomeProduto(l.produto_id)}: escolha um frasco aberto`}
+                  </span>
+                )}
+
                 {l.tipo === 'decant' && l.frasco_id && (
                   <div className="flex flex-col gap-1.5 text-xs">
                     {origensDaLinha(l).length > 0 && (
@@ -801,6 +842,9 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
             <Input label="Taxa do pedido (R$)" type="number" step="0.01" min="0" value={taxa} onChange={(e) => setTaxa(e.target.value)} />
             <Input label="Frete absorvido (R$)" type="number" step="0.01" min="0" value={frete} onChange={(e) => setFrete(e.target.value)} />
           </div>
+          {pedido && (
+            <p className="text-xs text-muted -mt-2">Cliente pagou {formatBRL(Number(pedido.frete) || 0)} de frete</p>
+          )}
 
           {/* Prévia ao vivo */}
           <div className="flex flex-col gap-1.5 border-t border-line pt-3 text-sm">

@@ -35,6 +35,7 @@ vi.mock('@/lib/supabase', () => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         order: vi.fn(() => Promise.resolve({ data: mockVendas, error: null })),
+        or: vi.fn(() => Promise.resolve({ count: 3, error: null })),
       })),
     })),
     rpc: vi.fn(() => Promise.resolve({ data: null, error: null })),
@@ -94,5 +95,12 @@ describe('EstVendas (lista)', () => {
     await waitFor(() => {
       expect(supabase.rpc).toHaveBeenCalledWith('excluir_venda', { p_venda_id: 'v1' })
     })
+  })
+})
+
+describe('EstVendas (a confirmar)', () => {
+  it('a aba mostra quantos pedidos da Shopify estão pendentes', async () => {
+    render(<MemoryRouter><EstVendas /></MemoryRouter>)
+    expect(await screen.findByRole('button', { name: 'A confirmar (3)' })).toBeInTheDocument()
   })
 })
