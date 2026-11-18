@@ -13,6 +13,7 @@ const ABAS: Aba[] = [
   { id: 'categorias', label: 'Categorias', icon: 'grid', path: '/estoque/cadastros/categorias', tabela: 'categorias' },
   { id: 'fornecedores', label: 'Fornecedores', icon: 'supplier', path: '/estoque/cadastros/fornecedores', tabela: 'fornecedores' },
   { id: 'marcas', label: 'Marcas', icon: 'tag', path: '/estoque/cadastros/marcas', tabela: 'marcas' },
+  { id: 'tipos', label: 'Tipos', icon: 'tag', path: '/estoque/cadastros/tipos', tabela: 'tipos_produto' },
 ]
 
 export function Cadastros() {

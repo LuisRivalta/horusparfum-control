@@ -9,10 +9,11 @@ import Decimal from 'decimal.js'
 import { resumoVenda, type ItemVenda } from '@/lib/vendas'
 import { custoInsumos, listaDoItem, listaEnvio, listasAtivas, somarItens, type ItemInsumo, type ListaDb, type ListaInsumos } from '@/lib/insumos'
 import { aplicarDevolucoes, custoPrevistoOrigens, origemParaJson, planejarDecants, totalOrigens, type Devolucao, type Origem } from '@/lib/decantOrigens'
+import { vendeDecant, type TipoProduto } from '@/lib/tipos'
 import { InsumosVenda, type GrupoInsumos, type InsumoOpt } from './InsumosVenda'
 
 export interface Canal { id: string; nome: string; taxa_padrao: number; usa_envio: boolean }
-export interface ProdutoOpt { id: string; nome: string; estoque_atual: number; custo_medio: number | null; preco_referencia: number | null; volume_ml: number | null }
+export interface ProdutoOpt { id: string; nome: string; estoque_atual: number; custo_medio: number | null; preco_referencia: number | null; volume_ml: number | null; tipo_id?: string | null }
 export interface FrascoOpt { id: string; produto_id: string; ml_restante: number; ml_total: number; status?: string; produtos: { nome: string; custo_medio: number | null } | null }
 
 export interface LinhaForm {
@@ -79,6 +80,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
   const { user } = useAuth()
   const [canais, setCanais] = useState<Canal[]>([])
   const [produtos, setProdutos] = useState<ProdutoOpt[]>([])
+  const [tipos, setTipos] = useState<TipoProduto[]>([])
   const [frascos, setFrascos] = useState<FrascoOpt[]>([])
   const [listas, setListas] = useState<ListaInsumos[]>([])
   const [insumos, setInsumos] = useState<InsumoOpt[]>([])
@@ -113,15 +115,17 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
 
     const base = Promise.all([
       supabase.from('canais').select('id, nome, taxa_padrao, usa_envio').eq('ativo', true).order('nome'),
-      supabase.from('produtos').select('id, nome, estoque_atual, custo_medio, preco_referencia, volume_ml').order('nome'),
+      supabase.from('produtos').select('id, nome, estoque_atual, custo_medio, preco_referencia, volume_ml, tipo_id').order('nome'),
       supabase.from('frascos_abertos').select('id, produto_id, ml_restante, ml_total, status, produtos(nome, custo_medio)').eq('status', 'ativo'),
       supabase.from('insumo_listas').select('tipo, tamanho_ml, insumo_lista_itens(insumo_id, quantidade)'),
       supabase.from('insumos').select('id, nome, custo_medio, ativo').order('nome'),
-    ]).then(([c, p, f, l, ins]) => {
+      supabase.from('tipos_produto').select('id, vende_decant'),
+    ]).then(([c, p, f, l, ins, tp]) => {
       const listasData = listasAtivas((l.data as ListaDb[]) || [], (ins.data as InsumoOpt[]) || [])
       const prodsData = (p.data as ProdutoOpt[]) || []
       setCanais((c.data as Canal[]) || [])
       setProdutos(prodsData)
+      setTipos((tp.data as TipoProduto[]) || [])
       setListas(listasData)
       setInsumos((ins.data as InsumoOpt[]) || [])
       return { prodsData, listasData, frascosData: (f.data as unknown as FrascoOpt[]) || [] }
@@ -290,7 +294,10 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved }: VendaF
   const lacrados: Record<string, number> = {}
   for (const p of produtos) lacrados[p.id] = (Number(p.estoque_atual) || 0) + (lacradosDevolvidos[p.id] ?? 0)
   for (const l of linhas) if (l.tipo === 'produto' && l.produto_id) lacrados[l.produto_id] = (lacrados[l.produto_id] ?? 0) - (Number(l.quantidade) || 0)
-  const planos = planejarDecants(frascosRpc, lacrados, volumePorProduto, linhas.map(l => l.tipo === 'decant'
+  // só tipos que vendem em decant têm lacrado para abrir; produtos de outro tipo ficam fora das origens
+  const lacradosDecant = { ...lacrados }
+  for (const p of produtos) if (!vendeDecant(p, tipos)) lacradosDecant[p.id] = 0
+  const planos = planejarDecants(frascosRpc, lacradosDecant, volumePorProduto, linhas.map(l => l.tipo === 'decant'
     ? { frascoId: l.frasco_id, ml: mlNecessario(l), origens: l.origens, jaConsumido: Boolean(l.decant_id) }
     : { frascoId: '', ml: 0, origens: [] }))
   const plano = (l: LinhaForm) => planos[linhas.indexOf(l)]

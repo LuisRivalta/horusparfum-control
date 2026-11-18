@@ -9,6 +9,7 @@ interface ProdutoDisponivel {
   nome: string
   volume_ml: number
   estoque_atual: number
+  tipos_produto?: { vende_decant: boolean } | null
 }
 
 interface Props {
@@ -30,7 +31,7 @@ export function AbrirFrascoModal({ onClose, onSaved }: Props) {
     const [{ data: prodData, error: e1 }, { data: ativosData, error: e2 }] = await Promise.all([
       supabase
         .from('produtos')
-        .select('id, nome, volume_ml, estoque_atual')
+        .select('id, nome, volume_ml, estoque_atual, tipos_produto(vende_decant)')
         .gt('estoque_atual', 0)
         .order('nome'),
       supabase
@@ -41,7 +42,7 @@ export function AbrirFrascoModal({ onClose, onSaved }: Props) {
     if (e1) { setErro(e1.message); return }
     if (e2) { setErro(e2.message); return }
     const idsAtivos = new Set((ativosData ?? []).map((f: { produto_id: string }) => f.produto_id))
-    setProdutos((prodData ?? []).filter((p: ProdutoDisponivel) => !idsAtivos.has(p.id)))
+    setProdutos(((prodData ?? []) as unknown as ProdutoDisponivel[]).filter((p: ProdutoDisponivel) => !idsAtivos.has(p.id) && (p.tipos_produto?.vende_decant ?? true)))
   }
 
   const produtoSelecionado = produtos.find((p) => p.id === produtoId)

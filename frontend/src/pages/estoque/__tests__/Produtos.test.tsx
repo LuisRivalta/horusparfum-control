@@ -41,6 +41,8 @@ vi.mock('@/lib/supabase', () => ({
               ? [{ id: 'f1', nome: 'Onun' }]
               : table === 'marcas'
                 ? [{ id: 'm1', nome: 'Lattafa' }]
+                : table === 'tipos_produto'
+                  ? [{ id: 't1', nome: 'Perfume', vende_decant: true }]
                 : [],
           error: null,
         })),
@@ -85,6 +87,7 @@ describe('EstProdutos', () => {
       estoque_atual: 0,
       estoque_minimo: 2,
       marca_id: null,
+      tipo_id: 't1',
     })
   })
 

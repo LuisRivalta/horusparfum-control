@@ -8,6 +8,7 @@ import { Button, Input, Select } from '@/components/shared/FormControls'
 import { ImageCropper } from '@/components/shared/ImageCropper'
 import { ProductDetailsModal } from '@/components/shared/ProductDetailsModal'
 import { SaidaRapidaModal } from '@/components/shared/SaidaRapidaModal'
+import type { TipoProduto } from '@/lib/tipos'
 import './Produtos.css'
 
 interface Produto {
@@ -47,6 +48,7 @@ export function EstProdutos() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
   const [marcas, setMarcas] = useState<Marca[]>([])
+  const [tipos, setTipos] = useState<TipoProduto[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [fotoFile, setFotoFile] = useState<File | null>(null)
@@ -79,21 +81,27 @@ export function EstProdutos() {
     categoria_id: '',
     fornecedor_id: '',
     marca_id: '',
+    tipo_id: '',
     estoque_minimo: '0',
   })
 
   async function fetchData() {
     setLoading(true)
-    const [{ data: prods }, { data: cats }, { data: forns }, { data: marcasData }] = await Promise.all([
+    const [{ data: prods }, { data: cats }, { data: forns }, { data: marcasData }, { data: tiposData }] = await Promise.all([
       supabase.from('produtos').select('*, categorias(nome), fornecedores(nome), marcas(nome)').order('created_at', { ascending: false }),
       supabase.from('categorias').select('id, nome'),
       supabase.from('fornecedores').select('id, nome'),
       supabase.from('marcas').select('id, nome').order('nome'),
+      supabase.from('tipos_produto').select('id, nome, vende_decant').order('nome'),
     ])
     setProdutos(prods || [])
     setCategorias(cats || [])
     setFornecedores(forns || [])
     setMarcas(marcasData || [])
+    setTipos(tiposData || [])
+    // Perfume é o padrão do cadastro
+    const perfume = (tiposData || []).find((t) => t.nome === 'Perfume')
+    if (perfume) setForm((f) => (f.tipo_id ? f : { ...f, tipo_id: perfume.id }))
     setLoading(false)
   }
 
@@ -179,12 +187,13 @@ export function EstProdutos() {
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
         marca_id: form.marca_id || null,
+        tipo_id: form.tipo_id || undefined,
         estoque_atual: 0,
         estoque_minimo: Number(form.estoque_minimo),
         foto_url,
       })
 
-      setForm({ nome: '', volume_ml: '', preco_referencia: '', categoria_id: '', fornecedor_id: '', marca_id: '', estoque_minimo: '0' })
+      setForm({ nome: '', volume_ml: '', preco_referencia: '', categoria_id: '', fornecedor_id: '', marca_id: '', tipo_id: tipos.find((t) => t.nome === 'Perfume')?.id ?? '', estoque_minimo: '0' })
       clearFoto()
       setModalOpen(false)
       fetchData()
@@ -346,6 +355,7 @@ export function EstProdutos() {
           />
           <Select label="Fornecedor" options={fornecedores.map(f => ({ value: f.id, label: f.nome }))} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
           <Select label="Marca" options={[{ value: '', label: '—' }, ...marcas.map(m => ({ value: m.id, label: m.nome }))]} value={form.marca_id} onChange={(e) => setForm({ ...form, marca_id: e.target.value })} />
+          <Select label="Tipo" options={tipos.map(t => ({ value: t.id, label: t.nome }))} value={form.tipo_id} onChange={(e) => setForm({ ...form, tipo_id: e.target.value })} required />
           <Input label="Estoque mínimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-2">
             <Button type="button" variant="secondary" onClick={() => { setModalOpen(false); clearFoto() }}>Cancelar</Button>
@@ -369,6 +379,7 @@ export function EstProdutos() {
         categorias={categorias}
         fornecedores={fornecedores}
         marcas={marcas}
+        tipos={tipos}
         onClose={() => setSelectedProduto(null)}
         onUpdated={fetchData}
         onDeleted={fetchData}

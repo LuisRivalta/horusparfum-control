@@ -10,6 +10,7 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replac
 interface Categoria { id: string; nome: string }
 interface Fornecedor { id: string; nome: string }
 interface Marca { id: string; nome: string }
+interface Tipo { id: string; nome: string }
 
 export interface Produto {
   id: string
@@ -19,6 +20,7 @@ export interface Produto {
   categoria_id: string | null
   fornecedor_id: string | null
   marca_id?: string | null
+  tipo_id?: string | null
   estoque_atual: number
   estoque_minimo: number
   foto_url: string | null
@@ -44,6 +46,7 @@ interface ProductDetailsModalProps {
   categorias: Categoria[]
   fornecedores: Fornecedor[]
   marcas?: Marca[]
+  tipos?: Tipo[]
   onClose: () => void
   onUpdated: () => void
   onDeleted: () => void
@@ -57,6 +60,7 @@ export function ProductDetailsModal({
   categorias,
   fornecedores,
   marcas = [],
+  tipos = [],
   onClose,
   onUpdated,
   onDeleted,
@@ -79,6 +83,7 @@ export function ProductDetailsModal({
     categoria_id: '',
     fornecedor_id: '',
     marca_id: '',
+    tipo_id: '',
     estoque_minimo: '0',
   })
 
@@ -133,6 +138,7 @@ export function ProductDetailsModal({
       categoria_id: produto!.categoria_id ?? '',
       fornecedor_id: produto!.fornecedor_id ?? '',
       marca_id: produto!.marca_id ?? '',
+      tipo_id: produto!.tipo_id ?? '',
       estoque_minimo: produto!.estoque_minimo.toString(),
     })
     setEditing(true)
@@ -149,6 +155,9 @@ export function ProductDetailsModal({
         categoria_id: form.categoria_id || null,
         fornecedor_id: form.fornecedor_id || null,
         estoque_minimo: Number(form.estoque_minimo),
+      }
+      if ('tipo_id' in produto! && form.tipo_id) {
+        Object.assign(payload, { tipo_id: form.tipo_id })
       }
       if ('marca_id' in produto!) {
         Object.assign(payload, { marca_id: form.marca_id || null })
@@ -232,6 +241,7 @@ export function ProductDetailsModal({
           />
           <Select label="Fornecedor" options={[{ value: '', label: '—' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))]} value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} />
           <Select label="Marca" options={[{ value: '', label: '—' }, ...marcas.map(m => ({ value: m.id, label: m.nome }))]} value={form.marca_id} onChange={(e) => setForm({ ...form, marca_id: e.target.value })} />
+          {tipos.length > 0 && <Select label="Tipo" options={tipos.map(t => ({ value: t.id, label: t.nome }))} value={form.tipo_id} onChange={(e) => setForm({ ...form, tipo_id: e.target.value })} />}
           <div className="flex flex-col gap-2">
             <Input label="Estoque minimo" type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: e.target.value })} />
             <SugestaoEstoqueMinimo
