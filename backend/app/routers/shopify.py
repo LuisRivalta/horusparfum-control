@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-163442-16b9
+# ID                 : 20261118-164159-a7b6
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Shopify: rotas shopify.py
 # Assunto            : Rotas de conexao, variantes, vinculos e webhook de pedidos da Shopify
 # Origem             : solicitacao do usuario
-# Motivo             : Luis pediu a integracao Shopify dos canais; expor os servicos por API
+# Motivo             : Nova rota POST /produtos para publicar produto
 # Criado em          : 2026-11-18 16:33:26
+# Ultima modificacao : 2026-11-18 16:41:59
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import json
@@ -27,6 +28,7 @@ from app.config import settings
 from app.db.supabase import get_supabase
 from app.services.canais.estoque import enfileirar, sincronizar
 from app.services.canais.pedidos import ingerir, normalizar_webhook
+from app.services.shopify.publicar import OPCAO, PRODUCT_SET, montar_produto
 from app.services.shopify.cliente import (
     ShopifyCliente, ShopifyDesconectado, ShopifyErro, obter_token, verificar_hmac,
 )
@@ -219,3 +221,78 @@ async def webhook_pedidos(request: Request, db=Depends(obter_db), cliente: Shopi
         raise HTTPException(status_code=401, detail='Assinatura inválida')
     await run_in_threadpool(_receber, db, cliente, json.loads(corpo))
     return {}
+
+
+# --- publicar produto ---------------------------------------------------------
+
+class VarianteIn(BaseModel):
+    tipo: Literal['frasco', 'decant']
+    ml: Decimal | None = None
+    preco: Decimal
+
+
+class ProdutoIn(BaseModel):
+    produto_id: UUID
+    titulo: str
+    descricao: str = ''
+    fotos: list[str] = []
+    variantes: list[VarianteIn]
+
+
+@router.post('/produtos')
+def publicar(body: ProdutoIn, user: dict = Depends(get_current_user), db=Depends(obter_db),
+             cliente: ShopifyCliente = Depends(obter_cliente)):
+    produto_id = str(body.produto_id)
+    produto = db.table('produtos').select('tipo_id, volume_ml').eq('id', produto_id).execute().data
+    if not produto:
+        raise HTTPException(status_code=404, detail='Produto não encontrado')
+    if db.table('canal_vinculos').select('id').eq('canal', CANAL).eq('produto_id', produto_id).execute().data:
+        raise HTTPException(status_code=409, detail='Produto já está na Shopify: use Ligar produtos')
+    tipo = db.table('tipos_produto').select('nome, vende_decant').eq('id', produto[0]['tipo_id']).execute().data
+    tipo = tipo[0] if tipo else {}
+    if not body.variantes:
+        raise HTTPException(status_code=422, detail='Informe ao menos uma variante')
+    for v in body.variantes:
+        if (v.tipo == 'decant') != bool(v.ml and v.ml > 0):
+            raise HTTPException(status_code=422, detail='Decant precisa de ml maior que zero; frasco não leva ml')
+        if v.tipo == 'decant' and not tipo.get('vende_decant'):
+            raise HTTPException(status_code=422, detail='Este tipo de produto não é vendido em decant')
+        if v.tipo == 'frasco' and not produto[0].get('volume_ml'):
+            raise HTTPException(status_code=422, detail='Produto sem volume (ml) para o frasco')
+    dados = {
+        'titulo': body.titulo, 'descricao': body.descricao, 'fotos': body.fotos,
+        'tipo_produto': tipo.get('nome'), 'volume_ml': produto[0].get('volume_ml'),
+        'variantes': [{'tipo': v.tipo, 'ml': v.ml, 'preco': v.preco} for v in body.variantes],
+    }
+    entrada = montar_produto(dados, cliente.location_id)
+    rotulos = [x['optionValues'][0]['name'] for x in entrada['variants']]
+    if len(set(rotulos)) != len(rotulos):
+        raise HTTPException(status_code=422, detail='Variantes repetidas')
+    try:
+        criado = cliente.graphql(PRODUCT_SET, {'input': entrada})['productSet']['product']
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail='Falha de rede: confira na Shopify antes de tentar de novo') from None
+
+    por_rotulo = {}
+    for n in criado['variants']['nodes']:
+        for o in n.get('selectedOptions') or []:
+            if o['name'] == OPCAO:
+                por_rotulo[o['value']] = n
+    linhas = []
+    for v, rotulo in zip(body.variantes, rotulos):
+        n = por_rotulo.get(rotulo)
+        if not n:
+            raise ShopifyErro(f'variante "{rotulo}" não voltou na resposta; confira na Shopify')
+        linhas.append({
+            'canal': CANAL, 'externo_variante_id': n['legacyResourceId'], 'produto_id': produto_id,
+            'tipo': v.tipo, 'ml': float(v.ml) if v.tipo == 'decant' else None,
+            'externo_produto_id': criado['legacyResourceId'], 'externo_estoque_id': n['inventoryItem']['id'],
+            'titulo': rotulo, 'erro': None,
+        })
+    db.table('canal_vinculos').upsert(linhas, on_conflict='canal,externo_variante_id').execute()
+    enfileirar(db, [produto_id])
+    try:
+        sincronizar(db, cliente, [produto_id])
+    except Exception:
+        log.exception('Sincronização após publicar falhou; produto fica na fila')
+    return {'produto_ext_id': criado['legacyResourceId'], 'variantes': len(linhas)}
