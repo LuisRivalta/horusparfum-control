@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-164159-41bd
+# ID                 : 20261118-164344-d28b
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Shopify: test_shopify_publicar.py
 # Assunto            : Testes da publicacao de produto
 # Origem             : solicitacao do usuario
-# Motivo             : Cobrir montagem, vinculos, 409 e falha de rede
+# Motivo             : Testes das recusas 422/404 e falha ao ligar
 # Criado em          : 2026-11-18 16:40:52
+# Ultima modificacao : 2026-11-18 16:43:44
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import json
@@ -140,3 +141,42 @@ class PublicarTest(unittest.TestCase):
             r = self.http.post("/api/shopify/produtos", json=self.corpo())
         self.assertEqual(r.status_code, 200)
         self.assertEqual(len(self.db.tabelas["canal_vinculos"]), 3)
+
+
+class Recusas422Test(PublicarTest):
+    def chamar(self, mudar=None, tipo=None, volume=100, status=422):
+        self.usar(LojaPublicar())
+        if tipo is not None:
+            self.db.tabelas["tipos_produto"][0].update(tipo)
+        self.db.tabelas["produtos"][0]["volume_ml"] = volume
+        corpo = self.corpo()
+        if mudar:
+            mudar(corpo)
+        r = self.http.post("/api/shopify/produtos", json=corpo)
+        self.assertEqual(r.status_code, status, r.text)
+        self.assertEqual(self.loja.mutations("productSet"), [])
+        return r
+
+    def test_recusas(self):
+        casos = {
+            "sem variantes": dict(mudar=lambda c: c.update(variantes=[])),
+            "titulo em branco": dict(mudar=lambda c: c.update(titulo="  ")),
+            "preco zero": dict(mudar=lambda c: c["variantes"][0].update(preco="0")),
+            "preco negativo": dict(mudar=lambda c: c["variantes"][0].update(preco="-1")),
+            "decant em tipo sem decant": dict(tipo={"vende_decant": False}),
+            "decant ml zero": dict(mudar=lambda c: c["variantes"][1].update(ml=0)),
+            "variantes repetidas": dict(mudar=lambda c: c["variantes"].append(dict(c["variantes"][2]))),
+            "frasco sem volume": dict(volume=None),
+            "produto inexistente": dict(mudar=lambda c: c.update(produto_id="22222222-2222-2222-2222-222222222222"),
+                                        status=404),
+        }
+        for nome, args in casos.items():
+            with self.subTest(nome):
+                self.chamar(**args)
+
+    def test_falha_ao_salvar_vinculos_502(self):
+        self.usar(LojaPublicar())
+        with patch.object(rota, "enfileirar", side_effect=RuntimeError("banco")):
+            r = self.http.post("/api/shopify/produtos", json=self.corpo())
+        self.assertEqual(r.status_code, 502)
+        self.assertEqual(r.json()["detail"], "Produto criado na Shopify, mas não foi ligado: use Ligar produtos")

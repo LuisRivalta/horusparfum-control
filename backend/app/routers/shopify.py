@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-164159-a7b6
+# ID                 : 20261118-164343-319a
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Shopify: rotas shopify.py
 # Assunto            : Rotas de conexao, variantes, vinculos e webhook de pedidos da Shopify
 # Origem             : solicitacao do usuario
-# Motivo             : Nova rota POST /produtos para publicar produto
+# Motivo             : Correcoes da revisao: preco>0, titulo, 502 ao falhar vinculos
 # Criado em          : 2026-11-18 16:33:26
-# Ultima modificacao : 2026-11-18 16:41:59
+# Ultima modificacao : 2026-11-18 16:43:43
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import json
@@ -250,9 +250,13 @@ def publicar(body: ProdutoIn, user: dict = Depends(get_current_user), db=Depends
         raise HTTPException(status_code=409, detail='Produto já está na Shopify: use Ligar produtos')
     tipo = db.table('tipos_produto').select('nome, vende_decant').eq('id', produto[0]['tipo_id']).execute().data
     tipo = tipo[0] if tipo else {}
+    if not body.titulo.strip():
+        raise HTTPException(status_code=422, detail='Informe o título')
     if not body.variantes:
         raise HTTPException(status_code=422, detail='Informe ao menos uma variante')
     for v in body.variantes:
+        if v.preco <= 0:
+            raise HTTPException(status_code=422, detail='Preço deve ser maior que zero')
         if (v.tipo == 'decant') != bool(v.ml and v.ml > 0):
             raise HTTPException(status_code=422, detail='Decant precisa de ml maior que zero; frasco não leva ml')
         if v.tipo == 'decant' and not tipo.get('vende_decant'):
@@ -289,8 +293,13 @@ def publicar(body: ProdutoIn, user: dict = Depends(get_current_user), db=Depends
             'externo_produto_id': criado['legacyResourceId'], 'externo_estoque_id': n['inventoryItem']['id'],
             'titulo': rotulo, 'erro': None,
         })
-    db.table('canal_vinculos').upsert(linhas, on_conflict='canal,externo_variante_id').execute()
-    enfileirar(db, [produto_id])
+    try:
+        db.table('canal_vinculos').upsert(linhas, on_conflict='canal,externo_variante_id').execute()
+        enfileirar(db, [produto_id])
+    except Exception:
+        log.exception('Produto criado na Shopify, mas os vínculos não foram salvos')
+        raise HTTPException(
+            status_code=502, detail='Produto criado na Shopify, mas não foi ligado: use Ligar produtos') from None
     try:
         sincronizar(db, cliente, [produto_id])
     except Exception:
