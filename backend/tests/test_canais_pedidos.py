@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-162313-a83a
+# ID                 : 20261118-162633-442d
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Canais: test_canais_pedidos.py
 # Assunto            : Testes da normalizacao e ingestao de pedidos
 # Origem             : solicitacao do usuario
-# Motivo             : Garantir por teste que o pedido nao duplica nem regride status
+# Motivo             : Cobrir por teste a corrida de confirmacao, avisos concorrentes, total original e fuso
 # Criado em          : 2026-11-18 16:22:28
+# Ultima modificacao : 2026-11-18 16:26:33
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import unittest
@@ -32,8 +33,13 @@ class FakeQuery:
     def select(self, *_):
         return self
 
-    def upsert(self, payload, on_conflict):
+    def upsert(self, payload, on_conflict, ignore_duplicates=False):
         self.op, self.payload, self.conflito = "upsert", payload, on_conflict.split(",")
+        self.ignorar = ignore_duplicates
+        return self
+
+    def update(self, payload):
+        self.op, self.payload = "update", payload
         return self
 
     def eq(self, campo, valor):
@@ -41,21 +47,31 @@ class FakeQuery:
         return self
 
     def execute(self):
+        if self.op != "select" and self.db.antes_de_gravar:
+            gancho, self.db.antes_de_gravar = self.db.antes_de_gravar, None
+            gancho()
         linhas = self.db.tabelas.setdefault(self.nome, [])
         if self.op == "upsert":
             chave = [self.payload[c] for c in self.conflito]
             for r in linhas:
                 if [r.get(c) for c in self.conflito] == chave:
+                    if self.ignorar:
+                        return SimpleNamespace(data=[])
                     r.update(self.payload)
                     return SimpleNamespace(data=[dict(r)])
             linhas.append(dict(self.payload))
             return SimpleNamespace(data=[dict(self.payload)])
-        return SimpleNamespace(data=[dict(r) for r in linhas if all(f(r) for f in self.filtros)])
+        alvo = [r for r in linhas if all(f(r) for f in self.filtros)]
+        if self.op == "update":
+            for r in alvo:
+                r.update(self.payload)
+        return SimpleNamespace(data=[dict(r) for r in alvo])
 
 
 class FakeDb:
     def __init__(self, **tabelas):
         self.tabelas = tabelas
+        self.antes_de_gravar = None  # roda uma vez, entre a leitura e a gravação
 
     def table(self, nome):
         return FakeQuery(self, nome)
@@ -99,6 +115,7 @@ def graphql():
         "displayFinancialStatus": "PAID",
         "cancelledAt": None,
         "customer": {"displayName": "Ana Silva"},
+        "totalPriceSet": dinheiro("195.0"),
         "currentTotalPriceSet": dinheiro("195.0"),
         "totalShippingPriceSet": dinheiro("15.0"),
         "totalRefundedSet": dinheiro("0.0"),
@@ -136,6 +153,16 @@ class NormalizarTest(unittest.TestCase):
 
     def test_normalizar_graphql_equivale_webhook(self):
         self.assertEqual(normalizar_graphql(graphql()), normalizar_webhook(webhook()))
+
+    def test_total_original_nas_duas_formas(self):
+        n = graphql()
+        n["currentTotalPriceSet"] = dinheiro("180.0")  # depois de reembolso de 15
+        n["totalRefundedSet"] = dinheiro("15.0")
+        w = webhook(current_total_price="180.00",
+                    refunds=[{"transactions": [{"amount": "15.00"}]}])
+        self.assertEqual(normalizar_graphql(n)["total"], Decimal("195.00"))
+        self.assertEqual(normalizar_webhook(w)["total"], Decimal("195.00"))
+        self.assertEqual(normalizar_graphql(n), normalizar_webhook(w))
 
     def test_webhook_reembolso_e_cancelamento(self):
         p = normalizar_webhook(webhook(
@@ -237,6 +264,45 @@ class IngerirTest(unittest.TestCase):
             {"canal": "shopify", "externo_id": "5001", "status": "a_confirmar", "itens": antigos, "alerta": None}
         ])
         self.assertEqual(sorted(ingerir(db, "shopify", norm(), CONECTADO)), ["prod-0", "prod-1"])
+
+    def test_corrida_confirmado_entre_leitura_e_gravacao(self):
+        antigos = [{"variante_id": "1", "titulo": "Antigo", "quantidade": 1, "preco_unitario": 50.0,
+                    "produto_id": "prod-0", "tipo": "frasco", "ml": None}]
+        linha = {"canal": "shopify", "externo_id": "5001", "status": "a_confirmar",
+                 "itens": antigos, "alerta": None}
+        db = FakeDb(canal_vinculos=[VINCULO], pedidos_canal=[linha])
+        db.antes_de_gravar = lambda: linha.update(status="confirmado", venda_id="venda-1")
+        ingerir(db, "shopify", norm("pago"), CONECTADO)
+        self.assertEqual(linha["status"], "confirmado")
+        self.assertEqual(linha["itens"], antigos)
+        self.assertEqual(linha["venda_id"], "venda-1")
+
+    def test_dois_primeiros_avisos_concorrentes(self):
+        db = FakeDb(canal_vinculos=[VINCULO])
+        # o "pendente" lê vazio; antes de ele inserir, o "pago" insere primeiro
+        db.antes_de_gravar = lambda: ingerir(db, "shopify", norm("pago"), CONECTADO)
+        ingerir(db, "shopify", norm("pendente"), CONECTADO)
+        linhas = db.tabelas["pedidos_canal"]
+        self.assertEqual(len(linhas), 1)
+        self.assertEqual(linhas[0]["status"], "a_confirmar")
+
+    def test_linha_sempre_mudando_levanta_erro(self):
+        linha = {"canal": "shopify", "externo_id": "5001", "status": "a_confirmar", "itens": [], "alerta": None}
+        db = FakeDb(canal_vinculos=[VINCULO], pedidos_canal=[linha])
+        estados = iter(["aguardando_pagamento", "a_confirmar", "aguardando_pagamento"])
+
+        def mexer():
+            linha["status"] = next(estados)
+            db.antes_de_gravar = mexer  # muda a linha antes de toda gravação
+
+        db.antes_de_gravar = mexer
+        with self.assertRaises(RuntimeError):
+            ingerir(db, "shopify", norm("pago"), CONECTADO)
+
+    def test_conectado_em_sem_fuso_conta_como_utc(self):
+        db = FakeDb(canal_vinculos=[VINCULO])
+        self.assertEqual(ingerir(db, "shopify", norm(), datetime(2026, 11, 18, 14, 0)), [])
+        self.assertEqual(ingerir(db, "shopify", norm(), datetime(2026, 11, 18, 12, 0)), ["prod-1"])
 
 
 if __name__ == "__main__":

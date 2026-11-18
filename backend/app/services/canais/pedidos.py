@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-162312-e89a
+# ID                 : 20261118-162632-6bba
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Canais: pedidos.py
 # Assunto            : Normalizacao e ingestao de pedidos da Shopify
 # Origem             : solicitacao do usuario
-# Motivo             : Nenhuma venda da Shopify pode se perder nem duplicar no Horus
+# Motivo             : Evitar que um aviso da Shopify sobrescreva pedido ja confirmado e gere venda duplicada; total original nas duas fontes
 # Criado em          : 2026-11-18 16:22:57
+# Ultima modificacao : 2026-11-18 16:26:32
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 """Pedidos dos canais: normaliza o pedido da Shopify (webhook REST ou nó GraphQL)
@@ -117,7 +118,7 @@ def normalizar_graphql(n: dict) -> PedidoNorm:
         'pagamento': _pagamento(n.get('displayFinancialStatus')),
         'cancelado': bool(n.get('cancelledAt')),
         'cliente': (n.get('customer') or {}).get('displayName') or None,
-        'total': _money(n, 'currentTotalPriceSet'),
+        'total': _money(n, 'totalPriceSet'),  # total original; reembolso fica em 'reembolsado'
         'frete': _money(n, 'totalShippingPriceSet'),
         'reembolsado': _money(n, 'totalRefundedSet'),
         'itens': itens,
@@ -150,35 +151,56 @@ def _vinculo(db, canal: str, variante_id: str) -> dict:
     return r.data[0] if r.data else {}
 
 
+TENTATIVAS = 3
+
+
+def _itens_novos(db, canal: str, p: PedidoNorm) -> list[dict]:
+    itens = []
+    for it in p['itens']:
+        v = _vinculo(db, canal, it['variante_id'])
+        itens.append({
+            'variante_id': it['variante_id'], 'titulo': it['titulo'],
+            'quantidade': it['quantidade'], 'preco_unitario': float(it['preco_unitario']),
+            'produto_id': v.get('produto_id'), 'tipo': v.get('tipo'),
+            'ml': float(v['ml']) if v.get('ml') is not None else None,
+        })
+    return itens
+
+
 def ingerir(db, canal: str, p: PedidoNorm, conectado_em: datetime | None) -> list[str]:
-    """Grava o pedido; devolve os produto_id dos itens antigos e novos (para sincronizar)."""
-    if conectado_em is None or datetime.fromisoformat(p['criado_em']) < conectado_em:
+    """Grava o pedido; devolve os produto_id dos itens antigos e novos (para sincronizar).
+
+    Compare-and-swap: só grava status/itens calculados a partir da linha que está sendo
+    substituída (insert sem sobrescrever; update condicionado ao status lido). Se a linha
+    mudou no meio (ex.: o Luis confirmou), relê e recalcula."""
+    if conectado_em is None:
         return []
-    r = (db.table('pedidos_canal').select('status,alerta,itens')
-         .eq('canal', canal).eq('externo_id', p['externo_id']).execute())
-    atual = r.data[0] if r.data else {}
-    status, alerta = proximo_status(atual.get('status'), p)
-    antigos = atual.get('itens') or []
-
-    if atual.get('status') in ITENS_TRAVADOS:
-        itens = antigos
-    else:
-        itens = []
-        for it in p['itens']:
-            v = _vinculo(db, canal, it['variante_id'])
-            itens.append({
-                'variante_id': it['variante_id'], 'titulo': it['titulo'],
-                'quantidade': it['quantidade'], 'preco_unitario': float(it['preco_unitario']),
-                'produto_id': v.get('produto_id'), 'tipo': v.get('tipo'),
-                'ml': float(v['ml']) if v.get('ml') is not None else None,
-            })
-
-    db.table('pedidos_canal').upsert({
-        'canal': canal, 'externo_id': p['externo_id'], 'numero': p['numero'],
-        'status': status, 'alerta': alerta or atual.get('alerta'),
-        'cliente': p['cliente'], 'criado_em': p['criado_em'],
-        'total': float(p['total']), 'frete': float(p['frete']), 'itens': itens,
-        'updated_at': datetime.now(timezone.utc).isoformat(),
-    }, on_conflict='canal,externo_id').execute()
-
-    return list(dict.fromkeys(i['produto_id'] for i in antigos + itens if i.get('produto_id')))
+    if conectado_em.tzinfo is None:
+        conectado_em = conectado_em.replace(tzinfo=timezone.utc)
+    if datetime.fromisoformat(p['criado_em']) < conectado_em:
+        return []
+    novos = _itens_novos(db, canal, p)
+    for _ in range(TENTATIVAS):
+        r = (db.table('pedidos_canal').select('status,alerta,itens')
+             .eq('canal', canal).eq('externo_id', p['externo_id']).execute())
+        atual = r.data[0] if r.data else {}
+        status, alerta = proximo_status(atual.get('status'), p)
+        antigos = atual.get('itens') or []
+        itens = antigos if atual.get('status') in ITENS_TRAVADOS else novos
+        linha = {
+            'numero': p['numero'], 'status': status, 'alerta': alerta or atual.get('alerta'),
+            'cliente': p['cliente'], 'criado_em': p['criado_em'],
+            'total': float(p['total']), 'frete': float(p['frete']), 'itens': itens,
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+        }
+        if atual:
+            gravou = (db.table('pedidos_canal').update(linha)
+                      .eq('canal', canal).eq('externo_id', p['externo_id'])
+                      .eq('status', atual['status']).execute())
+        else:
+            gravou = db.table('pedidos_canal').upsert(
+                {'canal': canal, 'externo_id': p['externo_id'], **linha},
+                on_conflict='canal,externo_id', ignore_duplicates=True).execute()
+        if gravou.data:
+            return list(dict.fromkeys(i['produto_id'] for i in antigos + itens if i.get('produto_id')))
+    raise RuntimeError(f"pedido {canal}/{p['externo_id']} mudou {TENTATIVAS} vezes durante a gravação")
