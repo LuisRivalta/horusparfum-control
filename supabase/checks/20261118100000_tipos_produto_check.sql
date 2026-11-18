@@ -21,8 +21,8 @@ begin
   select count(*) into v_n from produtos where tipo_id is null;
   if v_n <> 0 then raise exception '% produto(s) com tipo_id nulo', v_n; end if;
 
-  insert into produtos (nome, volume_ml, estoque_atual)
-  values ('teste-check-tipo', 100, 0)
+  insert into produtos (nome, volume_ml, estoque_atual, categoria_id)
+  values ('teste-check-tipo', 100, 0, (select id from categorias limit 1))
   returning id into v_prod;
   select t.nome into v_tipo from produtos p join tipos_produto t on t.id = p.tipo_id where p.id = v_prod;
   if v_tipo is distinct from 'Perfume' then
