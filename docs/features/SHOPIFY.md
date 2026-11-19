@@ -70,7 +70,7 @@ Calculada em `services/canais/estoque.py` e enviada com `inventorySetQuantities`
 
 ## Checklist de ativação
 
-> Estado em 24/11/2026: código pronto na `main`, **sem push**, SQL **não aplicado**, app da Shopify **não criado**.
+> Estado em 24/11/2026: código **publicado** (push da `main`, deploy na Vercel); passo 1 **feito** (migrations e checks rodados); app da Shopify **não criado**, variáveis não cadastradas (passos 2 em diante).
 
 1. Aplicar no SQL Editor (projeto `wyobbztexoofhqdttxzq`) as migrations `20261118100000` e `20261118110000` e rodar os checks de `supabase/checks/`.
 2. **Dev Dashboard** da Shopify (na mesma organização da loja; senão o erro é `shop_not_permitted`): criar o app, dar os escopos `read_products, write_products, read_inventory, write_inventory, read_locations, read_orders` e instalar na loja.
@@ -94,7 +94,7 @@ O código foi escrito sem testar contra a loja real. **Conferido no shopify.dev 
 
 A conferir ao ativar:
 - `API_VERSAO = '2026-10'` em `services/shopify/cliente.py`: confirmar que segue estável na data da ativação.
-- `pg_net` é criado no schema `extensions` (as funções ficam em `net`); se o `create extension` falhar, ver o schema no projeto.
+- ~~`pg_net` no schema `extensions`~~: a migration rodou sem erro em 24/11/2026.
 - `variants(first: 100)`: produto com mais de 100 variantes é cortado na tela de ligar (comentário `ponytail:` no código).
 
 Outros:
