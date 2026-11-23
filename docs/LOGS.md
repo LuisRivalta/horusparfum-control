@@ -3,7 +3,7 @@
 **Responsável:** Claude + Luis
 
 ### O que foi feito
-- Spec `docs/superpowers/specs/2026-11-18-shopify-canais-design.md` e plano `docs/superpowers/plans/2026-11-18-shopify-canais.md` executados por tarefas (18-24/11/2026), commits locais na `main`, sem push.
+- Spec `docs/superpowers/specs/2026-11-18-shopify-canais-design.md` e plano `docs/superpowers/plans/2026-11-18-shopify-canais.md` executados por tarefas (18-24/11/2026), commits na `main`; push feito em 24/11/2026 e as duas migrations aplicadas pelo Luis, com os checks, no mesmo dia.
 - Migrations `20261118100000_tipos_produto.sql` (tipos de produto, `produtos.tipo_id`) e `20261118110000_canais_nucleo.sql` (canal Shopify, `shopify_conexao`, `canal_vinculos`, `pedidos_canal`, fila e config de sincronização, gatilhos com `pg_net`, RPCs `confirmar_pedido_canal` e `desfazer_pedido_canal`), com checks em `supabase/checks/`.
 - Backend: `routers/shopify.py` (conexão, variantes, vínculos, webhook com HMAC, publicar), `routers/canais.py` (conferir 7 dias, sincronizar, sync), `services/shopify/{cliente,publicar}.py`, `services/canais/{pedidos,estoque}.py`; variáveis `SHOPIFY_LOJA`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`, `HORUS_SYNC_SECRET`.
 - Frontend: tipos de produto, Ligar Shopify, Publicar na Shopify, bloco Shopify em Anúncios › Configuração, lista A confirmar em Vendas, `lib/canais.ts` e `lib/apiShopify.ts`. Abrir lacrado passou a funcionar direto no formulário de venda.
@@ -14,8 +14,8 @@
 - Revisão final, rodada 2: fila não quebra mais produto com vários vínculos (distinct antes do `clock_timestamp`, senão toda venda do produto falhava); `inventorySetQuantities` no formato 2026-04+ (`changeFromQuantity: null` e `@idempotent`), conferido no shopify.dev pelo coordenador (`uri` e `productSet` já certos); dreno apaga só o par (produto, `criado_em`) lido; lease com dono (token, renovação a cada volta, soltar só o próprio) e nova tentativa se sobrou fila ao soltar; Ligar produtos avisa quando o envio ficou para a sincronização em andamento.
 
 ### Pendente
-- Luis: aplicar as duas migrations e rodar os checks; criar o app no Dev Dashboard da Shopify; cadastrar as variáveis na Vercel e Redeploy; `insert` em `canais_sync_config` pelo SQL Editor; taxa do canal Shopify; Conectar, Ligar e Sincronizar tudo; teste de ponta a ponta; só então push da `main`.
-- Conferir na doc da Shopify: `API_VERSAO '2026-10'`, `uri` x `callbackUrl` no webhook, `ignoreCompareQuantity`, campos do `productSet`, `pg_net` no schema `extensions`, limite de `variants(first: 100)`.
+- Luis: ~~aplicar as duas migrations e rodar os checks~~ (feito em 24/11/2026); criar o app no Dev Dashboard da Shopify; cadastrar as variáveis na Vercel e Redeploy; `insert` em `canais_sync_config` pelo SQL Editor; taxa do canal Shopify; Conectar, Ligar e Sincronizar tudo; teste de ponta a ponta.
+- Conferir na ativação: `API_VERSAO '2026-10'` ainda estável. `uri`, `changeFromQuantity`/`@idempotent` e `productSet` já foram conferidos no shopify.dev; o `pg_net` passou, porque a migration rodou.
 - Conector do ML sobre o núcleo (antiga Parte 3) depende da chave do app do ML.
 
 ## 2026-11-17 - Sessão 70: Anúncios (Parte 2 do módulo Anúncios)
