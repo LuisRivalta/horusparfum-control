@@ -16,6 +16,7 @@ import { fmtMl } from './novo/item'
 
 const erroMsg = (e: unknown) => (e instanceof Error ? e.message : 'Erro inesperado')
 const JA_NA_SHOPIFY = 'já está na Shopify'
+const SEM_CANAL = 'Canal Shopify não encontrado em Vendas › Configuração'
 const nomeProduto = (p: Produto) => `${p.marca} ${p.nome}`.trim()
 const rotuloAlvo = (a: AlvoAnuncio) => (a.tipo === 'frasco' ? 'Frasco/unidade' : `Decant ${fmtMl(a.ml ?? 0)} ml`)
 const chave = (a: AlvoAnuncio) => (a.tipo === 'frasco' ? 'frasco' : `decant-${a.ml}`)
@@ -24,7 +25,7 @@ const numero = (s: string) => Number(s.replace(',', '.'))
 export function PublicarShopify() {
   const [base, setBase] = useState<Base | null>(null)
   const [tipos, setTipos] = useState<TipoProduto[]>([])
-  const [taxa, setTaxa] = useState(0)
+  const [taxa, setTaxa] = useState<number | null>(null)
   const [produtoId, setProdutoId] = useState('')
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set(['frasco']))
   const [precos, setPrecos] = useState<Record<string, string>>({})
@@ -34,6 +35,7 @@ export function PublicarShopify() {
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
+  const [semCanal, setSemCanal] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -42,7 +44,8 @@ export function PublicarShopify() {
       supabase.from('canais').select('taxa_padrao').eq('nome', 'Shopify').maybeSingle(),
     ]).then(([b, t, c]) => {
       setBase(b); setTipos((t.data ?? []) as TipoProduto[])
-      setTaxa(Number((c.data as { taxa_padrao?: number } | null)?.taxa_padrao ?? 0))
+      const tx = (c.data as { taxa_padrao?: number | null } | null)?.taxa_padrao
+      if (c.error || tx == null) setSemCanal(true); else setTaxa(Number(tx))
     }).catch((e) => setErro(erroMsg(e)))
   }, [])
 
@@ -60,7 +63,7 @@ export function PublicarShopify() {
       const custo = 'custo' in c ? c.custo : null
       return {
         alvo, k: chave(alvo), custo, bloqueio: 'bloqueio' in c ? c.bloqueio : null,
-        sugerido: custo == null ? null : precoShopify(custo, base.config.margem_padrao, taxa),
+        sugerido: custo == null ? null : taxa == null ? null : precoShopify(custo, base.config.margem_padrao, taxa),
       }
     })
   }, [base, produto, tipos, taxa])
@@ -84,7 +87,7 @@ export function PublicarShopify() {
   const precoDe = (l: (typeof linhas)[number]) => precos[l.k] ?? (l.sugerido == null ? '' : String(l.sugerido))
   const escolhidas = linhas.filter((l) => marcadas.has(l.k) && l.custo != null)
   const lucro = (l: (typeof linhas)[number]) =>
-    new Decimal(numero(precoDe(l)) || 0).times(new Decimal(1).minus(new Decimal(taxa).div(100))).minus(l.custo ?? 0).toNumber()
+    new Decimal(numero(precoDe(l)) || 0).times(new Decimal(1).minus(new Decimal(taxa ?? 0).div(100))).minus(l.custo ?? 0).toNumber()
 
   async function publicar() {
     if (!produto) return
@@ -102,7 +105,7 @@ export function PublicarShopify() {
   }
 
   const alterna = (k: string) => setMarcadas((s) => { const n = new Set(s); if (!n.delete(k)) n.add(k); return n })
-  const pronto = !!produto && escolhidas.length > 0 && titulo.trim() !== '' && !ocupado
+  const pronto = taxa != null && !!produto && escolhidas.length > 0 && titulo.trim() !== '' && !ocupado
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 p-4">
@@ -144,6 +147,7 @@ export function PublicarShopify() {
           <div><Button onClick={publicar} disabled={!pronto}>{ocupado ? 'Publicando…' : 'Publicar'}</Button></div>
         </>
       )}
+      {semCanal && <p className="text-sm text-danger">{SEM_CANAL}</p>}
       {ok && <p className="text-sm text-green-600">{ok}</p>}
       {erro && (
         <p className="text-sm text-danger">

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { precoShopify } from '@/lib/canais'
 import { PublicarShopify } from '../PublicarShopify'
 
-const { api } = vi.hoisted(() => ({ api: { apiShopify: { publicar: vi.fn() } } }))
+const { api, canal } = vi.hoisted(() => ({ api: { apiShopify: { publicar: vi.fn() } }, canal: { data: { taxa_padrao: 10 } as unknown } }))
 
 vi.mock('@/lib/apiShopify', () => api)
 vi.mock('../FotosPerfume', () => ({
@@ -15,7 +15,7 @@ vi.mock('../FotosPerfume', () => ({
 }))
 vi.mock('@/lib/supabase', () => ({
   supabase: { from: (t: string) => ({ select: () => t === 'canais'
-    ? { eq: () => ({ maybeSingle: () => Promise.resolve({ data: { taxa_padrao: 10 } }) }) }
+    ? { eq: () => ({ maybeSingle: () => Promise.resolve({ data: canal.data }) }) }
     : Promise.resolve({ data: [{ id: 't1', nome: 'Perfume', vende_decant: true }, { id: 't2', nome: 'Creme', vende_decant: false }] }) }) },
 }))
 vi.mock('../novo/carregar', () => ({
@@ -24,12 +24,13 @@ vi.mock('../novo/carregar', () => ({
     produtos: [
       { id: 'p1', nome: 'Asad', marca: 'Lattafa', tipo_id: 't1', volume_ml: 100, custo_medio: 100, ficha: {} },
       { id: 'p2', nome: 'Hidratante', marca: 'Horus', tipo_id: 't2', volume_ml: null, custo_medio: 20, ficha: {} },
+      { id: 'p3', nome: 'Sem custo', marca: 'Horus', tipo_id: 't1', volume_ml: 100, custo_medio: 0, ficha: {} },
     ],
     listas: [], custoPorInsumo: {},
   }),
 }))
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => { vi.clearAllMocks(); canal.data = { taxa_padrao: 10 } })
 const abrir = () => render(<MemoryRouter><PublicarShopify /></MemoryRouter>)
 const escolherProduto = async (id: string) => escolher(await screen.findByRole('combobox', { name: 'Produto' }), id)
 
@@ -64,5 +65,22 @@ describe('PublicarShopify', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Publicar' }))
     expect(await screen.findByText(/já está na Shopify/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Ligar/ })).toHaveAttribute('href', '/anuncios/shopify/ligar')
+  })
+
+  it('sem o canal Shopify avisa e bloqueia o Publicar', async () => {
+    canal.data = null
+    abrir()
+    expect(await screen.findByText(/Canal Shopify não encontrado/)).toBeInTheDocument()
+    await escolherProduto('p1')
+    fireEvent.click(screen.getByText('fotos'))
+    expect(await screen.findByRole('button', { name: 'Publicar' })).toBeDisabled()
+  })
+
+  it('variante bloqueada mostra o motivo, sem preço e sem checkbox ativo', async () => {
+    abrir(); await escolherProduto('p3')
+    expect((await screen.findAllByText('Perfume sem custo médio')).length).toBeGreaterThan(0)
+    expect(screen.queryByLabelText('Preço Frasco/unidade')).toBeNull()
+    expect(screen.getByLabelText('Frasco/unidade')).toBeDisabled()
+    expect(screen.getByLabelText('Decant 5 ml')).toBeDisabled()
   })
 })
