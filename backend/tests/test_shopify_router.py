@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261124-104732-da4b
+# ID                 : 20261124-105748-3d7f
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Shopify: test_shopify_router.py
 # Assunto            : Testes das rotas da Shopify e dos canais
 # Origem             : solicitacao do usuario
-# Motivo             : Fake do banco com lease e testes de dreno ocupado e sincronizar tudo
+# Motivo             : Fake do lease com token e conferencia do JSON enviado a Shopify (changeFromQuantity null e chave de idempotencia)
 # Criado em          : 2026-11-18 16:32:45
-# Ultima modificacao : 2026-11-24 10:47:32
+# Ultima modificacao : 2026-11-24 10:57:48
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import base64
@@ -117,17 +117,21 @@ class FakeQuery:
 class FakeDb:
     def __init__(self, **tabelas):
         self.tabelas = tabelas
-        self.lease = False
+        self.lease = None  # token do dono atual
 
     def table(self, nome):
         return FakeQuery(self, nome)
 
     def rpc(self, nome, params=None):
-        dado = None
+        params, dado = params or {}, None
         if nome == "pegar_lease_sync":
-            dado, self.lease = not self.lease, True
-        elif nome == "soltar_lease_sync":
-            self.lease = False
+            dono = params.get("p_dono")
+            if dono is None and self.lease is None:
+                self.lease = dado = "tok"
+            elif dono is not None and dono == self.lease:
+                dado = dono
+        elif nome == "soltar_lease_sync" and params.get("p_dono") == self.lease:
+            self.lease = None
         return SimpleNamespace(execute=lambda: SimpleNamespace(data=dado))
 
 
@@ -254,7 +258,12 @@ class RotasTest(unittest.TestCase):
         self.assertEqual(pedido["itens"][0]["produto_id"], P1)
         [(_, v)] = self.loja.mutations("inventorySetQuantities")
         self.assertEqual(v["input"]["quantities"][0]["quantity"], 4)  # 5 em estoque - 1 reservado
+        # no JSON enviado: changeFromQuantity null explícito (omitir é erro na 2026-04+) e a chave
+        self.assertIn("changeFromQuantity", v["input"]["quantities"][0])
+        self.assertIsNone(v["input"]["quantities"][0]["changeFromQuantity"])
+        self.assertTrue(v["idempotencyKey"])
         self.assertEqual(self.db.tabelas["canal_sync_fila"], [])
+        self.assertIsNone(self.db.lease)
 
     def test_webhook_falha_de_sync_fica_na_fila(self):
         db = self.base_db(shopify_conexao=[conexao(location_id=None)])
@@ -265,7 +274,7 @@ class RotasTest(unittest.TestCase):
 
     def test_webhook_com_dreno_ocupado_deixa_na_fila(self):
         db = self.base_db()
-        db.lease = True  # outro dreno em andamento: ele pega o produto na próxima volta
+        db.lease = "outro"  # outro dreno em andamento: ele pega o produto na próxima volta
         self.usar(db, Shopify())
         self.assertEqual(self.postar_webhook(pedido_webhook()).status_code, 200)
         self.assertEqual(self.loja.mutations("inventorySetQuantities"), [])
@@ -277,7 +286,7 @@ class RotasTest(unittest.TestCase):
         r = self.http.post("/api/canais/sincronizar")
         self.assertEqual(r.json(), {"enviados": 1, "erros": []})
         self.assertEqual(db.tabelas["canal_sync_fila"], [])
-        db.lease = True
+        db.lease = "outro"
         self.assertEqual(self.http.post("/api/canais/sincronizar").json(),
                          {"enviados": 0, "erros": [], "ocupado": True})
         self.assertEqual([f["produto_id"] for f in db.tabelas["canal_sync_fila"]], [P1])

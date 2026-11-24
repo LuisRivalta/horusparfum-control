@@ -1,16 +1,17 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261124-104729-8322
+# ID                 : 20261124-105747-b226
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Canais: estoque.py
 # Assunto            : Reserva e sincronizacao de estoque com a Shopify
 # Origem             : solicitacao do usuario
-# Motivo             : Dreno unico com lease, fila que avanca criado_em, reserva pela variante ligada depois e limpeza de produto desligado (revisao final)
+# Motivo             : Mutation de estoque no formato exigido pela API 2026-04+, limpeza da fila pelo par lido e lease com dono (rodada 2 da revisao)
 # Criado em          : 2026-11-18 16:29:07
-# Ultima modificacao : 2026-11-24 10:47:29
+# Ultima modificacao : 2026-11-24 10:57:47
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import math
+import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -21,12 +22,16 @@ from app.services.shopify.cliente import ShopifyErro
 
 STATUS_RESERVA = ('aguardando_pagamento', 'a_confirmar')
 LOTE = 250
+# Admin API 2026-04+: @idempotent obrigatório e changeFromQuantity em cada quantidade
+# (null = sem conferência; o Horus é a fonte da verdade). Conferido no shopify.dev em 24/11/2026.
 MUTATION = '''
-mutation($input: InventorySetQuantitiesInput!) {
-  inventorySetQuantities(input: $input) {
-    userErrors { field message }
+mutation inventorySetQuantities($input: InventorySetQuantitiesInput!, $idempotencyKey: String!) {
+  inventorySetQuantities(input: $input) @idempotent(key: $idempotencyKey) {
+    userErrors { code field message }
   }
 }'''
+LEASE_SEGUNDOS = 60
+VOLTAS = 5
 
 
 def reservas(pedidos: list[dict], por_variante: dict[str, dict] | None = None) -> dict[str, tuple[int, Decimal]]:
@@ -62,17 +67,15 @@ def quantidade_canal(estoque_atual, volume_ml, ml_aberto: Decimal, tipo: str, ml
     return max(math.floor(saldo / Decimal(str(ml))), 0)
 
 
-def sincronizar(db, cliente, produto_ids: list[str] | None, ate: str | None = None) -> dict:
-    # Só drenar_fila chama (sob o lease). `ate`: só sai da fila o que entrou até esse instante;
-    # mudança que chega durante o envio fica.
-    ate = ate or datetime.now(timezone.utc).isoformat()
-    if produto_ids is not None and not produto_ids:
+def sincronizar(db, cliente, fila: dict[str, str]) -> dict:
+    """Envia os produtos da fila lida (produto_id -> criado_em lido). Só drenar_fila chama, sob o
+    lease. Sai da fila só a linha que ainda tem o criado_em lido: reenfileirada no meio, fica."""
+    if not fila:
         return {'enviados': 0, 'erros': []}
     ligados = db.table('canal_vinculos').select('*').eq('canal', 'shopify').execute().data
-    vinculos = [v for v in ligados if produto_ids is None or v['produto_id'] in produto_ids]
+    vinculos = [v for v in ligados if v['produto_id'] in fila]
     if not vinculos:
-        if produto_ids:
-            _limpar_fila(db, produto_ids, ate)
+        _limpar_fila(db, fila)
         return {'enviados': 0, 'erros': []}
 
     ids = sorted({v['produto_id'] for v in vinculos})
@@ -111,11 +114,12 @@ def sincronizar(db, cliente, produto_ids: list[str] | None, ate: str | None = No
     for i in range(0, len(calculo), LOTE):
         lote = calculo[i:i + LOTE]
         entrada = {
-            'name': 'available', 'reason': 'correction', 'ignoreCompareQuantity': True,
-            'quantities': [{'inventoryItemId': v['externo_estoque_id'], 'locationId': location, 'quantity': q} for v, q in lote],
+            'name': 'available', 'reason': 'correction',
+            'quantities': [{'inventoryItemId': v['externo_estoque_id'], 'locationId': location, 'quantity': q,
+                            'changeFromQuantity': None} for v, q in lote],
         }
         try:
-            cliente.graphql(MUTATION, {'input': entrada})
+            cliente.graphql(MUTATION, {'input': entrada, 'idempotencyKey': str(uuid.uuid4())})
         except (ShopifyErro, httpx.HTTPError) as e:
             falhar([v for v, _ in lote], str(e))
             continue
@@ -125,13 +129,14 @@ def sincronizar(db, cliente, produto_ids: list[str] | None, ate: str | None = No
         enviados += len(lote)
 
     # pedido de produto que não está mais ligado também sai (senão fica na fila para sempre)
-    _limpar_fila(db, [p for p in (produto_ids or ids) if p not in falhos], ate)
+    _limpar_fila(db, {p: t for p, t in fila.items() if p not in falhos})
     return {'enviados': enviados, 'erros': erros}
 
 
-def _limpar_fila(db, produto_ids: list[str], ate: str) -> None:
-    if produto_ids:
-        db.table('canal_sync_fila').delete().in_('produto_id', produto_ids).lte('criado_em', ate).execute()
+def _limpar_fila(db, fila: dict[str, str]) -> None:
+    # ponytail: um delete por linha; trocar por RPC com array se a fila passar de centenas
+    for produto_id, criado_em in fila.items():
+        db.table('canal_sync_fila').delete().eq('produto_id', produto_id).eq('criado_em', criado_em).execute()
 
 
 def enfileirar(db, produto_ids: list[str]) -> None:
@@ -142,30 +147,42 @@ def enfileirar(db, produto_ids: list[str]) -> None:
                                            on_conflict='produto_id').execute()
 
 
-VOLTAS = 5
+def _pendentes(db, vistos: set) -> dict[str, str]:
+    """Fila sem as linhas (produto_id, criado_em) já tentadas neste dreno (falhas não repetem)."""
+    linhas = db.table('canal_sync_fila').select('produto_id, criado_em').execute().data
+    return {r['produto_id']: r['criado_em'] for r in linhas if (r['produto_id'], r['criado_em']) not in vistos}
 
 
-def drenar_fila(db, cliente) -> dict:
-    """Único caminho de envio. Um dreno por vez (lease no banco); quem chega com o lease ocupado
-    só deixa o produto na fila, e o dreno em andamento repete enquanto entrar mudança nova."""
-    if db.rpc('pegar_lease_sync', {'p_segundos': 60}).execute().data is not True:
+def _drenar(db, cliente, vistos: set) -> dict:
+    dono = db.rpc('pegar_lease_sync', {'p_segundos': LEASE_SEGUNDOS}).execute().data
+    if not dono:
         return {'enviados': 0, 'erros': [], 'ocupado': True}
     total: dict = {'enviados': 0, 'erros': []}
     try:
-        ultimo = None
-        for _ in range(VOLTAS):
-            q = db.table('canal_sync_fila').select('produto_id, criado_em')
-            if ultimo:
-                q = q.gt('criado_em', ultimo)  # falhas da volta anterior não repetem
-            fila = q.execute().data
+        for volta in range(VOLTAS):
+            renovar = {'p_segundos': LEASE_SEGUNDOS, 'p_dono': dono}
+            if volta and db.rpc('pegar_lease_sync', renovar).execute().data != dono:
+                break  # o lease venceu e outro dreno pegou: ele segue com a fila
+            fila = _pendentes(db, vistos)
             if not fila:
                 break
-            # corte = o mais novo lido (relógio do banco, não o do servidor)
-            ate = max((r['criado_em'] for r in fila), key=datetime.fromisoformat)
-            r = sincronizar(db, cliente, [x['produto_id'] for x in fila], ate)
+            vistos.update(fila.items())
+            r = sincronizar(db, cliente, fila)
             total['enviados'] += r['enviados']
             total['erros'] += r['erros']
-            ultimo = ate
     finally:
-        db.rpc('soltar_lease_sync').execute()
+        db.rpc('soltar_lease_sync', {'p_dono': dono}).execute()
+    return total
+
+
+def drenar_fila(db, cliente) -> dict:
+    """Único caminho de envio. Um dreno por vez (lease com dono no banco); quem chega com o lease
+    ocupado só deixa o produto na fila, e o dreno em andamento repete enquanto entrar mudança nova."""
+    vistos: set = set()
+    total = _drenar(db, cliente, vistos)
+    if not total.get('ocupado') and _pendentes(db, vistos):
+        # quem enfileirou entre a última leitura e o soltar recebeu "ocupado": mais uma vez
+        mais = _drenar(db, cliente, vistos)
+        total['enviados'] += mais['enviados']
+        total['erros'] += mais['erros']
     return total

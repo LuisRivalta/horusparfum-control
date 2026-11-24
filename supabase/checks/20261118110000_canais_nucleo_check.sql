@@ -11,6 +11,8 @@ declare
   v_sem     uuid;
   v_troca   uuid;
   v_antes   timestamptz;
+  v_dono    uuid;
+  v_dono2   uuid;
   v_canal   uuid;
   v_pedido  uuid;
   v_venda   uuid;
@@ -34,9 +36,12 @@ begin
   insert into produtos (nome, volume_ml, custo_medio, estoque_atual, categoria_id)
   values ('teste-check-canal-troca', 100, 180, 5, (select id from categorias limit 1))
   returning id into v_troca;
-  insert into canal_vinculos (canal, produto_id, tipo, externo_variante_id)
-  values ('shopify', v_prod, 'frasco', 'teste-check-variante'),
-         ('shopify', v_troca, 'frasco', 'teste-check-variante-troca');
+  -- v_prod com dois vínculos (frasco + decant, como o publicar cria): a fila não pode
+  -- tentar atualizar a mesma linha duas vezes no on conflict
+  insert into canal_vinculos (canal, produto_id, tipo, ml, externo_variante_id)
+  values ('shopify', v_prod, 'frasco', null, 'teste-check-variante'),
+         ('shopify', v_prod, 'decant', 5, 'teste-check-variante-dec'),
+         ('shopify', v_troca, 'frasco', null, 'teste-check-variante-troca');
 
   assert exists (select 1 from information_schema.columns
                  where table_schema = 'public' and table_name = 'pedidos_canal'
@@ -107,19 +112,29 @@ begin
     'reenfileirar avança criado_em';
   update produtos set estoque_atual = estoque_atual - 1 where id = v_prod;
 
-  -- 3b. Lease: um dreno por vez --------------------------------------
-  update canal_sync_lease set ate = null where id = 1;
-  assert pegar_lease_sync(60), 'pega o lease livre';
-  assert not pegar_lease_sync(60), 'lease ocupado não é pego de novo';
-  perform soltar_lease_sync();
-  assert pegar_lease_sync(60), 'pega de novo depois de soltar';
-  perform soltar_lease_sync();
+  -- 3b. Lease: um dreno por vez, com dono ------------------------------
+  update canal_sync_lease set ate = null, dono = null where id = 1;
+  v_dono := pegar_lease_sync(60);
+  assert v_dono is not null, 'pega o lease livre';
+  assert pegar_lease_sync(60) is null, 'lease ocupado não é pego de novo';
+  assert pegar_lease_sync(60, v_dono) = v_dono, 'o dono renova';
+  assert pegar_lease_sync(60, gen_random_uuid()) is null, 'outro token não renova';
+  perform soltar_lease_sync(gen_random_uuid());
+  assert (select dono from canal_sync_lease where id = 1) = v_dono, 'outro token não solta';
+  perform soltar_lease_sync(v_dono);
+  assert (select dono from canal_sync_lease where id = 1) is null, 'o dono solta';
+  v_dono := pegar_lease_sync(60);
+  assert v_dono is not null, 'pega de novo depois de soltar';
   update canal_sync_lease set ate = now() - interval '1 second' where id = 1;
-  assert pegar_lease_sync(60), 'lease vencido é pego';
-  perform soltar_lease_sync();
-  assert not has_function_privilege('authenticated', 'public.pegar_lease_sync(int)', 'execute'),
+  v_dono2 := pegar_lease_sync(60);
+  assert v_dono2 is not null and v_dono2 <> v_dono, 'lease vencido é pego por outro dono';
+  perform soltar_lease_sync(v_dono);
+  assert (select dono from canal_sync_lease where id = 1) = v_dono2,
+    'dreno lento que perdeu o lease não solta o do próximo';
+  perform soltar_lease_sync(v_dono2);
+  assert not has_function_privilege('authenticated', 'public.pegar_lease_sync(int, uuid)', 'execute'),
     'authenticated não pega lease';
-  assert not has_function_privilege('anon', 'public.soltar_lease_sync()', 'execute'),
+  assert not has_function_privilege('anon', 'public.soltar_lease_sync(uuid)', 'execute'),
     'anon não solta lease';
 
   -- 4. Desfazer devolve o estoque e marca cancelado -------------------

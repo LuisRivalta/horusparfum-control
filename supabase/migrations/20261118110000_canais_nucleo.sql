@@ -85,11 +85,13 @@ create table if not exists public.canais_sync_config (
   segredo text
 );
 
--- Lease de um dreno por vez (backend): ate = até quando o dreno atual vale.
+-- Lease de um dreno por vez (backend): ate = até quando o dreno atual vale; dono = token dele.
 create table if not exists public.canal_sync_lease (
-  id  int         primary key default 1 check (id = 1),
-  ate timestamptz
+  id   int         primary key default 1 check (id = 1),
+  ate  timestamptz,
+  dono uuid
 );
+alter table public.canal_sync_lease add column if not exists dono uuid;
 insert into public.canal_sync_lease (id, ate) values (1, null) on conflict (id) do nothing;
 
 -- 3. RLS ----------------------------------------------------------
@@ -116,9 +118,9 @@ drop policy if exists "Acesso total autenticados" on public.canal_sync_lease;
 -- 4. Fila de sincronização ----------------------------------------
 -- Põe na fila os produtos com vínculo em algum canal e, se houver URL configurada,
 -- avisa o backend. O pg_net só envia depois do commit (transação desfeita não avisa).
--- Reenfileirar AVANÇA criado_em: um dreno em andamento (que só limpa o que entrou até o
--- corte dele) não apaga a mudança nova. clock_timestamp, não now(): transação longa não
--- grava um instante anterior ao corte de um dreno.
+-- Reenfileirar AVANÇA criado_em: um dreno em andamento (que só apaga a linha com o mesmo
+-- criado_em que leu) não apaga a mudança nova. clock_timestamp, não now(): cada
+-- reenfileiramento ganha um instante diferente.
 create or replace function public._canal_sync_enfileirar(p_produto_ids uuid[])
 returns void
 language plpgsql
@@ -130,9 +132,11 @@ declare
   v_cfg canais_sync_config%rowtype;
 begin
   insert into canal_sync_fila (produto_id, criado_em)
-  select distinct v.produto_id, clock_timestamp()
-  from canal_vinculos v
-  where v.produto_id = any(p_produto_ids)
+  -- distinct ANTES do clock_timestamp: produto com vários vínculos (frasco + decants) dá
+  -- uma linha só (senão "ON CONFLICT DO UPDATE command cannot affect row a second time")
+  select s.produto_id, clock_timestamp()
+  from (select distinct v.produto_id from canal_vinculos v
+        where v.produto_id = any(p_produto_ids)) s
   on conflict (produto_id) do update set criado_em = excluded.criado_em;
   get diagnostics v_n = row_count;
   if v_n = 0 then return; end if;
@@ -173,34 +177,47 @@ end;
 $$;
 
 -- Lease: um dreno da fila por vez. Só o backend (service role) chama.
-create or replace function public.pegar_lease_sync(p_segundos int default 60)
-returns boolean
+-- pegar devolve o dono (uuid) ou null se outro dreno tem o lease; com p_dono = o próprio
+-- dono, renova. soltar só solta se o lease ainda é desse dono (dreno lento que perdeu o
+-- lease não solta o do próximo).
+drop function if exists public.pegar_lease_sync(int);
+drop function if exists public.soltar_lease_sync();
+
+create or replace function public.pegar_lease_sync(p_segundos int default 60, p_dono uuid default null)
+returns uuid
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
+declare
+  v_dono uuid;
 begin
-  update canal_sync_lease set ate = now() + make_interval(secs => p_segundos)
-  where id = 1 and (ate is null or ate < now());
-  return found;
+  update canal_sync_lease
+     set ate = now() + make_interval(secs => p_segundos),
+         dono = coalesce(p_dono, gen_random_uuid())
+   where id = 1
+     and (case when p_dono is null then ate is null or ate < now()
+               else dono = p_dono end)
+  returning dono into v_dono;
+  return v_dono;
 end;
 $$;
 
-create or replace function public.soltar_lease_sync()
+create or replace function public.soltar_lease_sync(p_dono uuid)
 returns void
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 begin
-  update canal_sync_lease set ate = null where id = 1;
+  update canal_sync_lease set ate = null, dono = null where id = 1 and dono = p_dono;
 end;
 $$;
 
-revoke all on function public.pegar_lease_sync(int) from public, anon, authenticated;
-revoke all on function public.soltar_lease_sync() from public, anon, authenticated;
-grant execute on function public.pegar_lease_sync(int) to service_role;
-grant execute on function public.soltar_lease_sync() to service_role;
+revoke all on function public.pegar_lease_sync(int, uuid) from public, anon, authenticated;
+revoke all on function public.soltar_lease_sync(uuid) from public, anon, authenticated;
+grant execute on function public.pegar_lease_sync(int, uuid) to service_role;
+grant execute on function public.soltar_lease_sync(uuid) to service_role;
 
 drop trigger if exists produtos_canal_sync on public.produtos;
 create trigger produtos_canal_sync

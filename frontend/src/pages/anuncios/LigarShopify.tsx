@@ -82,6 +82,7 @@ export function LigarShopify() {
       setItens((l) => (l ?? []).map((x) => (x.variante_id === i.variante_id
         ? { ...x, vinculo: { produto_id: e.produto_id, tipo: decant ? 'decant' : 'frasco', ml } } : x)))
       if (r?.erros?.length) setAviso(`Ligado, mas o estoque não foi enviado: ${r.erros.join('; ')}`)
+      else if (r?.ocupado) setAviso('Ligado; o estoque será enviado em instantes')
     } catch (x) { setErro(erroMsg(x)) } finally { ocupar(i.variante_id, false) }
   }
 

@@ -42,6 +42,15 @@ describe('LigarShopify', () => {
     expect(await screen.findByText(/Ligado: Lattafa Asad · Decant 5 ml/)).toBeInTheDocument()
   })
 
+  it('ligar com sincronização em andamento avisa que o estoque vai em instantes', async () => {
+    api.apiShopify.variantes.mockResolvedValue({ itens: [v()], proximo: null })
+    api.apiShopify.ligar.mockResolvedValue({ enviados: 0, erros: [], ocupado: true })
+    abrir()
+    await screen.findByRole('combobox', { name: /Tipo de/ })
+    fireEvent.click(screen.getByRole('button', { name: 'Ligar' }))
+    expect(await screen.findByText('Ligado; o estoque será enviado em instantes')).toBeInTheDocument()
+  })
+
   it('só oferece decant para produto que vende decant', async () => {
     api.apiShopify.variantes.mockResolvedValue({ itens: [v()], proximo: null })
     abrir()
