@@ -42,6 +42,7 @@ Abaixo estão os guias detalhados de cada módulo funcional do sistema, explican
 
 ### 🏷️ Anúncios
 - [[features/ANUNCIOS]] — Anúncios no Mercado Livre: ficha, preço que fecha a margem, publicação, qualidade e ligação de anúncios existentes.
+- [[features/SHOPIFY]] — Shopify e núcleo de vendas dos canais: pedidos a confirmar, reserva e sincronização de estoque, ligar e publicar produtos, checklist de ativação.
 
 ---
 

@@ -640,6 +640,32 @@ Detalhes de negócio em [[features/ANUNCIOS]]. Todas as rotas exigem JWT, exceto
 
 ---
 
+### 15. Shopify e canais ✅
+
+Detalhes de negócio em [[features/SHOPIFY]]. Todas as rotas exigem JWT, exceto `POST /api/shopify/webhooks/pedidos` (protegida por HMAC do corpo, `401 Assinatura inválida`) e `POST /api/canais/sync` (protegida pelo cabeçalho `X-Horus-Sync`, `401 Não autorizado`). Sem conexão, as rotas que falam com a Shopify respondem com o erro de "Shopify desconectada"; falha da Shopify vira `502`.
+
+**Shopify (`/api/shopify`)**
+
+| Rota | Body | Resposta | Erros |
+|---|---|---|---|
+| `GET /conexao` | — | `{"conectado": bool, "loja": str\|null, "conectado_em": str\|null}` (nunca devolve token) | — |
+| `POST /conectar` | — | Mesmo formato de `/conexao`; pega o token, a localização da loja e registra os webhooks de pedidos | `503` Shopify não configurada, `502` |
+| `GET /variantes?cursor=` | — | `{"itens": [{produto_id_ext, produto_titulo, variante_id, variante_titulo, sku, estoque_id, vinculo}], "proximo": str\|null}` | `502` |
+| `POST /vinculos` | `{"variante_id", "produto_ext_id"?, "estoque_id", "titulo"?, "produto_id", "tipo": "frasco"\|"decant", "ml"?}` | Resultado da sincronização `{"enviados", "erros"}` | `422` decant sem ml, frasco com ml ou tipo sem decant, `404` produto |
+| `DELETE /vinculos/{variante_id}` | — | `{}` | — |
+| `POST /webhooks/pedidos` | corpo da Shopify | `{}` | `401` |
+| `POST /produtos` | `{"produto_id", "titulo", "descricao"?, "fotos"?, "variantes": [{"tipo", "ml"?, "preco"}]}` | Produto criado e vínculos gravados | `404`, `409` já está na Shopify, `422` título, variantes ou preço inválidos, `502` |
+
+**Canais (`/api/canais`)**
+
+| Rota | Body | Resposta | Erros |
+|---|---|---|---|
+| `POST /pedidos/conferir` | — | `{"novos": int}`; relê os últimos 7 dias na Shopify e sincroniza a fila | desconectada, `502` |
+| `POST /sincronizar` | — | `{"enviados": int, "erros": [str]}`; recalcula e envia a quantidade de todos os vínculos | `502` |
+| `POST /sync` | — | Esvazia a fila de sincronização (chamada pelo gatilho do banco) | `401` |
+
+---
+
 ## ⚠️ Tratamento de Erros — Referência Geral
 
 A API segue um padrão consistente de respostas de erro:

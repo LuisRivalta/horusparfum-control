@@ -1,6 +1,6 @@
 # Handoff IA — Estado Atual
 
-> Última atualização: 2026-11-17 (Sessão 70)
+> Última atualização: 2026-11-24 (Sessão 71)
 
 ## O que já foi feito
 
@@ -483,10 +483,13 @@
 - Anúncios, Parte 2 (Sessão 70): **implementada e no ar desde 17/11/2026** (frontend e backend publicam sozinhos a cada push na `main`; as rotas `/api/anuncios/*` respondem 401 sem login, como esperado). Migration `20261117100000_anuncios_schema.sql` aplicada pelo Luis em 16/11/2026. Doc: `docs/features/ANUNCIOS.md` (inclui checklist de ativação e limites conhecidos).
 - Anúncios, pendente do Luis (nesta ordem): criar o app no devcenter do ML (redirect `https://horusparfum-control-api.vercel.app/api/mercadolivre/callback`, escopos read/write/offline_access, PKCE off); cadastrar `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `ML_REDIRECT_URI` (e opcional `ANTHROPIC_API_KEY`) no painel Vercel do `horusparfum-control-api`; `npx vercel login` + `npx vercel --prod` em `backend/`; dar push na `main` (frontend publica sozinho); em Anúncios › Configuração clicar Conectar, definir margem padrão e preencher peso/medidas dos kits de envio em Estoque › Insumos.
 - Anúncios, limites conhecidos: busca de anúncios existentes para em 1000; anúncios ligados não têm `custo_base` (sem aviso de custo mudou); quantidade só sincroniza por botão; sem chave de idempotência no ML (falha de rede ao criar pede conferir no ML).
+- **Shopify e núcleo de canais (Sessão 71):** código **pronto na `main`, sem push**. SQL (`20261118100000_tipos_produto.sql` e `20261118110000_canais_nucleo.sql`) **não aplicado**; app da Shopify **não criado**; variáveis `SHOPIFY_*` e `HORUS_SYNC_SECRET` não cadastradas. Doc: `docs/features/SHOPIFY.md` (telas, status do pedido, regras de quantidade e preço, limites). Antes de ativar, conferir na doc da Shopify os pontos listados em "Limites conhecidos e a conferir" (versão da API, `uri` x `callbackUrl`, `ignoreCompareQuantity`, `productSet`, `pg_net`, `variants(first: 100)`).
 
 ## Decisões pendentes
 
-- **Próximo grande passo:** escrever o plano da Parte 3 do spec `2026-11-16-anuncios-design.md` ("Vendas do ML": receber vendas do ML, baixar estoque, sincronizar quantidade sozinho). Só depois da Parte 2 ativada e conectada.
+- **Próximo grande passo (Sessão 71): ativar a Shopify**, na ordem do "Checklist de ativação" de `docs/features/SHOPIFY.md`: (1) aplicar as duas migrations e rodar os checks; (2) criar o app no Dev Dashboard da Shopify (mesma organização da loja) com os escopos `read_products, write_products, read_inventory, write_inventory, read_locations, read_orders` e instalar; (3) variáveis `SHOPIFY_LOJA`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`, `HORUS_SYNC_SECRET` na Vercel e Redeploy; (4) `insert into canais_sync_config ...` no SQL Editor (o Luis digita o segredo lá, nunca no chat); (5) taxa padrão do canal Shopify em Vendas › Configuração; (6) Anúncios › Configuração › Conectar Shopify, Ligar Shopify, Sincronizar tudo; (7) teste com compra real ou de teste e cancelamento antes de confirmar. Só então dar push.
+- A Parte 3 do ML agora é o **conector do ML sobre o núcleo de canais** (usa `pedidos_canal`, `canal_vinculos` e a fila); continua esperando a chave do app do ML.
+- ~~Plano da Parte 3 do ML~~: absorvido pelo spec `2026-11-18-shopify-canais-design.md` (núcleo de canais feito; falta só o conector do ML, depois da chave).
 - ~~Aplicar as migrations de Insumos~~ (feito em 16/11/2026); plano da Parte 2 (Anúncios) concluído, falta o da Parte 3.
 
 - `ProductDetailsModal` não permite trocar/adicionar foto na edição (só no cadastro em `Produtos.tsx`); produto criado por SQL ou sem foto não tem caminho pela UI.

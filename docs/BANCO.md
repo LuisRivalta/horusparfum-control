@@ -324,6 +324,27 @@ Migration `20261117100000_anuncios_schema.sql`; conferência em `supabase/checks
 
 `ml_conexao` (linha única, `id = 1`): `ml_user_id`, `nickname`, `access_token`, `refresh_token`, `expires_at`, `user_product`, `updated_at`. RLS ligado **sem policy**: guarda tokens, só o backend (service role) acessa.
 
+### Shopify e canais
+
+Migrations `20261118100000_tipos_produto.sql` e `20261118110000_canais_nucleo.sql`; conferência em `supabase/checks/20261118100000_tipos_produto_check.sql` e `20261118110000_canais_nucleo_check.sql`. Detalhes em [[features/SHOPIFY]].
+
+`tipos_produto`: `id`, `nome` (único), `vende_decant` boolean, `created_at`. Sementes: Perfume (decant sim), Creme e Body splash (não). RLS para `authenticated`. `produtos.tipo_id` (FK → tipos_produto, NOT NULL; produtos antigos viram Perfume).
+
+`canais`: a migration cria o canal **"Shopify"** (taxa 0, `usa_envio` true) se não existir pelo nome.
+
+`canal_vinculos`: `id`, `canal` (`shopify`/`ml`), `produto_id` (FK → produtos), `tipo` (`frasco`/`decant`), `ml` (preenchido se, e só se, decant), `externo_produto_id`, `externo_variante_id`, `externo_estoque_id`, `titulo`, `ultima_qtd`, `sincronizado_em`, `erro`, `created_at`. Único em (`canal`, `externo_variante_id`).
+
+`pedidos_canal`: `id`, `canal`, `externo_id`, `numero`, `status` (`aguardando_pagamento`, `a_confirmar`, `confirmado`, `cancelado`, `cancelado_pos_confirmacao`), `cliente`, `criado_em`, `total`, `frete`, `itens` jsonb (`variante_id`, `titulo`, `quantidade`, `preco_unitario`, `produto_id`, `tipo`, `ml`), `venda_id` (FK → vendas, **on delete set null**: excluir a venda solta o pedido), `alerta`, `created_at`, `updated_at`. Único em (`canal`, `externo_id`).
+
+`shopify_conexao` (linha única, `id = 1`): `access_token`, `expires_at`, `location_id`, `conectado_em`, `updated_at`. `canal_sync_fila` (`produto_id` PK, `criado_em`) e `canais_sync_config` (linha única: `url`, `segredo`): as três têm RLS ligado **sem policy** (token e segredo; só o service role acessa). `canal_vinculos` e `pedidos_canal` têm a policy padrão para `authenticated`.
+
+Gatilhos `produtos_canal_sync` (muda `estoque_atual`) e `frascos_abertos_canal_sync` chamam `_canal_sync_marcar()`: põe o produto vinculado na fila e, com URL configurada, avisa o backend por `pg_net`. A extensão `pg_net` é criada no schema `extensions` (as funções ficam em `net`).
+
+| Função | Resumo | Migração |
+|---|---|---|
+| `confirmar_pedido_canal(p_pedido_id, p_canal_id, p_data_venda, ..., p_itens, p_titulo, p_insumos_envio)` | Só se o pedido está `a_confirmar`: chama `registrar_venda` e marca `confirmado` com `venda_id` | 20261118110000_canais_nucleo |
+| `desfazer_pedido_canal(p_pedido_id)` | Só se `cancelado_pos_confirmacao`: cancela a venda (se ainda não estiver cancelada) e fecha o pedido como `cancelado` | 20261118110000_canais_nucleo |
+
 ## Relações
 
 ```

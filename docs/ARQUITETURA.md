@@ -77,11 +77,13 @@ C:\Horus\
     └── app\
         ├── main.py             → FastAPI app + CORS
         ├── auth\               → deps.py (validação de JWT)
-        ├── routers\            → financeiro.py, estoque.py, mercadolivre.py, anuncios.py
+        ├── routers\            → financeiro.py, estoque.py, mercadolivre.py, anuncios.py, shopify.py, canais.py
         ├── models\             → schemas Pydantic
         ├── services\           → cálculos backend (relatórios financeiros)
         │   ├── mercadolivre\  → cliente.py (MLCliente, renova token), conexao.py (OAuth, state)
-        │   └── anuncios\      → preco.py, ia.py, publicar.py
+        │   ├── anuncios\      → preco.py, ia.py, publicar.py
+        │   ├── shopify\       → cliente.py (token, HMAC, GraphQL), publicar.py (productSet)
+        │   └── canais\        → pedidos.py (normaliza e ingere pedido), estoque.py (reserva e sincronização)
         └── db\                 → supabase.py (service role client)
 ```
 
@@ -171,6 +173,10 @@ ML_CLIENT_ID=
 ML_CLIENT_SECRET=
 ML_REDIRECT_URI=
 ANTHROPIC_API_KEY=          # opcional (IA dos anúncios)
+SHOPIFY_LOJA=               # domínio *.myshopify.com
+SHOPIFY_CLIENT_ID=
+SHOPIFY_CLIENT_SECRET=
+HORUS_SYNC_SECRET=          # segredo do aviso banco → backend
 ```
 
 ## Fluxo de dados
@@ -217,6 +223,8 @@ Browser (React SPA)
 | /anuncios | Lista de anúncios |
 | /anuncios/novo · /anuncios/:id | Novo anúncio (passo a passo) · reabrir rascunho |
 | /anuncios/ligar · /anuncios/config | Ligar anúncios do ML · Configuração (conexão, margem, IA) |
+| /anuncios/shopify/ligar · /anuncios/shopify/novo | Ligar produtos da Shopify · Publicar produto na Shopify |
+| /estoque/cadastros/tipos | Tipos de produto (Perfume, Creme...) |
 
 Tudo sob `/financeiro/*`, `/estoque/*` e `/anuncios/*` usa o `Layout` (sidebar + header). A nav lateral alterna entre os módulos Financeiro, Estoque e Anúncios.
 

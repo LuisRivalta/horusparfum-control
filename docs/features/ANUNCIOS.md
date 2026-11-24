@@ -4,7 +4,7 @@
 
 Módulo que cria, publica e acompanha anúncios de perfumes (frasco lacrado e decant) no **Mercado Livre**, a partir do estoque do Horus. Terceiro módulo da nav (Financeiro / Estoque / **Anúncios**).
 
-Parte 2 do módulo (spec: `docs/superpowers/specs/2026-11-16-anuncios-design.md`; plano: `docs/superpowers/plans/2026-11-16-anuncios.md`). A Parte 3 ("Vendas do ML": receber venda do ML e baixar estoque) ainda precisa de plano próprio.
+Parte 2 do módulo (spec: `docs/superpowers/specs/2026-11-16-anuncios-design.md`; plano: `docs/superpowers/plans/2026-11-16-anuncios.md`). A Parte 3 ("Vendas do ML": receber venda do ML e baixar estoque) agora é o **conector do ML sobre o núcleo de canais** (pedidos a confirmar, reserva e fila de estoque), construído para a Shopify e descrito em [[features/SHOPIFY]]; falta só a chave do app do ML.
 
 > Migration `20261117100000_anuncios_schema.sql` aplicada no Supabase em 16/11/2026. Tabelas em [[BANCO]] (`anuncios`, `anuncios_config`, `ml_conexao`, `produto_fotos`; `produtos.ficha`).
 
@@ -93,7 +93,7 @@ Claude Haiku (`claude-haiku-5-5`, `services/anuncios/ia.py`) sugere a ficha e es
 
 - A busca de anúncios existentes (`/api/anuncios/conta/itens`) para em 1000 itens (limite da busca comum do ML).
 - Anúncios ligados por "Ligar" não têm `custo_base`, então não recebem o aviso "custo mudou".
-- A sincronização de quantidade é manual (botão) até a Parte 3.
+- A sincronização de quantidade do ML é manual (botão) até o conector do ML sobre o núcleo de canais (Parte 3). Na Shopify já é automática ([[features/SHOPIFY]]).
 - O ML não tem chave de idempotência na criação: se a rede falhar ao publicar, o anúncio fica com erro e a mensagem pede conferir no ML antes de tentar de novo.
 - O refresh token do ML é de uso único; uma renovação simultânea é tratada em `services/mercadolivre/cliente.py`, mas se a conexão cair basta reconectar.
 - Não há restrição única em `anuncios (produto_id, tipo, ml)`: evite editar o mesmo perfume em duas abas (pode criar rascunho duplicado).

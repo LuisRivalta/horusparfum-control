@@ -98,6 +98,7 @@ Configuradas no painel da Vercel:
   > A `supabase_service_role_key` dá bypass total nas regras de RLS (Row Level Security). Ela **nunca** deve ser exposta no frontend e deve ser mantida estritamente como segredo no backend.
 - `frontend_url`: URL do frontend autorizada para CORS (ex: `https://horusparfum-control.vercel.app` ou `http://localhost:5173` em dev).
 - `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `ML_REDIRECT_URI`: app do Mercado Livre (módulo Anúncios). O redirect é `https://horusparfum-control-api.vercel.app/api/mercadolivre/callback`. Passo a passo em [[features/ANUNCIOS]].
+- `SHOPIFY_LOJA`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`, `HORUS_SYNC_SECRET`: integração Shopify e aviso do banco ao backend. Passo a passo em [[features/SHOPIFY]].
 - `ANTHROPIC_API_KEY` (opcional): liga a IA de ficha e textos dos anúncios; sem ela o Horus usa o template.
   > [!CAUTION]
   > Segredos do ML e da Anthropic só no painel da Vercel, nunca no repositório nem em chat.

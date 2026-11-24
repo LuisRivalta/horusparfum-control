@@ -354,7 +354,17 @@ Cancela uma venda existente, revertendo todas as operações.
 - Cancelar/excluir devolve estoque, ml e insumos. As embalagens de decant deram lugar às listas de insumos em `/estoque/insumos`.
 - Detalhes: [[features/INSUMOS]].
 
+## Vendas dos canais (Shopify)
+
+- Pedidos da Shopify chegam na lista **A confirmar** (`AConfirmar.tsx`) e só viram venda quando o Luis confirma (RPC `confirmar_pedido_canal`, que chama `registrar_venda`). Status, reserva de estoque e regras em [[features/SHOPIFY]].
+- Na confirmação, a taxa é a `taxa_padrao` do canal Shopify e o **Frete começa em 0**, com "Cliente pagou R$ X de frete" ao lado como informação (o frete do `registrar_venda` é só despesa).
+- **Abrir lacrado direto no formulário:** vender decant de um perfume sem frasco aberto agora abre um lacrado na própria venda (manual e confirmação), sem passar antes por Decants.
+- **Excluir uma venda que veio de pedido** deixa o pedido com `venda_id` nulo. Desfazer um pedido já com a venda cancelada só fecha o pedido.
+- Produto de tipo sem decant (Creme, Body splash) não oferece decant nem frasco para abrir.
+
 ## Documentos Relacionados
+
+- [[features/SHOPIFY]] — Pedidos dos canais, reserva e sincronização de estoque
 
 - [[features/FINANCEIRO]] — Módulo financeiro (recebe transações de vendas)
 - [[features/ESTOQUE]] — Módulo de estoque (afetado por vendas)
