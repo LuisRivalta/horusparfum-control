@@ -10,6 +10,8 @@
 - Decisões: frete na confirmação começa em 0 (o `registrar_venda` trata frete só como despesa); excluir venda solta o pedido (`venda_id` nulo); conferência relê 7 dias.
 - Docs: novo `docs/features/SHOPIFY.md` (com checklist de ativação e limites); atualizados `00-INDEX`, `API` (seção 15), `BANCO`, `ARQUITETURA`, `DEPLOY`, `features/VENDAS`, `features/ANUNCIOS` e o HANDOFF.
 
+- Revisão final (24/11/2026): dreno único da fila com lease no banco (`canal_sync_lease`, `pegar_lease_sync`/`soltar_lease_sync`); reenfileirar avança `criado_em` (`_canal_sync_enfileirar`); todo envio passa por `drenar_fila`; item sem produto reserva pela variante ligada depois; `pedidos_canal.alerta_dispensado` (Manter/Ok não voltam na releitura); reembolso parcial em pedido aberto alerta e aparece no formulário; confirmar enfileira os itens originais; linha com quantidade 0 ignorada; produto desligado sai da fila. Doc da Shopify (shopify.dev) não abriu desta máquina (certificado TLS): campos da API seguem sem conferência.
+
 ### Pendente
 - Luis: aplicar as duas migrations e rodar os checks; criar o app no Dev Dashboard da Shopify; cadastrar as variáveis na Vercel e Redeploy; `insert` em `canais_sync_config` pelo SQL Editor; taxa do canal Shopify; Conectar, Ligar e Sincronizar tudo; teste de ponta a ponta; só então push da `main`.
 - Conferir na doc da Shopify: `API_VERSAO '2026-10'`, `uri` x `callbackUrl` no webhook, `ignoreCompareQuantity`, campos do `productSet`, `pg_net` no schema `extensions`, limite de `variants(first: 100)`.

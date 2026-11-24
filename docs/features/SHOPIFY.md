@@ -30,7 +30,10 @@ O pedido fica em `pedidos_canal` com um status (regra em `services/canais/pedido
 
 Detalhes:
 - Pedido com pagamento pendente **reserva, mas não pode ser confirmado**: só `a_confirmar` confirma.
-- Reembolso parcial de pedido confirmado mantém `confirmado` e grava o alerta "Reembolso parcial de R$ X na Shopify".
+- Reembolso parcial grava o alerta "Reembolso parcial de R$ X na Shopify": pedido confirmado continua `confirmado`; pedido aberto vai para `a_confirmar` com o alerta, que aparece também no formulário de confirmação (acima dos itens).
+- **Alerta dispensado não volta** (`pedidos_canal.alerta_dispensado`): **Manter** (cancelado depois de confirmado) grava `'cancelado'` e o pedido fica `confirmado` mesmo que a conferência releia o cancelamento; **Ok** grava o texto do alerta, e só um reembolso de valor diferente alerta de novo. Confirmar o pedido conta como Ok do alerta que estava nele.
+- Pedido aberto que é cancelado na Shopify perde o alerta (fica só `cancelado`).
+- Linha de pedido com quantidade 0 (removida por edição na Shopify) é ignorada.
 - Confirmar e desfazer **nunca são automáticos**. Cancelamento de venda já confirmada só acontece quando o Luis clica em desfazer (`desfazer_pedido_canal`, que cancela a venda e devolve o estoque).
 - A ingestão é idempotente (compare-and-swap): aviso repetido ou fora de ordem não regride o status nem recria venda. Itens de pedido confirmado não mudam.
 - Pedidos anteriores ao primeiro **Conectar** (`conectado_em`) são ignorados.
@@ -44,15 +47,16 @@ Detalhes:
 `confirmar_pedido_canal` chama `registrar_venda` com os mesmos argumentos e marca o pedido `confirmado` na mesma transação (trava com `for update`, não confirma duas vezes).
 - **Taxa:** a `taxa_padrao` do canal Shopify (o `VendaFormModal` calcula quando a taxa está vazia).
 - **Frete começa em 0.** O frete pago pelo cliente aparece ao lado ("Cliente pagou R$ X de frete") só como informação. Motivo: em `registrar_venda` o frete é só despesa; pré-preencher com o valor pago baixaria o lucro sem a receita correspondente. O campo é editável.
-- Troca de perfume e item sem ligação são resolvidos no formulário pelo Luis.
+- Troca de perfume e item sem ligação são resolvidos no formulário pelo Luis. Ao confirmar, os produtos dos itens **originais** do pedido entram na fila de estoque: a reserva deles acabou mesmo que a venda tenha trocado o perfume ou tirado a linha.
 
 ## Regra de quantidade (Horus para a Shopify)
 
 Calculada em `services/canais/estoque.py` e enviada com `inventorySetQuantities` (lotes de 250).
 - **Frasco:** `estoque_atual - unidades reservadas` (mínimo 0).
 - **Decant de X ml:** `floor((ml abertos + estoque_atual x volume_ml - ml reservados - unidades reservadas x volume_ml) / X)` (mínimo 0).
-- Reservado = itens dos pedidos `aguardando_pagamento` e `a_confirmar`.
-- Um gatilho no banco (mudança de `estoque_atual` do produto e de `frascos_abertos`) põe o produto na fila `canal_sync_fila` e, se houver URL configurada, avisa o backend por `pg_net` (`POST /api/canais/sync`, segredo no cabeçalho `X-Horus-Sync`). A fila só é limpa depois do envio; se falhar, o produto fica na fila e o erro aparece no vínculo (`canal_vinculos.erro`).
+- Reservado = itens dos pedidos `aguardando_pagamento` e `a_confirmar`. Item gravado sem produto (o pedido chegou antes de a variante ser ligada) reserva pela variante, assim que ela for ligada.
+- Um gatilho no banco (mudança de `estoque_atual` do produto e de `frascos_abertos`) põe o produto na fila `canal_sync_fila` (função `_canal_sync_enfileirar`) e, se houver URL configurada, avisa o backend por `pg_net` (`POST /api/canais/sync`, segredo no cabeçalho `X-Horus-Sync`). A fila só é limpa depois do envio; se falhar, o produto fica na fila e o erro aparece no vínculo (`canal_vinculos.erro`).
+- **Todo envio passa pela fila e por um dreno só** (`drenar_fila`): webhook, ligar variante, publicar, conferir, Sincronizar tudo e `/api/canais/sync` enfileiram os produtos e chamam o dreno. Um **lease** no banco (`canal_sync_lease`, RPCs `pegar_lease_sync` / `soltar_lease_sync`, 60 s) garante um dreno por vez; quem chega com o lease ocupado só deixa o produto na fila (resposta `ocupado: true`). Reenfileirar **avança** `criado_em`, e o dreno só limpa o que entrou até o corte dele; por isso repete (até 5 voltas) enquanto chegar mudança nova durante o envio. Falha não é repetida na mesma chamada. Produto desligado depois de enfileirado sai da fila.
 - Vendas da loja física e do WhatsApp continuam manuais, mas movem o estoque e, portanto, a quantidade nos canais.
 
 ## Regra de preço (publicar)
@@ -62,7 +66,7 @@ Calculada em `services/canais/estoque.py` e enviada com `inventorySetQuantities`
 ## Rotas e banco
 
 - Rotas: [[API]], seção 15 (`/api/shopify/*` e `/api/canais/*`).
-- Tabelas e RPCs: [[BANCO]] (`tipos_produto`, `produtos.tipo_id`, `shopify_conexao`, `canal_vinculos`, `pedidos_canal`, `canal_sync_fila`, `canais_sync_config`, canal "Shopify", `confirmar_pedido_canal`, `desfazer_pedido_canal`). Migrations `20261118100000_tipos_produto.sql` e `20261118110000_canais_nucleo.sql`; conferência em `supabase/checks/`.
+- Tabelas e RPCs: [[BANCO]] (`tipos_produto`, `produtos.tipo_id`, `shopify_conexao`, `canal_vinculos`, `pedidos_canal`, `canal_sync_fila`, `canais_sync_config`, `canal_sync_lease`, canal "Shopify", `confirmar_pedido_canal`, `desfazer_pedido_canal`, `pegar_lease_sync`, `soltar_lease_sync`). Migrations `20261118100000_tipos_produto.sql` e `20261118110000_canais_nucleo.sql`; conferência em `supabase/checks/`.
 
 ## Checklist de ativação
 
@@ -76,17 +80,17 @@ Calculada em `services/canais/estoque.py` e enviada com `inventorySetQuantities`
    insert into canais_sync_config (id, url, segredo) values (1, 'https://horusparfum-control-api.vercel.app/api/canais/sync', '<mesmo HORUS_SYNC_SECRET>') on conflict (id) do update set url = excluded.url, segredo = excluded.segredo;
    ```
 5. Vendas › Configuração: definir a taxa padrão do canal Shopify.
-6. Anúncios › Configuração › **Conectar Shopify**; depois **Ligar Shopify** (ligar as variantes) e **Sincronizar tudo**.
+6. Anúncios › Configuração › **Conectar Shopify**; depois **Ligar produtos** (ligar as variantes) e **Sincronizar tudo**.
 7. Teste: compra real ou de teste na loja → aparece em A confirmar em menos de 1 minuto e a quantidade cai na loja; confirmar; cancelar um pedido de teste antes de confirmar e ver a quantidade voltar.
 
 O push da `main` publica backend e frontend sozinho (Vercel).
 
 ## Limites conhecidos e a conferir
 
-Conferir na documentação da Shopify ao ativar (o código foi escrito sem testar contra a loja real):
+Conferir na documentação da Shopify ao ativar (o código foi escrito sem testar contra a loja real). Na revisão final de 24/11/2026 o shopify.dev não abriu desta máquina (erro de certificado TLS), então os itens abaixo seguem **sem conferência** e o código não mudou:
 - `API_VERSAO = '2026-10'` em `services/shopify/cliente.py`: confirmar que é a versão estável vigente.
 - `webhookSubscriptionCreate`: o código usa o campo `uri`; confirmar se a versão pede `uri` ou `callbackUrl`.
-- `inventorySetQuantities`: o código usa `ignoreCompareQuantity: true`; confirmar o campo na versão.
+- `inventorySetQuantities`: o código usa `ignoreCompareQuantity: true`; confirmar o campo na versão. **Atenção (de memória, não verificado):** versões recentes da Admin API podem ter trocado `compareQuantity`/`ignoreCompareQuantity` por `changeFromQuantity` (por quantidade) e exigir a diretiva `@idempotent(key: ...)` nas mutações de estoque. Se for o caso, a primeira sincronização volta com `userErrors`/erro de schema e aparece em `canal_vinculos.erro`.
 - `productSet` (publicar): confirmar os campos de entrada usados em `services/shopify/publicar.py`.
 - `pg_net` é criado no schema `extensions` (as funções ficam em `net`); se o `create extension` falhar, ver o schema no projeto.
 - `variants(first: 100)`: produto com mais de 100 variantes é cortado na tela de ligar (comentário `ponytail:` no código).
