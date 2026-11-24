@@ -28,6 +28,7 @@ import { AnunciosConfig } from '@/pages/anuncios/AnunciosConfig'
 import { AnunciosLista } from '@/pages/anuncios/AnunciosLista'
 import { LigarAnuncios } from '@/pages/anuncios/LigarAnuncios'
 import { LigarShopify } from '@/pages/anuncios/LigarShopify'
+import { PublicarShopify } from '@/pages/anuncios/PublicarShopify'
 import { NovoAnuncio } from '@/pages/anuncios/NovoAnuncio'
 
 export function App() {
@@ -69,6 +70,7 @@ export function App() {
         <Route path="/anuncios/novo" element={<NovoAnuncio />} />
         <Route path="/anuncios/ligar" element={<LigarAnuncios />} />
         <Route path="/anuncios/shopify/ligar" element={<LigarShopify />} />
+        <Route path="/anuncios/shopify/novo" element={<PublicarShopify />} />
         <Route path="/anuncios/config" element={<AnunciosConfig />} />
         <Route path="/anuncios/:id" element={<NovoAnuncio />} />
       </Route>
