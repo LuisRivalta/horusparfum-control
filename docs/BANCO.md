@@ -336,16 +336,16 @@ Migrations `20261118100000_tipos_produto.sql` e `20261118110000_canais_nucleo.sq
 
 `pedidos_canal`: `id`, `canal`, `externo_id`, `numero`, `status` (`aguardando_pagamento`, `a_confirmar`, `confirmado`, `cancelado`, `cancelado_pos_confirmacao`), `cliente`, `criado_em`, `total`, `frete`, `itens` jsonb (`variante_id`, `titulo`, `quantidade`, `preco_unitario`, `produto_id`, `tipo`, `ml`), `venda_id` (FK → vendas, **on delete set null**: excluir a venda solta o pedido), `alerta`, `alerta_dispensado` (`'cancelado'` = Manter; outro texto = alerta de reembolso que recebeu Ok; a releitura não levanta de novo o mesmo alerta), `created_at`, `updated_at`. Único em (`canal`, `externo_id`).
 
-`shopify_conexao` (linha única, `id = 1`): `access_token`, `expires_at`, `location_id`, `conectado_em`, `updated_at`. `canal_sync_fila` (`produto_id` PK, `criado_em`: reenfileirar avança), `canais_sync_config` (linha única: `url`, `segredo`) e `canal_sync_lease` (linha única: `ate`, até quando vale o dreno atual): as quatro têm RLS ligado **sem policy** (token e segredo; só o service role acessa). `canal_vinculos` e `pedidos_canal` têm a policy padrão para `authenticated`.
+`shopify_conexao` (linha única, `id = 1`): `access_token`, `expires_at`, `location_id`, `conectado_em`, `updated_at`. `canal_sync_fila` (`produto_id` PK, `criado_em`: reenfileirar avança), `canais_sync_config` (linha única: `url`, `segredo`) e `canal_sync_lease` (linha única: `ate`, até quando vale o dreno atual; `dono`, token do dreno): as quatro têm RLS ligado **sem policy** (token e segredo; só o service role acessa). `canal_vinculos` e `pedidos_canal` têm a policy padrão para `authenticated`.
 
-Gatilhos `produtos_canal_sync` (muda `estoque_atual`) e `frascos_abertos_canal_sync` chamam `_canal_sync_marcar()`, que chama `_canal_sync_enfileirar(uuid[])`: põe os produtos vinculados na fila (`on conflict` avança `criado_em` com `clock_timestamp()`) e, com URL configurada, avisa o backend por `pg_net`. `_canal_sync_enfileirar` é security definer, executável por `authenticated` (o `confirmar_pedido_canal` chama). A extensão `pg_net` é criada no schema `extensions` (as funções ficam em `net`).
+Gatilhos `produtos_canal_sync` (muda `estoque_atual`) e `frascos_abertos_canal_sync` chamam `_canal_sync_marcar()`, que chama `_canal_sync_enfileirar(uuid[])`: põe os produtos vinculados na fila (uma linha por produto, mesmo com vários vínculos; `on conflict` avança `criado_em` com `clock_timestamp()`; o dreno apaga só a linha com o `criado_em` que leu) e, com URL configurada, avisa o backend por `pg_net`. `_canal_sync_enfileirar` é security definer, executável por `authenticated` (o `confirmar_pedido_canal` chama). A extensão `pg_net` é criada no schema `extensions` (as funções ficam em `net`).
 
 | Função | Resumo | Migração |
 |---|---|---|
 | `confirmar_pedido_canal(p_pedido_id, p_canal_id, p_data_venda, ..., p_itens, p_titulo, p_insumos_envio)` | Só se o pedido está `a_confirmar`: chama `registrar_venda`, marca `confirmado` com `venda_id`, limpa o alerta (vira `alerta_dispensado`) e enfileira os produtos dos itens originais do pedido | 20261118110000_canais_nucleo |
 | `desfazer_pedido_canal(p_pedido_id)` | Só se `cancelado_pos_confirmacao`: cancela a venda (se ainda não estiver cancelada) e fecha o pedido como `cancelado` | 20261118110000_canais_nucleo |
-| `pegar_lease_sync(p_segundos int default 60)` | Pega o lease do dreno da fila se estiver livre ou vencido; devolve `true`/`false`. Security definer, só service role | 20261118110000_canais_nucleo |
-| `soltar_lease_sync()` | Solta o lease. Security definer, só service role | 20261118110000_canais_nucleo |
+| `pegar_lease_sync(p_segundos int default 60, p_dono uuid default null)` | Sem `p_dono`: pega o lease do dreno se livre ou vencido e devolve o token (uuid) do dono, ou null. Com `p_dono`: renova se o lease ainda é desse dono (devolve o token) ou null. Security definer, só service role | 20261118110000_canais_nucleo |
+| `soltar_lease_sync(p_dono uuid)` | Solta o lease só se ainda é desse dono. Security definer, só service role | 20261118110000_canais_nucleo |
 
 ## Relações
 

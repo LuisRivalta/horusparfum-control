@@ -56,7 +56,7 @@ Calculada em `services/canais/estoque.py` e enviada com `inventorySetQuantities`
 - **Decant de X ml:** `floor((ml abertos + estoque_atual x volume_ml - ml reservados - unidades reservadas x volume_ml) / X)` (mínimo 0).
 - Reservado = itens dos pedidos `aguardando_pagamento` e `a_confirmar`. Item gravado sem produto (o pedido chegou antes de a variante ser ligada) reserva pela variante, assim que ela for ligada.
 - Um gatilho no banco (mudança de `estoque_atual` do produto e de `frascos_abertos`) põe o produto na fila `canal_sync_fila` (função `_canal_sync_enfileirar`) e, se houver URL configurada, avisa o backend por `pg_net` (`POST /api/canais/sync`, segredo no cabeçalho `X-Horus-Sync`). A fila só é limpa depois do envio; se falhar, o produto fica na fila e o erro aparece no vínculo (`canal_vinculos.erro`).
-- **Todo envio passa pela fila e por um dreno só** (`drenar_fila`): webhook, ligar variante, publicar, conferir, Sincronizar tudo e `/api/canais/sync` enfileiram os produtos e chamam o dreno. Um **lease** no banco (`canal_sync_lease`, RPCs `pegar_lease_sync` / `soltar_lease_sync`, 60 s) garante um dreno por vez; quem chega com o lease ocupado só deixa o produto na fila (resposta `ocupado: true`). Reenfileirar **avança** `criado_em`, e o dreno só limpa o que entrou até o corte dele; por isso repete (até 5 voltas) enquanto chegar mudança nova durante o envio. Falha não é repetida na mesma chamada. Produto desligado depois de enfileirado sai da fila.
+- **Todo envio passa pela fila e por um dreno só** (`drenar_fila`): webhook, ligar variante, publicar, conferir, Sincronizar tudo e `/api/canais/sync` enfileiram os produtos e chamam o dreno. Um **lease com dono** no banco (`canal_sync_lease`, 60 s) garante um dreno por vez: `pegar_lease_sync` devolve um token (uuid) ou null; o dreno renova o lease no início de cada volta com o próprio token e para se outro dreno pegou; `soltar_lease_sync(token)` só solta o próprio lease. Quem chega com o lease ocupado só deixa o produto na fila (resposta `ocupado: true`). Reenfileirar **avança** `criado_em`, e o dreno apaga só a linha com o **mesmo `criado_em` que leu** (par produto + instante); linha reenfileirada no meio fica. Repete (até 5 voltas) enquanto houver linha nova; falha não é repetida na mesma chamada. Ao soltar, se ainda sobrou fila nova (quem avisou recebeu "ocupado"), pega o lease mais uma vez. Produto desligado depois de enfileirado sai da fila.
 - Vendas da loja física e do WhatsApp continuam manuais, mas movem o estoque e, portanto, a quantidade nos canais.
 
 ## Regra de preço (publicar)
@@ -87,11 +87,13 @@ O push da `main` publica backend e frontend sozinho (Vercel).
 
 ## Limites conhecidos e a conferir
 
-Conferir na documentação da Shopify ao ativar (o código foi escrito sem testar contra a loja real). Na revisão final de 24/11/2026 o shopify.dev não abriu desta máquina (erro de certificado TLS), então os itens abaixo seguem **sem conferência** e o código não mudou:
-- `API_VERSAO = '2026-10'` em `services/shopify/cliente.py`: confirmar que é a versão estável vigente.
-- `webhookSubscriptionCreate`: o código usa o campo `uri`; confirmar se a versão pede `uri` ou `callbackUrl`.
-- `inventorySetQuantities`: o código usa `ignoreCompareQuantity: true`; confirmar o campo na versão. **Atenção (de memória, não verificado):** versões recentes da Admin API podem ter trocado `compareQuantity`/`ignoreCompareQuantity` por `changeFromQuantity` (por quantidade) e exigir a diretiva `@idempotent(key: ...)` nas mutações de estoque. Se for o caso, a primeira sincronização volta com `userErrors`/erro de schema e aparece em `canal_vinculos.erro`.
-- `productSet` (publicar): confirmar os campos de entrada usados em `services/shopify/publicar.py`.
+O código foi escrito sem testar contra a loja real. **Conferido no shopify.dev (Admin GraphQL 2026-10) em 24/11/2026:**
+- `inventorySetQuantities`: desde a 2026-04 cada item de `quantities` leva `changeFromQuantity` (o Horus manda `null` explícito = sem conferência, porque é a fonte da verdade; omitir é erro) e a mutação exige `@idempotent(key: $idempotencyKey)` (uma chave uuid4 nova por chamada). `ignoreCompareQuantity`/`compareQuantity` são da API anterior e saíram do código.
+- `webhookSubscriptionCreate`: `webhookSubscription: { uri, format }` está certo (a doc usa `uri`).
+- `productSet(synchronous: true, input)`: `productOptions`, `variants.optionValues`, `inventoryItem.tracked`, `inventoryQuantities { locationId, name: "available", quantity }` e `files.originalSource` estão certos.
+
+A conferir ao ativar:
+- `API_VERSAO = '2026-10'` em `services/shopify/cliente.py`: confirmar que segue estável na data da ativação.
 - `pg_net` é criado no schema `extensions` (as funções ficam em `net`); se o `create extension` falhar, ver o schema no projeto.
 - `variants(first: 100)`: produto com mais de 100 variantes é cortado na tela de ligar (comentário `ponytail:` no código).
 
