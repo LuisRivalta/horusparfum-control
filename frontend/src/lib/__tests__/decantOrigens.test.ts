@@ -114,4 +114,11 @@ describe('planejarDecants', () => {
     expect(a.origens).toBe(dadas)
     expect(b.origens).toEqual([{ tipo: 'frasco', frascoId: 'f1', produtoId: 'p1', ml: 7 }])
   })
+  it('sem frasco aberto, pelo produto: abre um lacrado; sem lacrado fica sem origem', () => {
+    const [a, b] = planejarDecants([], { p1: 1 }, vol, [
+      { frascoId: '', produtoId: 'p1', ml: 10, origens: null }, { frascoId: '', produtoId: 'p1', ml: 5, origens: null },
+    ])
+    expect(a.origens).toEqual([{ tipo: 'abrir', produtoId: 'p1', ml: 10 }])
+    expect(b.origens).toEqual([])
+  })
 })

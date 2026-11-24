@@ -308,7 +308,8 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved, pedido }
   const custoMedioPorProduto = Object.fromEntries(produtos.map(p => [p.id, p.custo_medio ?? 0]))
   const volumePorProduto = Object.fromEntries(produtos.map(p => [p.id, Number(p.volume_ml) || 0]))
   const nomeProduto = (id: string) => produtos.find(p => p.id === id)?.nome ?? 'outro perfume'
-  const selecionada = (l: LinhaForm) => Boolean(l.tipo === 'produto' ? l.produto_id : l.frasco_id)
+  // decant: frasco aberto escolhido, ou só o produto (sem frasco aberto: sai de um lacrado)
+  const selecionada = (l: LinhaForm) => Boolean(l.tipo === 'produto' ? l.produto_id : l.frasco_id || l.produto_id)
 
   function mlNecessario(l: LinhaForm): number {
     return new Decimal(Number(l.ml) || 0).mul(Number(l.quantidade) || 0).toNumber()
@@ -329,7 +330,7 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved, pedido }
   const lacradosDecant = { ...lacrados }
   for (const p of produtos) if (!vendeDecant(p, tipos)) lacradosDecant[p.id] = 0
   const planos = planejarDecants(frascosRpc, lacradosDecant, volumePorProduto, linhas.map(l => l.tipo === 'decant'
-    ? { frascoId: l.frasco_id, ml: mlNecessario(l), origens: l.origens, jaConsumido: Boolean(l.decant_id) }
+    ? { frascoId: l.frasco_id, produtoId: l.produto_id, ml: mlNecessario(l), origens: l.origens, jaConsumido: Boolean(l.decant_id) }
     : { frascoId: '', ml: 0, origens: [] }))
   const plano = (l: LinhaForm) => planos[linhas.indexOf(l)]
   const frascoDaLinha = (l: LinhaForm) => plano(l).frasco
@@ -411,8 +412,14 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved, pedido }
       return p ? `${p.estoque_atual} un.` : ''
     }
     const f = frascos.find(x => x.id === l.frasco_id)
-    return f ? `${fmtMl(Number(f.ml_restante))} ml` : ''
+    if (f) return `${fmtMl(Number(f.ml_restante))} ml`
+    const p = produtos.find(x => x.id === l.produto_id)
+    return p ? `${p.estoque_atual} lacrado(s)` : ''
   }
+
+  // perfumes de decant sem frasco aberto, mas com lacrado: a linha sai abrindo um
+  const soLacrados = produtos.filter(p => Number(p.estoque_atual) > 0 && vendeDecant(p, tipos)
+    && !frascos.some(f => f.produto_id === p.id && (f.status ?? 'ativo') === 'ativo'))
 
   const insumosJson = (itens: ItemInsumo[]) =>
     itens.filter(i => i.quantidade > 0).map(i => ({ insumo_id: i.insumoId, quantidade: i.quantidade }))
@@ -446,8 +453,8 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved, pedido }
       const origens = origensDaLinha(l)
       return {
         tipo: 'decant',
-        produto_id: frascos.find(f => f.id === l.frasco_id)?.produto_id ?? origens[0]?.produtoId,
-        frasco_id: l.frasco_id,
+        produto_id: frascos.find(f => f.id === l.frasco_id)?.produto_id ?? origens[0]?.produtoId ?? l.produto_id,
+        frasco_id: l.frasco_id || null,
         ml: Number(l.ml),
         ...comum,
         ...(l.decant_id ? { decant_id: l.decant_id } : {}),
@@ -763,9 +770,16 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved, pedido }
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_90px_60px_95px] gap-2 items-end">
                     <Select
                       label="Frasco aberto"
-                      options={frascos.map(f => ({ value: f.id, label: `${f.produtos?.nome} (${fmtMl(Number(f.ml_restante))}ml)` }))}
-                      value={l.frasco_id}
-                      onChange={(e) => setLinha(i, { frasco_id: e.target.value, origens: null, decant_id: '' })}
+                      options={[
+                        ...frascos.map(f => ({ value: f.id, label: `${f.produtos?.nome} (${fmtMl(Number(f.ml_restante))}ml)` })),
+                        ...soLacrados.map(p => ({ value: `lacrado:${p.id}`, label: `${p.nome} (abrir lacrado)` })),
+                      ]}
+                      value={l.frasco_id || (l.produto_id ? `lacrado:${l.produto_id}` : '')}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        const lacrado = v.startsWith('lacrado:')
+                        setLinha(i, { frasco_id: lacrado ? '' : v, produto_id: lacrado ? v.slice(8) : '', origens: null, decant_id: '' })
+                      }}
                     />
                     <Select
                       label="ml"
@@ -780,14 +794,10 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved, pedido }
                 )}
 
                 {pedido && !selecionada(l) && (
-                  <span className="text-xs text-down">
-                    {l.tipo === 'produto' || !l.produto_id
-                      ? 'Escolha o produto (não ligado na Shopify)'
-                      : `Sem frasco aberto de ${nomeProduto(l.produto_id)}: escolha um frasco aberto`}
-                  </span>
+                  <span className="text-xs text-down">Escolha o produto (não ligado na Shopify)</span>
                 )}
 
-                {l.tipo === 'decant' && l.frasco_id && (
+                {l.tipo === 'decant' && selecionada(l) && (
                   <div className="flex flex-col gap-1.5 text-xs">
                     {origensDaLinha(l).length > 0 && (
                       <div className="flex flex-wrap items-center gap-2">

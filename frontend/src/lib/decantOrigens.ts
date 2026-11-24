@@ -55,7 +55,8 @@ export function aplicarDevolucoes(frascos: FrascoEstado[], devolucoes: Devolucao
   return estado
 }
 
-export interface PedidoDecant { frascoId: string; ml: number; origens: Origem[] | null; jaConsumido?: boolean }
+// produtoId sem frasco escolhido: perfume sem frasco aberto, sai de um lacrado
+export interface PedidoDecant { frascoId: string; produtoId?: string; ml: number; origens: Origem[] | null; jaConsumido?: boolean }
 export interface PlanoDecant { origens: Origem[]; frasco?: FrascoEstado; frascos: FrascoEstado[] }
 
 // Planeja os decants na ordem em que a RPC os consome: cada item vê os frascos e lacrados já
@@ -79,6 +80,8 @@ export function planejarDecants(
       origens = planejarOrigens(p.ml, aberto, pid, sobra[pid] ?? 0, volumes[pid] ?? 0)
         ?? (aberto && planejarOrigens(Decimal.min(p.ml, Math.max(aberto.mlRestante, 0)).toNumber(), aberto, pid, 0, 0))
         ?? []
+    } else if (!p.origens && !escolhido && p.produtoId && p.ml > 0) {
+      origens = planejarOrigens(p.ml, null, p.produtoId, sobra[p.produtoId] ?? 0, volumes[p.produtoId] ?? 0) ?? []
     }
     if (!p.jaConsumido) {
       for (const o of origens) {

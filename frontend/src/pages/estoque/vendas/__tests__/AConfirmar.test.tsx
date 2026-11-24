@@ -163,13 +163,41 @@ describe('AConfirmar', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
-  it('cancelado após confirmação: Desfazer venda e Manter', async () => {
+  it('Desfazer venda pede confirmação e chama desfazer_pedido_canal', async () => {
     await abrir()
     fireEvent.click(within(linha('#1003')).getByRole('button', { name: 'Desfazer venda' }))
+    expect(rpc).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Sim, desfazer venda' }))
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('desfazer_pedido_canal', { p_pedido_id: 'ped3' }))
+  })
 
+  it('Manter volta o pedido para confirmado e limpa o alerta', async () => {
+    await abrir()
     fireEvent.click(within(linha('#1003')).getByRole('button', { name: 'Manter' }))
     await waitFor(() => expect(updates).toContainEqual({ table: 'pedidos_canal', patch: { status: 'confirmado', alerta: null }, id: 'ped3' }))
+  })
+
+  it('cada linha mostra os itens (título × quantidade) e o frete', async () => {
+    await abrir()
+    const l = linha('#1002')
+    expect(within(l).getByText('Perfume X 100ml × 1')).toBeInTheDocument()
+    expect(within(l).getByText('Perfume Y 5ml × 2')).toBeInTheDocument()
+    expect(within(l).getByText(/19,90/)).toBeInTheDocument()
+  })
+
+  it('decant de perfume só com lacrado: abre um lacrado ao confirmar', async () => {
+    db.produtos.push({ id: 'p3', nome: 'Perfume Z', estoque_atual: 1, custo_medio: 150, preco_referencia: 250, volume_ml: 50 })
+    const ped2 = db.pedidos_canal.find((p) => p.id === 'ped2')!
+    ped2.itens = [{ variante_id: 'v4', titulo: 'Perfume Z 5ml', quantidade: 2, preco_unitario: 30, produto_id: 'p3', tipo: 'decant', ml: 5 }]
+    await abrirFormulario()
+    await waitFor(() => expect(screen.getByText(/abrir 1 lacrado/i)).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /registrar venda/i }))
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('confirmar_pedido_canal', expect.anything()))
+    const args = rpc.mock.calls.find((c) => c[0] === 'confirmar_pedido_canal')![1]
+    expect(args.p_itens).toEqual([expect.objectContaining({
+      tipo: 'decant', produto_id: 'p3', frasco_id: null, ml: 5, quantidade: 2,
+      origens: [{ abrir_produto_id: 'p3', ml: 10 }],
+    })])
   })
 
   it('alerta de reembolso parcial tem Ok que limpa o alerta', async () => {

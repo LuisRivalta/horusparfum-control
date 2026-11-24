@@ -5,6 +5,7 @@ import { ROTULO_STATUS, type PedidoCanal } from '@/lib/canais'
 import { Button } from '@/components/shared/FormControls'
 import { formatBRL } from '@/lib/utils'
 import { NovaVendaModal } from './NovaVendaModal'
+import { Modal } from '@/components/shared/Modal'
 
 /** Pedidos que pedem ação: abertos, cancelados após confirmação ou com alerta. */
 export const FILTRO_A_CONFIRMAR = 'status.in.(aguardando_pagamento,a_confirmar,cancelado_pos_confirmacao),alerta.not.is.null'
@@ -20,6 +21,7 @@ export function AConfirmar({ onMudou }: { onMudou?: () => void }) {
   const [erro, setErro] = useState<string | null>(null)
   const [confirmando, setConfirmando] = useState<PedidoCanal | null>(null)
   const [ocupado, setOcupado] = useState<string | null>(null)
+  const [desfazendo, setDesfazendo] = useState<PedidoCanal | null>(null)
   const conferiu = useRef(false)
 
   const carregar = useCallback(async () => {
@@ -66,7 +68,8 @@ export function AConfirmar({ onMudou }: { onMudou?: () => void }) {
                 <th className="text-left px-4 py-3 text-text-2 font-medium">Pedido</th>
                 <th className="text-left px-4 py-3 text-text-2 font-medium">Data</th>
                 <th className="text-left px-4 py-3 text-text-2 font-medium">Cliente</th>
-                <th className="text-right px-4 py-3 text-text-2 font-medium">Itens</th>
+                <th className="text-left px-4 py-3 text-text-2 font-medium">Itens</th>
+                <th className="text-right px-4 py-3 text-text-2 font-medium">Frete</th>
                 <th className="text-right px-4 py-3 text-text-2 font-medium">Total</th>
                 <th className="text-left px-4 py-3 text-text-2 font-medium">Situação</th>
                 <th className="px-4 py-3" />
@@ -74,15 +77,20 @@ export function AConfirmar({ onMudou }: { onMudou?: () => void }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted">Carregando...</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted">Carregando...</td></tr>
               ) : pedidos.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted">Nenhum pedido a confirmar</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted">Nenhum pedido a confirmar</td></tr>
               ) : pedidos.map((p) => (
                 <tr key={p.id} className="border-b border-line last:border-0">
                   <td className="px-4 py-3 font-mono text-muted">{p.numero ?? p.externo_id}</td>
                   <td className="px-4 py-3 text-text-2 text-xs">{formatData(p.criado_em)}</td>
                   <td className="px-4 py-3">{p.cliente || '—'}</td>
-                  <td className="px-4 py-3 text-right font-mono">{p.itens.reduce((s, i) => s + i.quantidade, 0)}</td>
+                  <td className="px-4 py-3 text-xs">
+                    <ul className="flex flex-col gap-0.5">
+                      {p.itens.map((i, k) => <li key={k}>{`${i.titulo} × ${i.quantidade}`}</li>)}
+                    </ul>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">{p.frete != null ? formatBRL(Number(p.frete)) : '—'}</td>
                   <td className="px-4 py-3 text-right font-mono">{p.total != null ? formatBRL(Number(p.total)) : '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-0.5">
@@ -97,7 +105,7 @@ export function AConfirmar({ onMudou }: { onMudou?: () => void }) {
                       )}
                       {p.status === 'cancelado_pos_confirmacao' ? (
                         <>
-                          <Button size="sm" variant="danger" disabled={ocupado === p.id} onClick={() => desfazer(p)}>Desfazer venda</Button>
+                          <Button size="sm" variant="danger" disabled={ocupado === p.id} onClick={() => setDesfazendo(p)}>Desfazer venda</Button>
                           <Button size="sm" variant="secondary" disabled={ocupado === p.id}
                             onClick={() => atualizar(p, { status: 'confirmado', alerta: null })}>Manter</Button>
                         </>
@@ -112,6 +120,22 @@ export function AConfirmar({ onMudou }: { onMudou?: () => void }) {
           </table>
         </div>
       </div>
+
+      <Modal open={!!desfazendo} onClose={() => setDesfazendo(null)} title="Desfazer venda" size="sm">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-text-2">
+            O pedido <span className="font-mono">{desfazendo?.numero}</span> foi cancelado na Shopify. Desfazer a venda?
+            O estoque é devolvido, os decants são estornados e os lançamentos no caixa são removidos.
+          </p>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="secondary" onClick={() => setDesfazendo(null)}>Voltar</Button>
+            <Button variant="danger" disabled={!!ocupado}
+              onClick={() => { if (desfazendo) desfazer(desfazendo); setDesfazendo(null) }}>
+              Sim, desfazer venda
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {confirmando && (
         <NovaVendaModal open pedido={confirmando} onClose={() => setConfirmando(null)} onSaved={carregar} />

@@ -340,4 +340,21 @@ describe('VendaFormModal', () => {
     expect(item.origens).toEqual([{ frasco_id: 'f9', ml: 5 }])
     expect(item).not.toHaveProperty('decant_id')
   })
+
+  it('decant de perfume sem frasco aberto, só lacrado: escolhe o lacrado e abre um', async () => {
+    db.produtos.push({ id: 'p3', nome: 'Perfume Z', estoque_atual: 1, custo_medio: 150, preco_referencia: 250, volume_ml: 50 })
+    render(<NovaVendaModal open onClose={vi.fn()} onSaved={vi.fn()} />)
+    await waitFor(() => expect(opcoes(screen.getByLabelText('Canal'))).toHaveLength(3))
+    escolher(screen.getByLabelText('Canal'), 'c2')
+    escolher(screen.getByLabelText('Tipo'), 'decant')
+    escolher(screen.getByLabelText('Frasco aberto'), 'lacrado:p3')
+    escolher(screen.getByLabelText('ml'), '5')
+    fireEvent.change(screen.getByLabelText('Preço un.'), { target: { value: '50' } })
+    expect(screen.getByText(/abrir 1 lacrado/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /registrar venda/i }))
+    await waitFor(() => expect(payload('registrar_venda')).toBeDefined())
+    expect(payload('registrar_venda').p_itens[0]).toMatchObject({
+      tipo: 'decant', produto_id: 'p3', frasco_id: null, ml: 5, origens: [{ abrir_produto_id: 'p3', ml: 5 }],
+    })
+  })
 })
