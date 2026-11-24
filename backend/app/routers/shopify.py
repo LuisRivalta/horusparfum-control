@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-164343-319a
+# ID                 : 20261124-104730-3c28
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Shopify: rotas shopify.py
 # Assunto            : Rotas de conexao, variantes, vinculos e webhook de pedidos da Shopify
 # Origem             : solicitacao do usuario
-# Motivo             : Correcoes da revisao: preco>0, titulo, 502 ao falhar vinculos
+# Motivo             : Webhook, vincular e publicar passam a enfileirar e drenar a fila em vez de sincronizar direto (revisao final)
 # Criado em          : 2026-11-18 16:33:26
-# Ultima modificacao : 2026-11-18 16:43:43
+# Ultima modificacao : 2026-11-24 10:47:30
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import json
@@ -26,7 +26,7 @@ from starlette.concurrency import run_in_threadpool
 from app.auth.deps import get_current_user
 from app.config import settings
 from app.db.supabase import get_supabase
-from app.services.canais.estoque import enfileirar, sincronizar
+from app.services.canais.estoque import drenar_fila, enfileirar
 from app.services.canais.pedidos import ingerir, normalizar_webhook
 from app.services.shopify.publicar import OPCAO, PRODUCT_SET, montar_produto
 from app.services.shopify.cliente import (
@@ -194,7 +194,8 @@ def vincular(body: VinculoIn, user: dict = Depends(get_current_user), db=Depends
         'externo_produto_id': body.produto_ext_id, 'externo_estoque_id': body.estoque_id,
         'titulo': body.titulo, 'erro': None,
     }, on_conflict='canal,externo_variante_id').execute()
-    return sincronizar(db, cliente, [produto_id])
+    enfileirar(db, [produto_id])
+    return drenar_fila(db, cliente)
 
 
 @router.delete('/vinculos/{variante_id}')
@@ -207,9 +208,11 @@ def desvincular(variante_id: str, user: dict = Depends(get_current_user), db=Dep
 
 def _receber(db, cliente: ShopifyCliente, pedido: dict) -> None:
     ids = ingerir(db, CANAL, normalizar_webhook(pedido), conectado_em(db))  # RuntimeError → 500, a Shopify reenvia
+    if not ids:
+        return
     enfileirar(db, ids)  # se o envio falhar, o produto fica na fila
     try:
-        sincronizar(db, cliente, ids)
+        drenar_fila(db, cliente)
     except Exception:
         log.exception('Sincronização após webhook falhou; produtos ficam na fila')
 
@@ -301,7 +304,7 @@ def publicar(body: ProdutoIn, user: dict = Depends(get_current_user), db=Depends
         raise HTTPException(
             status_code=502, detail='Produto criado na Shopify, mas não foi ligado: use Ligar produtos') from None
     try:
-        sincronizar(db, cliente, [produto_id])
+        drenar_fila(db, cliente)
     except Exception:
         log.exception('Sincronização após publicar falhou; produto fica na fila')
     return {'produto_ext_id': criado['legacyResourceId'], 'variantes': len(linhas)}

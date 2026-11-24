@@ -1,12 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-162908-8f61
+# ID                 : 20261124-104731-ebb4
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Canais: test_canais_estoque.py
 # Assunto            : Testes de reserva e sincronizacao de estoque
 # Origem             : solicitacao do usuario
-# Motivo             : Cobrir por teste o calculo de quantidade, o envio e a fila
+# Motivo             : Testes do lease, da fila que avanca, da reserva pela variante e da limpeza de produto desligado
 # Criado em          : 2026-11-18 16:29:08
+# Ultima modificacao : 2026-11-24 10:47:31
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import unittest
@@ -15,7 +16,7 @@ from types import SimpleNamespace
 
 import httpx
 
-from app.services.canais.estoque import drenar_fila, quantidade_canal, reservas, sincronizar
+from app.services.canais.estoque import drenar_fila, enfileirar, quantidade_canal, reservas, sincronizar
 from app.services.shopify.cliente import ShopifyErro
 
 P1, P2 = "p1", "p2"
@@ -50,8 +51,24 @@ class FakeQuery:
         self.filtros.append(lambda r: r.get(campo) <= valor)
         return self
 
+    def gt(self, campo, valor):
+        self.filtros.append(lambda r: r.get(campo) > valor)
+        return self
+
+    def upsert(self, payload, on_conflict, ignore_duplicates=False):
+        self.op, self.payload, self.conflito, self.ignorar = "upsert", payload, on_conflict, ignore_duplicates
+        return self
+
     def execute(self):
         linhas = self.db.tabelas.setdefault(self.nome, [])
+        if self.op == "upsert":
+            for item in self.payload:
+                achou = next((r for r in linhas if r[self.conflito] == item[self.conflito]), None)
+                if achou is None:
+                    linhas.append(dict(item))
+                elif not self.ignorar:
+                    achou.update(item)
+            return SimpleNamespace(data=list(self.payload))
         alvo = [r for r in linhas if all(f(r) for f in self.filtros)]
         if self.op == "update":
             for r in alvo:
@@ -65,17 +82,31 @@ class FakeQuery:
 class FakeDb:
     def __init__(self, **tabelas):
         self.tabelas = tabelas
+        self.lease, self.rpcs = False, []
 
     def table(self, nome):
         return FakeQuery(self, nome)
 
+    def rpc(self, nome, params=None):
+        self.rpcs.append(nome)
+        dado = None
+        if nome == "pegar_lease_sync":
+            dado, self.lease = not self.lease, True
+        elif nome == "soltar_lease_sync":
+            self.lease = False
+        return SimpleNamespace(execute=lambda: SimpleNamespace(data=dado))
+
 
 class FakeCliente:
-    def __init__(self, erro=None, location="gid://loc/1"):
+    def __init__(self, erro=None, location="gid://loc/1", durante=None):
         self.chamadas, self.erro, self.location_id = [], erro, location
+        self.durante = durante  # roda no meio do envio (mudança concorrente)
 
     def graphql(self, query, variables=None):
         self.chamadas.append((query, variables))
+        if self.durante:
+            acao, self.durante = self.durante, None
+            acao()
         if self.erro:
             raise self.erro
         return {"inventorySetQuantities": {"userErrors": []}}
@@ -169,6 +200,74 @@ class EstoqueTest(unittest.TestCase):
         res = drenar_fila(db, cli)
         self.assertEqual(res["enviados"], 1)
         self.assertEqual(db.tabelas["canal_sync_fila"], [])
+        self.assertEqual(db.rpcs, ["pegar_lease_sync", "soltar_lease_sync"])
+        self.assertFalse(db.lease)
+
+    def test_drenar_ocupado_nao_envia(self):
+        db, cli = montar(), FakeCliente()
+        db.lease = True  # outro dreno em andamento
+        self.assertEqual(drenar_fila(db, cli), {"enviados": 0, "erros": [], "ocupado": True})
+        self.assertEqual(cli.chamadas, [])
+        self.assertEqual(len(db.tabelas["canal_sync_fila"]), 2)
+        self.assertTrue(db.lease)  # não solta o lease alheio
+
+    def test_drenar_solta_lease_mesmo_com_erro(self):
+        db = montar()
+        cli = FakeCliente(erro=RuntimeError("inesperado"))
+        with self.assertRaises(RuntimeError):
+            drenar_fila(db, cli)
+        self.assertFalse(db.lease)
+
+    def test_drenar_repete_quando_entra_mudanca_durante_envio(self):
+        db = montar()
+        db.tabelas["canal_sync_fila"] = [{"produto_id": P1, "criado_em": ANTES}]
+        # durante o envio de P1, um pedido novo reenfileira P1 (criado_em avança)
+        cli = FakeCliente(durante=lambda: enfileirar(db, [P1]))
+        res = drenar_fila(db, cli)
+        self.assertEqual(len(cli.chamadas), 2)  # mandou de novo com o estado novo
+        self.assertEqual(res["enviados"], 4)
+        self.assertEqual(db.tabelas["canal_sync_fila"], [])
+
+    def test_drenar_nao_repete_falha(self):
+        db, cli = montar(), FakeCliente(erro=ShopifyErro("boom"))
+        res = drenar_fila(db, cli)
+        self.assertEqual(len(cli.chamadas), 1)
+        self.assertEqual(len(res["erros"]), 1)
+        self.assertEqual(len(db.tabelas["canal_sync_fila"]), 2)
+
+    def test_enfileirar_avanca_criado_em(self):
+        db = montar()
+        enfileirar(db, [P1, "p9"])
+        fila = {r["produto_id"]: r["criado_em"] for r in db.tabelas["canal_sync_fila"]}
+        self.assertGreater(fila[P1], ANTES)
+        self.assertEqual(fila[P2], ANTES)
+        self.assertIn("p9", fila)
+
+    def test_produto_desligado_sai_da_fila(self):
+        db = montar()
+        db.tabelas["canal_sync_fila"].append({"produto_id": "p9", "criado_em": ANTES})
+        sincronizar(db, FakeCliente(), [P2, "p9"], "2999-01-01")
+        self.assertEqual([r["produto_id"] for r in db.tabelas["canal_sync_fila"]], [P1])
+
+    def test_item_sem_produto_reserva_pela_variante(self):
+        # pedido chegou antes do vínculo: produto_id null, mas a variante agora está ligada
+        pedidos = [{"status": "a_confirmar", "itens": [
+            {"variante_id": "777", "produto_id": None, "tipo": None, "ml": None, "quantidade": 2},
+            {"variante_id": "888", "produto_id": None, "tipo": None, "ml": None, "quantidade": 1},
+            {"variante_id": "999", "produto_id": None, "tipo": None, "ml": None, "quantidade": 5}]}]
+        ligados = {"777": {"produto_id": P1, "tipo": "frasco", "ml": None},
+                   "888": {"produto_id": P1, "tipo": "decant", "ml": 5}}
+        self.assertEqual(reservas(pedidos, ligados), {P1: (2, Decimal(5))})
+
+    def test_sincronizar_reserva_item_ligado_depois(self):
+        db = montar()
+        db.tabelas["pedidos_canal"] = [{"status": "a_confirmar", "itens": [
+            {"variante_id": "777", "produto_id": None, "tipo": None, "ml": None, "quantidade": 3}]}]
+        db.tabelas["canal_vinculos"][2]["externo_variante_id"] = "777"  # v3 → P2
+        cli = FakeCliente()
+        sincronizar(db, cli, [P2])
+        [q] = cli.chamadas[0][1]["input"]["quantities"]
+        self.assertEqual(q["quantity"], 1)  # 4 em estoque - 3 reservados
 
 
 if __name__ == "__main__":

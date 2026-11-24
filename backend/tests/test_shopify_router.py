@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-163834-2bde
+# ID                 : 20261124-104732-da4b
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Shopify: test_shopify_router.py
 # Assunto            : Testes das rotas da Shopify e dos canais
 # Origem             : solicitacao do usuario
-# Motivo             : Cobrir janela da conferencia, webhook 500 e exigencia de token pedidos na revisao
+# Motivo             : Fake do banco com lease e testes de dreno ocupado e sincronizar tudo
 # Criado em          : 2026-11-18 16:32:45
-# Ultima modificacao : 2026-11-18 16:38:34
+# Ultima modificacao : 2026-11-24 10:47:32
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import base64
@@ -73,6 +73,10 @@ class FakeQuery:
         self.filtros.append(lambda r: r.get(campo) <= valor)
         return self
 
+    def gt(self, campo, valor):
+        self.filtros.append(lambda r: r.get(campo) > valor)
+        return self
+
     def order(self, campo, desc=False):
         self.ordem = (campo, desc)
         return self
@@ -113,9 +117,18 @@ class FakeQuery:
 class FakeDb:
     def __init__(self, **tabelas):
         self.tabelas = tabelas
+        self.lease = False
 
     def table(self, nome):
         return FakeQuery(self, nome)
+
+    def rpc(self, nome, params=None):
+        dado = None
+        if nome == "pegar_lease_sync":
+            dado, self.lease = not self.lease, True
+        elif nome == "soltar_lease_sync":
+            self.lease = False
+        return SimpleNamespace(execute=lambda: SimpleNamespace(data=dado))
 
 
 def conexao(**extra):
@@ -248,6 +261,25 @@ class RotasTest(unittest.TestCase):
         self.usar(db, Shopify())
         r = self.postar_webhook(pedido_webhook())
         self.assertEqual(r.status_code, 200)
+        self.assertEqual([f["produto_id"] for f in db.tabelas["canal_sync_fila"]], [P1])
+
+    def test_webhook_com_dreno_ocupado_deixa_na_fila(self):
+        db = self.base_db()
+        db.lease = True  # outro dreno em andamento: ele pega o produto na próxima volta
+        self.usar(db, Shopify())
+        self.assertEqual(self.postar_webhook(pedido_webhook()).status_code, 200)
+        self.assertEqual(self.loja.mutations("inventorySetQuantities"), [])
+        self.assertEqual([f["produto_id"] for f in db.tabelas["canal_sync_fila"]], [P1])
+
+    def test_sincronizar_tudo_enfileira_e_drena(self):
+        db = self.base_db()
+        self.usar(db, Shopify())
+        r = self.http.post("/api/canais/sincronizar")
+        self.assertEqual(r.json(), {"enviados": 1, "erros": []})
+        self.assertEqual(db.tabelas["canal_sync_fila"], [])
+        db.lease = True
+        self.assertEqual(self.http.post("/api/canais/sincronizar").json(),
+                         {"enviados": 0, "erros": [], "ocupado": True})
         self.assertEqual([f["produto_id"] for f in db.tabelas["canal_sync_fila"]], [P1])
 
     def test_webhook_repetido_uma_linha(self):

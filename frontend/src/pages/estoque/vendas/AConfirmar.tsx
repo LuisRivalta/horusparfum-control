@@ -107,10 +107,11 @@ export function AConfirmar({ onMudou }: { onMudou?: () => void }) {
                         <>
                           <Button size="sm" variant="danger" disabled={ocupado === p.id} onClick={() => setDesfazendo(p)}>Desfazer venda</Button>
                           <Button size="sm" variant="secondary" disabled={ocupado === p.id}
-                            onClick={() => atualizar(p, { status: 'confirmado', alerta: null })}>Manter</Button>
+                            onClick={() => atualizar(p, { status: 'confirmado', alerta: null, alerta_dispensado: 'cancelado' })}>Manter</Button>
                         </>
                       ) : p.alerta && (
-                        <Button size="sm" variant="secondary" disabled={ocupado === p.id} onClick={() => atualizar(p, { alerta: null })}>Ok</Button>
+                        <Button size="sm" variant="secondary" disabled={ocupado === p.id}
+                          onClick={() => atualizar(p, { alerta: null, alerta_dispensado: p.alerta })}>Ok</Button>
                       )}
                     </div>
                   </td>

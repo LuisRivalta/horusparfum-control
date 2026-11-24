@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-164344-d28b
+# ID                 : 20261124-104733-9467
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Shopify: test_shopify_publicar.py
 # Assunto            : Testes da publicacao de produto
 # Origem             : solicitacao do usuario
-# Motivo             : Testes das recusas 422/404 e falha ao ligar
+# Motivo             : Teste passa a simular falha do dreno em vez da sincronizacao direta
 # Criado em          : 2026-11-18 16:40:52
-# Ultima modificacao : 2026-11-18 16:43:44
+# Ultima modificacao : 2026-11-24 10:47:33
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import json
@@ -137,7 +137,7 @@ class PublicarTest(unittest.TestCase):
 
     def test_sincronizacao_falha_nao_derruba(self):
         self.usar(LojaPublicar())
-        with patch.object(rota, "sincronizar", side_effect=RuntimeError("x")):
+        with patch.object(rota, "drenar_fila", side_effect=RuntimeError("x")):
             r = self.http.post("/api/shopify/produtos", json=self.corpo())
         self.assertEqual(r.status_code, 200)
         self.assertEqual(len(self.db.tabelas["canal_vinculos"]), 3)

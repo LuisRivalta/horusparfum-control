@@ -13,7 +13,7 @@ export interface LigarShopifyBody {
   variante_id: string; produto_ext_id: string | null; estoque_id: string; titulo: string | null
   produto_id: string; tipo: 'frasco' | 'decant'; ml: number | null
 }
-export interface ResultadoSync { enviados: number; erros: string[] }
+export interface ResultadoSync { enviados: number; erros: string[]; ocupado?: boolean }
 export interface PublicarShopifyBody {
   produto_id: string; titulo: string; descricao: string; fotos: string[]
   variantes: { tipo: 'frasco' | 'decant'; ml: number | null; preco: number }[]

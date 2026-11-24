@@ -171,10 +171,17 @@ describe('AConfirmar', () => {
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('desfazer_pedido_canal', { p_pedido_id: 'ped3' }))
   })
 
-  it('Manter volta o pedido para confirmado e limpa o alerta', async () => {
+  it('Manter volta o pedido para confirmado, limpa o alerta e grava a dispensa', async () => {
     await abrir()
     fireEvent.click(within(linha('#1003')).getByRole('button', { name: 'Manter' }))
-    await waitFor(() => expect(updates).toContainEqual({ table: 'pedidos_canal', patch: { status: 'confirmado', alerta: null }, id: 'ped3' }))
+    await waitFor(() => expect(updates).toContainEqual({ table: 'pedidos_canal', patch: { status: 'confirmado', alerta: null, alerta_dispensado: 'cancelado' }, id: 'ped3' }))
+  })
+
+  it('formulário de confirmação mostra o alerta do pedido acima dos itens', async () => {
+    db.pedidos_canal.find((p) => p.id === 'ped2')!.alerta = 'Reembolso parcial de R$ 15,00 na Shopify'
+    await abrirFormulario()
+    const dialogo = screen.getByLabelText('Nome da venda (opcional)').closest('dialog') as HTMLElement
+    expect(within(dialogo).getByText('Reembolso parcial de R$ 15,00 na Shopify')).toBeInTheDocument()
   })
 
   it('cada linha mostra os itens (título × quantidade) e o frete', async () => {
@@ -200,11 +207,11 @@ describe('AConfirmar', () => {
     })])
   })
 
-  it('alerta de reembolso parcial tem Ok que limpa o alerta', async () => {
+  it('alerta de reembolso parcial tem Ok que limpa o alerta e grava o texto dispensado', async () => {
     await abrir()
     const l = linha('#1004')
     expect(within(l).getByText('Reembolso parcial de R$ 10,00 na Shopify')).toBeInTheDocument()
     fireEvent.click(within(l).getByRole('button', { name: 'Ok' }))
-    await waitFor(() => expect(updates).toContainEqual({ table: 'pedidos_canal', patch: { alerta: null }, id: 'ped4' }))
+    await waitFor(() => expect(updates).toContainEqual({ table: 'pedidos_canal', patch: { alerta: null, alerta_dispensado: 'Reembolso parcial de R$ 10,00 na Shopify' }, id: 'ped4' }))
   })
 })

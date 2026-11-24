@@ -91,4 +91,16 @@ describe('AnunciosConfig', () => {
     expect(await screen.findByText('3 estoques enviados.')).toBeInTheDocument()
     expect(screen.getByText('Falhou X')).toBeInTheDocument()
   })
+
+  it('sincronização já em andamento avisa que o estoque segue na fila', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(url.endsWith('/sincronizar') ? { enviados: 0, erros: [], ocupado: true }
+        : { conectado: true, nickname: 'LOJA', loja: 'horus.myshopify.com', conectado_em: '2026-11-18' }),
+    })))
+    abrir()
+    fireEvent.click(await screen.findByRole('button', { name: 'Sincronizar tudo' }))
+    expect(await screen.findByText(/sincronização já está em andamento/i)).toBeInTheDocument()
+    expect(screen.queryByText('0 estoques enviados.')).not.toBeInTheDocument()
+  })
 })

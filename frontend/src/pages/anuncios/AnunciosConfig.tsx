@@ -132,7 +132,9 @@ export function AnunciosConfig() {
         </div>
         {sync && (
           <div role="status" className="text-sm">
-            <p>{sync.enviados} {sync.enviados === 1 ? 'estoque enviado' : 'estoques enviados'}.</p>
+            {sync.ocupado
+              ? <p>Uma sincronização já está em andamento; os estoques ficam na fila e são enviados por ela.</p>
+              : <p>{sync.enviados} {sync.enviados === 1 ? 'estoque enviado' : 'estoques enviados'}.</p>}
             {sync.erros.map((m) => <p key={m} className="text-down">{m}</p>)}
           </div>
         )}

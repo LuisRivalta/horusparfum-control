@@ -21,6 +21,8 @@ export interface PedidoCanal {
   id: string; canal: string; externo_id: string; numero: string | null; status: StatusPedidoCanal
   cliente: string | null; criado_em: string | null; total: number | null; frete: number | null
   itens: ItemPedidoCanal[]; venda_id: string | null; alerta: string | null
+  /** 'cancelado' (Manter) ou o texto do alerta que recebeu Ok: a releitura não alerta de novo. */
+  alerta_dispensado?: string | null
 }
 
 export interface LinhaPedido { tipo: 'produto' | 'decant'; produto_id: string; ml: string; quantidade: string; preco: string }

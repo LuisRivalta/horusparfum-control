@@ -724,6 +724,10 @@ export function VendaFormModal({ open, mode, vendaId, onClose, onSaved, pedido }
             <Input label="Forma de pagamento" value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} placeholder="Pix, Cartão…" />
           </div>
 
+          {pedido?.alerta && (
+            <div className="px-3 py-2.5 rounded-lg bg-down/10 border border-down/30 text-down text-sm">{pedido.alerta}</div>
+          )}
+
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium uppercase tracking-[.08em] text-muted">Itens</span>
 

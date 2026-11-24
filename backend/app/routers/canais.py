@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-163833-cfac
+# ID                 : 20261124-104731-09dd
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Canais: rotas canais.py
 # Assunto            : Rotas de conferencia de pedidos e sincronizacao de estoque dos canais
 # Origem             : solicitacao do usuario
-# Motivo             : Conferencia passa a reler 7 dias para nao perder pedido cujo webhook falhou (achado da revisao)
+# Motivo             : Sincronizar tudo enfileira os produtos ligados e drena a fila sob o lease (revisao final)
 # Criado em          : 2026-11-18 16:33:36
-# Ultima modificacao : 2026-11-18 16:38:33
+# Ultima modificacao : 2026-11-24 10:47:31
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import hmac
@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from app.auth.deps import get_current_user
 from app.config import settings
 from app.routers.shopify import CANAL, conectado_em, obter_cliente, obter_db
-from app.services.canais.estoque import drenar_fila, enfileirar, sincronizar
+from app.services.canais.estoque import drenar_fila, enfileirar
 from app.services.canais.pedidos import ingerir, normalizar_graphql
 from app.services.shopify.cliente import ShopifyCliente, ShopifyDesconectado
 
@@ -86,7 +86,9 @@ def conferir(user: dict = Depends(get_current_user), db=Depends(obter_db),
 @router.post('/sincronizar')
 def sincronizar_tudo(user: dict = Depends(get_current_user), db=Depends(obter_db),
                      cliente: ShopifyCliente = Depends(obter_cliente)):
-    return sincronizar(db, cliente, None)
+    ligados = db.table('canal_vinculos').select('produto_id').eq('canal', CANAL).execute().data
+    enfileirar(db, [v['produto_id'] for v in ligados])
+    return drenar_fila(db, cliente)
 
 
 @router.post('/sync')

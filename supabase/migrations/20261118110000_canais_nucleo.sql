@@ -60,10 +60,14 @@ create table if not exists public.pedidos_canal (
   itens      jsonb         not null default '[]',
   venda_id   uuid          references public.vendas(id) on delete set null,
   alerta     text,
+  -- 'cancelado' = o Luis escolheu Manter a venda; outro texto = alerta de reembolso que ele deu Ok.
+  -- A releitura do pedido não levanta de novo o alerta dispensado.
+  alerta_dispensado text,
   created_at timestamptz   default now(),
   updated_at timestamptz   default now(),
   unique (canal, externo_id)
 );
+alter table public.pedidos_canal add column if not exists alerta_dispensado text;
 create index if not exists pedidos_canal_status_idx on public.pedidos_canal (status);
 -- excluir_venda apaga a venda: o pedido fica, sem venda_id (re-run: recria a FK)
 alter table public.pedidos_canal drop constraint if exists pedidos_canal_venda_id_fkey;
@@ -81,12 +85,20 @@ create table if not exists public.canais_sync_config (
   segredo text
 );
 
+-- Lease de um dreno por vez (backend): ate = até quando o dreno atual vale.
+create table if not exists public.canal_sync_lease (
+  id  int         primary key default 1 check (id = 1),
+  ate timestamptz
+);
+insert into public.canal_sync_lease (id, ate) values (1, null) on conflict (id) do nothing;
+
 -- 3. RLS ----------------------------------------------------------
 alter table public.shopify_conexao    enable row level security;
 alter table public.canal_vinculos     enable row level security;
 alter table public.pedidos_canal      enable row level security;
 alter table public.canal_sync_fila    enable row level security;
 alter table public.canais_sync_config enable row level security;
+alter table public.canal_sync_lease   enable row level security;
 
 drop policy if exists "Acesso total autenticados" on public.canal_vinculos;
 create policy "Acesso total autenticados" on public.canal_vinculos
@@ -94,37 +106,36 @@ create policy "Acesso total autenticados" on public.canal_vinculos
 drop policy if exists "Acesso total autenticados" on public.pedidos_canal;
 create policy "Acesso total autenticados" on public.pedidos_canal
   for all to authenticated using (true) with check (true);
--- shopify_conexao, canal_sync_fila, canais_sync_config: RLS ligado e SEM policy
--- (token e segredo; só service role acessa).
+-- shopify_conexao, canal_sync_fila, canais_sync_config, canal_sync_lease: RLS ligado e
+-- SEM policy (token e segredo; só service role acessa).
 drop policy if exists "Acesso total autenticados" on public.shopify_conexao;
 drop policy if exists "Acesso total autenticados" on public.canal_sync_fila;
 drop policy if exists "Acesso total autenticados" on public.canais_sync_config;
+drop policy if exists "Acesso total autenticados" on public.canal_sync_lease;
 
--- 4. Gatilho de sincronização -------------------------------------
--- Produto com vínculo em algum canal entra na fila; se houver URL configurada,
+-- 4. Fila de sincronização ----------------------------------------
+-- Põe na fila os produtos com vínculo em algum canal e, se houver URL configurada,
 -- avisa o backend. O pg_net só envia depois do commit (transação desfeita não avisa).
-create or replace function public._canal_sync_marcar()
-returns trigger
+-- Reenfileirar AVANÇA criado_em: um dreno em andamento (que só limpa o que entrou até o
+-- corte dele) não apaga a mudança nova. clock_timestamp, não now(): transação longa não
+-- grava um instante anterior ao corte de um dreno.
+create or replace function public._canal_sync_enfileirar(p_produto_ids uuid[])
+returns void
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_linha jsonb;
-  v_produto_id uuid;
+  v_n int;
   v_cfg canais_sync_config%rowtype;
 begin
-  v_linha := case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end;
-  v_produto_id := case when tg_table_name = 'produtos' then (v_linha->>'id')::uuid
-                       else (v_linha->>'produto_id')::uuid end;
-
-  if v_produto_id is null
-     or not exists (select 1 from canal_vinculos where produto_id = v_produto_id) then
-    return null;
-  end if;
-
-  insert into canal_sync_fila (produto_id) values (v_produto_id)
-  on conflict do nothing;
+  insert into canal_sync_fila (produto_id, criado_em)
+  select distinct v.produto_id, clock_timestamp()
+  from canal_vinculos v
+  where v.produto_id = any(p_produto_ids)
+  on conflict (produto_id) do update set criado_em = excluded.criado_em;
+  get diagnostics v_n = row_count;
+  if v_n = 0 then return; end if;
 
   select * into v_cfg from canais_sync_config where id = 1;
   if v_cfg.url is not null then
@@ -135,10 +146,61 @@ begin
                                     'X-Horus-Sync', coalesce(v_cfg.segredo, ''))
     );
   end if;
+end;
+$$;
+-- confirmar_pedido_canal (roda como o usuário logado) chama: authenticated executa.
+revoke all on function public._canal_sync_enfileirar(uuid[]) from public, anon;
+grant execute on function public._canal_sync_enfileirar(uuid[]) to authenticated;
 
+create or replace function public._canal_sync_marcar()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_linha jsonb;
+  v_produto_id uuid;
+begin
+  v_linha := case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end;
+  v_produto_id := case when tg_table_name = 'produtos' then (v_linha->>'id')::uuid
+                       else (v_linha->>'produto_id')::uuid end;
+  if v_produto_id is not null then
+    perform _canal_sync_enfileirar(array[v_produto_id]);
+  end if;
   return null;
 end;
 $$;
+
+-- Lease: um dreno da fila por vez. Só o backend (service role) chama.
+create or replace function public.pegar_lease_sync(p_segundos int default 60)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  update canal_sync_lease set ate = now() + make_interval(secs => p_segundos)
+  where id = 1 and (ate is null or ate < now());
+  return found;
+end;
+$$;
+
+create or replace function public.soltar_lease_sync()
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  update canal_sync_lease set ate = null where id = 1;
+end;
+$$;
+
+revoke all on function public.pegar_lease_sync(int) from public, anon, authenticated;
+revoke all on function public.soltar_lease_sync() from public, anon, authenticated;
+grant execute on function public.pegar_lease_sync(int) to service_role;
+grant execute on function public.soltar_lease_sync() to service_role;
 
 drop trigger if exists produtos_canal_sync on public.produtos;
 create trigger produtos_canal_sync
@@ -187,11 +249,23 @@ begin
                              p_taxa_total, p_frete, p_responsavel, p_observacao,
                              p_itens, p_titulo, p_insumos_envio);
 
+  -- o alerta (reembolso parcial) aparece no formulário: confirmar conta como Ok
   update pedidos_canal set
     status = 'confirmado',
     venda_id = (v_venda->>'id')::uuid,
+    alerta = null,
+    alerta_dispensado = coalesce(v_pedido.alerta, v_pedido.alerta_dispensado),
     updated_at = now()
   where id = p_pedido_id;
+
+  -- a reserva dos itens originais acabou: se o Luis trocou o perfume ou tirou uma linha,
+  -- o estoque desses produtos não mudou e o gatilho não dispara; enfileira aqui.
+  -- item gravado sem produto (vínculo feito depois do pedido) reservava pela variante
+  perform _canal_sync_enfileirar(array(
+    select coalesce(nullif(i->>'produto_id', '')::uuid,
+                    (select cv.produto_id from canal_vinculos cv
+                     where cv.canal = v_pedido.canal and cv.externo_variante_id = i->>'variante_id'))
+    from jsonb_array_elements(v_pedido.itens) i));
 
   return v_venda;
 end;

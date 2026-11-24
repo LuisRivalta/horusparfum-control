@@ -9,6 +9,8 @@ do $$
 declare
   v_prod    uuid;
   v_sem     uuid;
+  v_troca   uuid;
+  v_antes   timestamptz;
   v_canal   uuid;
   v_pedido  uuid;
   v_venda   uuid;
@@ -29,17 +31,33 @@ begin
   insert into produtos (nome, volume_ml, custo_medio, estoque_atual, categoria_id)
   values ('teste-check-canal-sem', 100, 180, 5, (select id from categorias limit 1))
   returning id into v_sem;
+  insert into produtos (nome, volume_ml, custo_medio, estoque_atual, categoria_id)
+  values ('teste-check-canal-troca', 100, 180, 5, (select id from categorias limit 1))
+  returning id into v_troca;
   insert into canal_vinculos (canal, produto_id, tipo, externo_variante_id)
-  values ('shopify', v_prod, 'frasco', 'teste-check-variante');
+  values ('shopify', v_prod, 'frasco', 'teste-check-variante'),
+         ('shopify', v_troca, 'frasco', 'teste-check-variante-troca');
 
+  assert exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'pedidos_canal'
+                   and column_name = 'alerta_dispensado'), 'coluna alerta_dispensado';
+
+  -- pedido traz v_prod e v_troca (este sem produto_id: reservava pela variante);
+  -- o Luis confirma só v_prod (trocou/tirou a linha de v_troca)
   v_itens := jsonb_build_array(jsonb_build_object(
     'tipo', 'produto', 'produto_id', v_prod, 'quantidade', 1, 'preco_unitario', 300));
-  insert into pedidos_canal (canal, externo_id, numero, status, cliente, total, itens)
+  insert into pedidos_canal (canal, externo_id, numero, status, cliente, total, itens, alerta)
   values ('shopify', 'teste-check-pedido', '#1001', 'a_confirmar', 'cliente', 300,
-          jsonb_build_array(jsonb_build_object(
-            'variante_id', 'teste-check-variante', 'titulo', 'teste', 'quantidade', 1,
-            'preco_unitario', 300, 'produto_id', v_prod, 'tipo', 'frasco', 'ml', null)))
+          jsonb_build_array(
+            jsonb_build_object(
+              'variante_id', 'teste-check-variante', 'titulo', 'teste', 'quantidade', 1,
+              'preco_unitario', 300, 'produto_id', v_prod, 'tipo', 'frasco', 'ml', null),
+            jsonb_build_object(
+              'variante_id', 'teste-check-variante-troca', 'titulo', 'troca', 'quantidade', 1,
+              'preco_unitario', 50, 'produto_id', null, 'tipo', null, 'ml', null)),
+          'Reembolso parcial de R$ 10,00 na Shopify')
   returning id into v_pedido;
+  delete from canal_sync_fila where produto_id in (v_prod, v_troca);
 
   -- 1. Confirmar baixa o estoque e grava a venda ----------------------
   r := confirmar_pedido_canal(v_pedido, v_canal, current_date, 'Pix', 'cliente', 0, 0,
@@ -49,6 +67,11 @@ begin
   assert (select estoque_atual from produtos where id = v_prod) = 1, 'estoque baixou 1';
   assert (select venda_id from pedidos_canal where id = v_pedido) = v_venda, 'venda_id gravado';
   assert (select status from pedidos_canal where id = v_pedido) = 'confirmado', 'status confirmado';
+  assert exists (select 1 from canal_sync_fila where produto_id = v_troca),
+    'confirmar enfileira o item original que saiu da venda (resolvido pela variante)';
+  assert (select alerta from pedidos_canal where id = v_pedido) is null, 'confirmar limpa o alerta';
+  assert (select alerta_dispensado from pedidos_canal where id = v_pedido)
+         = 'Reembolso parcial de R$ 10,00 na Shopify', 'confirmar dispensa o alerta visto';
 
   -- 2. Segunda confirmação levanta exceção e não cria outra venda ------
   select count(*) into v_vendas from vendas;
@@ -75,6 +98,29 @@ begin
   delete from canal_sync_fila where produto_id = v_prod;
   insert into frascos_abertos (produto_id, ml_total, ml_restante) values (v_prod, 100, 50);
   assert exists (select 1 from canal_sync_fila where produto_id = v_prod), 'frasco aberto entra na fila';
+
+  -- reenfileirar avança criado_em (dreno em andamento não apaga a mudança nova)
+  v_antes := now() - interval '1 hour';
+  update canal_sync_fila set criado_em = v_antes where produto_id = v_prod;
+  update produtos set estoque_atual = estoque_atual + 1 where id = v_prod;
+  assert (select criado_em from canal_sync_fila where produto_id = v_prod) > v_antes,
+    'reenfileirar avança criado_em';
+  update produtos set estoque_atual = estoque_atual - 1 where id = v_prod;
+
+  -- 3b. Lease: um dreno por vez --------------------------------------
+  update canal_sync_lease set ate = null where id = 1;
+  assert pegar_lease_sync(60), 'pega o lease livre';
+  assert not pegar_lease_sync(60), 'lease ocupado não é pego de novo';
+  perform soltar_lease_sync();
+  assert pegar_lease_sync(60), 'pega de novo depois de soltar';
+  perform soltar_lease_sync();
+  update canal_sync_lease set ate = now() - interval '1 second' where id = 1;
+  assert pegar_lease_sync(60), 'lease vencido é pego';
+  perform soltar_lease_sync();
+  assert not has_function_privilege('authenticated', 'public.pegar_lease_sync(int)', 'execute'),
+    'authenticated não pega lease';
+  assert not has_function_privilege('anon', 'public.soltar_lease_sync()', 'execute'),
+    'anon não solta lease';
 
   -- 4. Desfazer devolve o estoque e marca cancelado -------------------
   v_estoque := (select estoque_atual from produtos where id = v_prod);

@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-162633-442d
+# ID                 : 20261124-104732-b748
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Canais: test_canais_pedidos.py
 # Assunto            : Testes da normalizacao e ingestao de pedidos
 # Origem             : solicitacao do usuario
-# Motivo             : Cobrir por teste a corrida de confirmacao, avisos concorrentes, total original e fuso
+# Motivo             : Testes de alerta dispensado, reembolso parcial em pedido aberto e quantidade 0
 # Criado em          : 2026-11-18 16:22:28
-# Ultima modificacao : 2026-11-18 16:26:33
+# Ultima modificacao : 2026-11-24 10:47:32
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 import unittest
@@ -207,6 +207,24 @@ class ProximoStatusTest(unittest.TestCase):
     def test_proximo_status_confirmado_outro(self):
         self.assertEqual(proximo_status("confirmado", norm("pago")), ("confirmado", None))
 
+    def test_manter_nao_volta_a_alertar_cancelamento(self):
+        for p in (norm(cancelado=True), norm("reembolsado")):
+            self.assertEqual(proximo_status("confirmado", p, "cancelado"), ("confirmado", None))
+
+    def test_ok_no_reembolso_so_volta_se_o_valor_mudar(self):
+        texto = "Reembolso parcial de R$ 10,00 na Shopify"
+        self.assertEqual(proximo_status("confirmado", norm("reembolso_parcial", reembolsado="10"), texto),
+                         ("confirmado", None))
+        self.assertEqual(proximo_status("confirmado", norm("reembolso_parcial", reembolsado="15"), texto),
+                         ("confirmado", "Reembolso parcial de R$ 15,00 na Shopify"))
+
+    def test_reembolso_parcial_em_pedido_aberto_alerta(self):
+        texto = "Reembolso parcial de R$ 10,00 na Shopify"
+        for atual in (None, "aguardando_pagamento", "a_confirmar"):
+            self.assertEqual(proximo_status(atual, norm("reembolso_parcial", reembolsado="10")), ("a_confirmar", texto))
+        self.assertEqual(proximo_status("a_confirmar", norm("reembolso_parcial", reembolsado="10"), texto),
+                         ("a_confirmar", None))
+
     def test_proximo_status_cancelado_sem_mudanca(self):
         for atual in ("cancelado", "cancelado_pos_confirmacao"):
             self.assertEqual(proximo_status(atual, norm("pago")), (atual, None))
@@ -256,6 +274,28 @@ class IngerirTest(unittest.TestCase):
         self.assertEqual(linha["status"], "confirmado")
         self.assertEqual(linha["alerta"], "x")
         self.assertEqual(afetados, ["prod-0"])
+
+    def test_dispensado_gravado_vale_na_releitura(self):
+        db = FakeDb(canal_vinculos=[VINCULO], pedidos_canal=[
+            {"canal": "shopify", "externo_id": "5001", "status": "confirmado", "itens": [], "alerta": None,
+             "alerta_dispensado": "cancelado"}])
+        ingerir(db, "shopify", norm(cancelado=True), CONECTADO)
+        linha = db.tabelas["pedidos_canal"][0]
+        self.assertEqual((linha["status"], linha["alerta"]), ("confirmado", None))
+
+    def test_aberto_cancelado_limpa_alerta(self):
+        db = FakeDb(canal_vinculos=[VINCULO], pedidos_canal=[
+            {"canal": "shopify", "externo_id": "5001", "status": "a_confirmar", "itens": [],
+             "alerta": "Reembolso parcial de R$ 10,00 na Shopify"}])
+        ingerir(db, "shopify", norm(cancelado=True), CONECTADO)
+        linha = db.tabelas["pedidos_canal"][0]
+        self.assertEqual((linha["status"], linha["alerta"]), ("cancelado", None))
+
+    def test_webhook_linha_quantidade_zero_ignorada(self):
+        w = webhook()
+        w["line_items"].append({"variant_id": 778, "title": "Removido", "variant_title": None,
+                                "quantity": 0, "price": "50.00", "discount_allocations": []})
+        self.assertEqual(len(normalizar_webhook(w)["itens"]), 1)
 
     def test_troca_itens_retorna_antigos_e_novos(self):
         antigos = [{"variante_id": "1", "titulo": "Antigo", "quantidade": 1, "preco_unitario": 50.0,

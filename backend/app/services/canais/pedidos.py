@@ -1,13 +1,13 @@
 # [CLAUDE-CODE-AUDIT]
-# ID                 : 20261118-162632-6bba
+# ID                 : 20261124-104730-7fbf
 # Tipo de item       : Script Python
 # Autores            : luisgfr; MS125; Claude Code
 # Titulo             : Horus Canais: pedidos.py
 # Assunto            : Normalizacao e ingestao de pedidos da Shopify
 # Origem             : solicitacao do usuario
-# Motivo             : Evitar que um aviso da Shopify sobrescreva pedido ja confirmado e gere venda duplicada; total original nas duas fontes
+# Motivo             : Alerta dispensado nao volta, reembolso parcial em pedido aberto alerta e linha com quantidade 0 ignorada (revisao final)
 # Criado em          : 2026-11-18 16:22:57
-# Ultima modificacao : 2026-11-18 16:26:32
+# Ultima modificacao : 2026-11-24 10:47:30
 # Registro           : C:\Users\luisgfr\biblioteca-claude\logs\claude-auditoria.log
 # [/CLAUDE-CODE-AUDIT]
 """Pedidos dos canais: normaliza o pedido da Shopify (webhook REST ou nó GraphQL)
@@ -75,6 +75,8 @@ def normalizar_webhook(p: dict) -> PedidoNorm:
     itens = []
     for li in p.get('line_items') or []:
         qtd = int(li['quantity'])
+        if qtd <= 0:  # linha removida por edição do pedido
+            continue
         desconto = sum(Decimal(str(d['amount'])) for d in li.get('discount_allocations') or [])
         itens.append({
             'variante_id': str(li['variant_id']) if li.get('variant_id') else '',
@@ -105,6 +107,8 @@ def normalizar_graphql(n: dict) -> PedidoNorm:
     itens = []
     for li in (n.get('lineItems') or {}).get('nodes') or []:
         variante = li.get('variant') or {}
+        if int(li['quantity']) <= 0:
+            continue
         itens.append({
             'variante_id': str(variante.get('legacyResourceId') or ''),
             'titulo': _titulo(li['title'], li.get('variantTitle')),
@@ -125,21 +129,29 @@ def normalizar_graphql(n: dict) -> PedidoNorm:
     }
 
 
-def proximo_status(atual: str | None, p: PedidoNorm) -> tuple[str, str | None]:
-    """Alerta None = manter o alerta que já está gravado."""
+def proximo_status(atual: str | None, p: PedidoNorm, dispensado: str | None = None) -> tuple[str, str | None]:
+    """Alerta None = manter o alerta que já está gravado.
+
+    `dispensado` = alerta_dispensado gravado: 'cancelado' (o Luis escolheu Manter a venda) ou o
+    texto do alerta de reembolso que ele deu Ok; o mesmo alerta não volta."""
     cancelou = p['cancelado'] or p['pagamento'] in ('anulado', 'reembolsado')
+    reembolso = None
+    if p['pagamento'] == 'reembolso_parcial':
+        reembolso = f"Reembolso parcial de R$ {_brl(p['reembolsado'])} na Shopify"
+        if reembolso == dispensado:
+            reembolso = None
     if atual in ABERTOS:
         if cancelou:
             return 'cancelado', None
         if p['pagamento'] == 'pendente':
             return atual or 'aguardando_pagamento', None  # a_confirmar não regride
-        return 'a_confirmar', None
+        return 'a_confirmar', reembolso
     if atual == 'confirmado':
         if cancelou:
+            if dispensado == 'cancelado':
+                return 'confirmado', None
             return 'cancelado_pos_confirmacao', 'Cancelado na Shopify — desfazer venda?'
-        if p['pagamento'] == 'reembolso_parcial':
-            return 'confirmado', f"Reembolso parcial de R$ {_brl(p['reembolsado'])} na Shopify"
-        return 'confirmado', None
+        return 'confirmado', reembolso
     return atual, None
 
 
@@ -181,14 +193,18 @@ def ingerir(db, canal: str, p: PedidoNorm, conectado_em: datetime | None) -> lis
         return []
     novos = _itens_novos(db, canal, p)
     for _ in range(TENTATIVAS):
-        r = (db.table('pedidos_canal').select('status,alerta,itens')
+        r = (db.table('pedidos_canal').select('status,alerta,alerta_dispensado,itens')
              .eq('canal', canal).eq('externo_id', p['externo_id']).execute())
         atual = r.data[0] if r.data else {}
-        status, alerta = proximo_status(atual.get('status'), p)
+        status, alerta = proximo_status(atual.get('status'), p, atual.get('alerta_dispensado'))
+        if status == 'cancelado':
+            alerta = None
+        elif alerta is None:
+            alerta = atual.get('alerta')
         antigos = atual.get('itens') or []
         itens = antigos if atual.get('status') in ITENS_TRAVADOS else novos
         linha = {
-            'numero': p['numero'], 'status': status, 'alerta': alerta or atual.get('alerta'),
+            'numero': p['numero'], 'status': status, 'alerta': alerta,
             'cliente': p['cliente'], 'criado_em': p['criado_em'],
             'total': float(p['total']), 'frete': float(p['frete']), 'itens': itens,
             'updated_at': datetime.now(timezone.utc).isoformat(),
