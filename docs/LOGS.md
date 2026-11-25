@@ -1,3 +1,17 @@
+## 2026-11-25 - Sessão 74: aba Fotos e módulo Gestão (kanban)
+
+**Responsável:** Claude (modo /goal) + Luis
+
+### O que foi feito
+- Controle de anúncios: Luis aplicou a migration `20261125100000_anuncio_marcas.sql`, push feito; bolinhas com verde/vermelho sólidos (75932ec, publicado).
+- Aba Fotos (`/anuncios/fotos`): escolhe o perfume e gerencia as fotos com o `FotosPerfume`; baixar uma ou todas (`nomeArquivoFoto` em `lib/anuncios.ts`). Sem banco novo.
+- Módulo Gestão: tela `/gestao` com kanban A fazer / Fazendo / Feito (título, descrição, prazo; arrastar e botões ←/→), tabela `tarefas`, `lib/kanban.ts` com testes, aba no seletor do topo e card na Home (grade da Home virou 2×2).
+- Specs e planos em `docs/superpowers/` (`aba-fotos`, `kanban-gestao`); `features/GESTAO.md`, `features/ANUNCIOS.md`, BANCO e HANDOFF.
+- Verificação: `npx vitest run` 414/414, `npm run build` OK.
+
+### Pendente
+- Luis: aplicar `supabase/migrations/20261125110000_tarefas.sql` e rodar `supabase/checks/20261125110000_tarefas_check.sql` (esperado "tarefas ok"); depois, push da `main`.
+
 ## 2026-11-25 - Sessão 73: controle de anúncios por plataforma
 
 **Responsável:** Claude + Luis

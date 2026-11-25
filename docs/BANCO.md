@@ -349,6 +349,10 @@ Gatilhos `produtos_canal_sync` (muda `estoque_atual`) e `frascos_abertos_canal_s
 | `pegar_lease_sync(p_segundos int default 60, p_dono uuid default null)` | Sem `p_dono`: pega o lease do dreno se livre ou vencido e devolve o token (uuid) do dono, ou null. Com `p_dono`: renova se o lease ainda é desse dono (devolve o token) ou null. Security definer, só service role | 20261118110000_canais_nucleo |
 | `soltar_lease_sync(p_dono uuid)` | Solta o lease só se ainda é desse dono. Security definer, só service role | 20261118110000_canais_nucleo |
 
+### Gestão
+
+`tarefas` (kanban do módulo Gestão; migration `20261125110000_tarefas.sql`, conferência em `supabase/checks/20261125110000_tarefas_check.sql`): `id`, `titulo` (não vazio), `descricao`, `prazo` date, `status` (`a_fazer`, `fazendo`, `feito`; default `a_fazer`), `ordem` double precision (fracionária: soltar entre dois cartões grava a média), `created_at`. Índice em (`status`, `ordem`). RLS para `authenticated`.
+
 ## Relações
 
 ```

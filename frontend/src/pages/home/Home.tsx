@@ -29,6 +29,12 @@ const AREAS = [
     title: 'Anúncios',
     desc: 'Anúncios do Mercado Livre: preços, textos, publicação e qualidade.',
   },
+  {
+    path: '/gestao',
+    icon: 'grid',
+    title: 'Gestão',
+    desc: 'Quadro de tarefas da loja: a fazer, fazendo e feito.',
+  },
 ] as const
 
 export function Home() {
@@ -77,7 +83,7 @@ export function Home() {
           Selecione uma área para gerenciar
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {AREAS.map((area) => (
             <button
               key={area.path}

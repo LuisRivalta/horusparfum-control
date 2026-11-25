@@ -29,6 +29,10 @@ const ANU_NAV = [
   { id: 'config', label: 'Configuração', icon: 'grid', path: '/anuncios/config' },
 ]
 
+const GES_NAV = [
+  { id: 'quadro', label: 'Quadro', icon: 'grid', path: '/gestao' },
+]
+
 
 const ADMIN_EMAIL = 'byhorusco@gmail.com'
 
@@ -42,11 +46,12 @@ const EST_NAV = [
   { id: 'relatorios', label: 'Relatório de giro', icon: 'report', path: '/estoque/relatorios' },
 ]
 
-type Modulo = 'financeiro' | 'estoque' | 'anuncios'
+type Modulo = 'financeiro' | 'estoque' | 'anuncios' | 'gestao'
 const MODULOS: { id: Modulo; label: string }[] = [
   { id: 'financeiro', label: 'Financeiro' },
   { id: 'estoque', label: 'Estoque' },
   { id: 'anuncios', label: 'Anúncios' },
+  { id: 'gestao', label: 'Gestão' },
 ]
 
 export function Layout() {
@@ -58,8 +63,8 @@ export function Layout() {
   const { theme, toggleTheme } = useTheme()
 
   const segmento = location.pathname.split('/')[1]
-  const modulo: Modulo = segmento === 'financeiro' || segmento === 'anuncios' ? segmento : 'estoque'
-  const nav = { financeiro: FIN_NAV, estoque: EST_NAV, anuncios: ANU_NAV }[modulo]
+  const modulo: Modulo = segmento === 'financeiro' || segmento === 'anuncios' || segmento === 'gestao' ? segmento : 'estoque'
+  const nav = { financeiro: FIN_NAV, estoque: EST_NAV, anuncios: ANU_NAV, gestao: GES_NAV }[modulo]
   const indice = MODULOS.findIndex((m) => m.id === modulo)
   const isAdmin = user?.email === ADMIN_EMAIL
 
@@ -181,10 +186,10 @@ export function Layout() {
           </button>
 
           <div className="flex p-0.5 border border-line-2 rounded-3xl bg-surface-2 gap-0.5 relative">
-            {/* Indicador deslizante (em terços) */}
+            {/* Indicador deslizante (uma fatia por módulo) */}
             <span
               className="absolute top-0.5 bottom-0.5 rounded-2xl bg-gold shadow-[0_2px_12px_rgba(201,168,76,0.35)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-              style={{ width: 'calc((100% - 4px) / 3)', left: `calc(2px + ${indice} * (100% - 4px) / 3)` }}
+              style={{ width: `calc((100% - 4px) / ${MODULOS.length})`, left: `calc(2px + ${indice} * (100% - 4px) / ${MODULOS.length})` }}
             />
             {MODULOS.map((m) => (
               <button

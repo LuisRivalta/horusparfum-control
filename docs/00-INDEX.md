@@ -44,6 +44,9 @@ Abaixo estão os guias detalhados de cada módulo funcional do sistema, explican
 - [[features/ANUNCIOS]] — Anúncios no Mercado Livre: ficha, preço que fecha a margem, publicação, qualidade e ligação de anúncios existentes.
 - [[features/SHOPIFY]] — Shopify e núcleo de vendas dos canais: pedidos a confirmar, reserva e sincronização de estoque, ligar e publicar produtos, checklist de ativação.
 
+### 📋 Gestão
+- [[features/GESTAO]] — Quadro kanban de tarefas da loja (A fazer / Fazendo / Feito), com prazo e arrastar.
+
 ---
 
 ## 🧩 Histórico de Design e Implementação
