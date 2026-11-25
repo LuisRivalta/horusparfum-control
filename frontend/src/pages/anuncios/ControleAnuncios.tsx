@@ -32,6 +32,22 @@ function falhou(r: { error: { message: string } | null }) {
   if (r.error) throw new Error(r.error.message)
 }
 
+type Resposta = { data: unknown; error: { message: string } | null }
+type Paginavel = { order: (c: string) => { range: (de: number, ate: number) => PromiseLike<Resposta> } }
+const PAGINA = 1000 // limite padrão de linhas do Supabase por consulta
+
+/** Lê todas as linhas, de 1000 em 1000 (sem isso o Supabase corta em 1000 sem avisar). */
+async function todas<T>(consulta: () => Paginavel): Promise<T[]> {
+  const linhas: T[] = []
+  for (let de = 0; ; de += PAGINA) {
+    const r = await consulta().order('id').range(de, de + PAGINA - 1)
+    falhou(r)
+    const pagina = (r.data ?? []) as T[]
+    linhas.push(...pagina)
+    if (pagina.length < PAGINA) return linhas
+  }
+}
+
 export function ControleAnuncios() {
   const [produtos, setProdutos] = useState<ProdutoControle[] | null>(null)
   const [tamanhos, setTamanhos] = useState<number[]>([])
@@ -44,27 +60,27 @@ export function ControleAnuncios() {
   const [erro, setErro] = useState<string | null>(null)
 
   const carregarMarcas = useCallback(async () => {
-    const r = await supabase.from('anuncio_marcas').select('produto_id, canal, tipo, ml')
-    falhou(r)
-    setManuais(((r.data ?? []) as Linha[]).map((l) => paraMarca(l)))
+    const ls = await todas<Linha>(() => supabase.from('anuncio_marcas').select('produto_id, canal, tipo, ml'))
+    setManuais(ls.map((l) => paraMarca(l)))
   }, [])
 
   useEffect(() => {
+    type P = { id: string; nome: string; estoque_atual: number; tipos_produto: { vende_decant: boolean } | null }
     Promise.all([
-      supabase.from('produtos').select('id, nome, estoque_atual, tipos_produto(vende_decant)'),
-      supabase.from('frascos_abertos').select('produto_id, ml_restante').eq('status', 'ativo'),
+      todas<P>(() => supabase.from('produtos').select('id, nome, estoque_atual, tipos_produto(vende_decant)')),
+      todas<{ produto_id: string; ml_restante: number }>(
+        () => supabase.from('frascos_abertos').select('produto_id, ml_restante').eq('status', 'ativo')),
       supabase.from('anuncios_config').select('tamanhos_decant').eq('id', 1).maybeSingle(),
-      supabase.from('anuncios').select('produto_id, tipo, ml').in('status', ['publicado', 'pausado']),
-      supabase.from('canal_vinculos').select('produto_id, canal, tipo, ml'),
+      todas<Linha>(() => supabase.from('anuncios').select('produto_id, tipo, ml').in('status', ['publicado', 'pausado'])),
+      todas<Linha>(() => supabase.from('canal_vinculos').select('produto_id, canal, tipo, ml')),
       carregarMarcas(),
     ]).then(([p, f, c, a, v]) => {
-      ;[p, f, c, a, v].forEach(falhou)
+      falhou(c)
       const aberto = new Map<string, number>()
-      for (const x of (f.data ?? []) as { produto_id: string; ml_restante: number }[]) {
+      for (const x of f) {
         aberto.set(x.produto_id, Math.max(aberto.get(x.produto_id) ?? 0, Number(x.ml_restante)))
       }
-      type P = { id: string; nome: string; estoque_atual: number; tipos_produto: { vende_decant: boolean } | null }
-      setProdutos(((p.data ?? []) as unknown as P[]).map((x) => ({
+      setProdutos(p.map((x) => ({
         id: x.id, nome: x.nome, estoque_atual: Number(x.estoque_atual),
         vende_decant: x.tipos_produto?.vende_decant ?? true, // sem tipo = produto antigo, é Perfume
         ml_aberto: aberto.get(x.id) ?? null,
@@ -72,8 +88,8 @@ export function ControleAnuncios() {
       const tams = (c.data as { tamanhos_decant: number[] | null } | null)?.tamanhos_decant
       setTamanhos((tams ?? [2.5, 5, 10]).map(Number))
       setAutomaticas([
-        ...((a.data ?? []) as Linha[]).map((l) => paraMarca(l, 'ml')),
-        ...((v.data ?? []) as Linha[]).map((l) => paraMarca(l)),
+        ...a.map((l) => paraMarca(l, 'ml')),
+        ...v.map((l) => paraMarca(l)),
       ])
     }).catch((e) => { setErro(e instanceof Error ? e.message : 'Erro inesperado'); setProdutos([]) })
   }, [carregarMarcas])
@@ -141,7 +157,7 @@ export function ControleAnuncios() {
             </tr>
           </thead>
           <tbody>
-            {produtos && linhas.length === 0 && (
+            {produtos && !erro && linhas.length === 0 && (
               <tr className="border-t border-line">
                 <td colSpan={colunas.length + 3} className="p-8 text-center text-sm text-muted">Nenhum perfume.</td>
               </tr>

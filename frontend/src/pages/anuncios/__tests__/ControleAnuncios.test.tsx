@@ -25,7 +25,7 @@ vi.mock('@/lib/supabase', () => ({
     from: (tabela: string) => {
       const ops: string[] = []
       const b: Record<string, unknown> = {}
-      for (const op of ['select', 'eq', 'is', 'in', 'maybeSingle', 'insert', 'delete']) {
+      for (const op of ['select', 'eq', 'is', 'in', 'maybeSingle', 'insert', 'delete', 'order', 'range']) {
         b[op] = (...args: unknown[]) => { chamadas.push({ tabela, op, args }); ops.push(op); return b }
       }
       b.then = (res: (v: unknown) => unknown) => {
@@ -36,7 +36,11 @@ vi.mock('@/lib/supabase', () => ({
           return res({ data: null, error: null })
         }
         if (ops.includes('delete')) return res({ data: null, error: null })
-        return res({ data: tabela === 'anuncio_marcas' ? marcas : DADOS[tabela], error: null })
+        const dados = tabela === 'anuncio_marcas' ? marcas : DADOS[tabela]
+        const range = chamadas.filter((c) => c.tabela === tabela && c.op === 'range').at(-1)
+        if (!ops.includes('range') || !Array.isArray(dados)) return res({ data: dados, error: null })
+        const [de, ate] = range!.args as [number, number]
+        return res({ data: dados.slice(de, ate + 1), error: null })
       }
       return b
     },
@@ -124,6 +128,15 @@ describe('ControleAnuncios', () => {
     await screen.findByText('Asad')
     fireEvent.click(celula('Asad Frasco'))
     expect(await screen.findByRole('alert')).toHaveTextContent('sem permissão')
+  })
+
+  it('pagina as marcas além de 1000 linhas', async () => {
+    marcas = [...Array(1000)].map((_, i) => m(`x${i}`, 'frasco', null)).concat([m('p1', 'frasco', null)])
+    render(<ControleAnuncios />)
+    await screen.findByText('Asad')
+    await waitFor(() => expect(celula('Asad Frasco').getAttribute('aria-label')).toBe('Asad Frasco: criado'))
+    const ranges = chamadas.filter((c) => c.tabela === 'anuncio_marcas' && c.op === 'range').map((c) => c.args)
+    expect(ranges).toEqual([[0, 999], [1000, 1999]])
   })
 
   it('filtra por situação e troca de plataforma', async () => {

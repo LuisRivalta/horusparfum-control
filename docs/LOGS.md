@@ -1,4 +1,4 @@
-## 2026-11-25 - Sessão 72: controle de anúncios por plataforma
+## 2026-11-25 - Sessão 73: controle de anúncios por plataforma
 
 **Responsável:** Claude + Luis
 
