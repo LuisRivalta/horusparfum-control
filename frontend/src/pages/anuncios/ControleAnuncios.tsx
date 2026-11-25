@@ -19,8 +19,8 @@ const SITUACOES = [
 ]
 const TEXTO = { verde: 'criado', vermelha: 'falta criar', cinza: 'sem estoque' }
 const COR = {
-  verde: 'bg-up/20 border-up/60 text-up',
-  vermelha: 'bg-down/20 border-down/60 text-down hover:bg-down/30',
+  verde: 'bg-up border-up text-white',
+  vermelha: 'bg-down border-down text-white hover:brightness-110',
   cinza: 'bg-surface-2 border-line-2 hover:border-gold-line',
 }
 
