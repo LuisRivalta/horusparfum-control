@@ -322,6 +322,8 @@ Migration `20261117100000_anuncios_schema.sql`; conferência em `supabase/checks
 
 `anuncios`: `id`, `produto_id` (FK → produtos), `canal_id` (FK → canais, nullable), `tipo` (`frasco`/`decant`), `ml` numeric(6,1) (preenchido se, e só se, `tipo = 'decant'`), `listing_type`, `margem`, `custo_base`, `preco`, `titulo`, `descricao`, `fotos` text[], `status` (`rascunho`, `publicado`, `pausado`, `erro`), `ml_item_id` (único), `permalink`, `erro`, `qualidade_score`, `qualidade_nivel`, `qualidade_em`, `created_at`, `updated_at` (sem trigger; o backend atualiza).
 
+`anuncio_marcas` (controle manual de anúncios; migration `20261125100000_anuncio_marcas.sql`, conferência em `supabase/checks/20261125100000_anuncio_marcas_check.sql`): `id`, `produto_id` (FK → produtos, cascade), `canal` (`ml`/`shopify`), `tipo` (`frasco`/`decant`), `ml` numeric(6,1) (preenchido se, e só se, decant), `created_at`. Único em (`produto_id`, `canal`, `tipo`, `coalesce(ml,0)`). Marcar = insert, desmarcar = delete. RLS para `authenticated`.
+
 `ml_conexao` (linha única, `id = 1`): `ml_user_id`, `nickname`, `access_token`, `refresh_token`, `expires_at`, `user_product`, `updated_at`. RLS ligado **sem policy**: guarda tokens, só o backend (service role) acessa.
 
 ### Shopify e canais
