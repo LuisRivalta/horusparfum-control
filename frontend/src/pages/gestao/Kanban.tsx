@@ -13,10 +13,10 @@ interface Form { id: string | null; titulo: string; descricao: string; prazo: st
 const VAZIO: Form = { id: null, titulo: '', descricao: '', prazo: '', prioridade: 'media' }
 
 // Cor de cada coluna (kanban de parede): faixa no topo e fundo bem suave.
-const COR: Record<Status, string> = {
-  a_fazer: 'border-t-down bg-down/[0.05]',
-  fazendo: 'border-t-warn bg-warn/[0.06]',
-  feito: 'border-t-up bg-up/[0.05]',
+const COR: Record<Status, { fundo: string; faixa: string }> = {
+  a_fazer: { fundo: 'bg-down/[0.05]', faixa: 'bg-down' },
+  fazendo: { fundo: 'bg-warn/[0.06]', faixa: 'bg-warn' },
+  feito: { fundo: 'bg-up/[0.05]', faixa: 'bg-up' },
 }
 
 // Tons neutros de propósito: vermelho/amarelo/verde já são das colunas.
@@ -114,9 +114,10 @@ export function Kanban() {
             onDragOver={(e) => { e.preventDefault(); setAlvo(c.status) }}
             onDragLeave={() => setAlvo((a) => (a === c.status ? null : a))}
             onDrop={(e) => soltar(e, c.status, null)}
-            className={cn('border border-line border-t-4 rounded-xl p-3 min-h-[12rem] flex flex-col gap-2 transition-colors', COR[c.status],
+            className={cn('border border-line rounded-xl p-3 min-h-[12rem] flex flex-col gap-2 transition-colors', COR[c.status].fundo,
               alvo === c.status && 'ring-2 ring-gold/50')}
           >
+            <span aria-hidden className={cn('h-1.5 rounded-full', COR[c.status].faixa)} />
             <h2 className="flex items-center justify-between font-mono text-xs uppercase tracking-[.14em] text-muted px-1 pb-1">
               {c.titulo} <span className="text-faint">{grupos[c.status].length}</span>
             </h2>
