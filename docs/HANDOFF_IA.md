@@ -455,6 +455,11 @@
     - Libs `lib/insumos.ts` e `lib/decantOrigens.ts`; `VendaFormModal` + `InsumosVenda`, `DecantModal`, `CorrigirConsumoDecantModal`; `embalagens_decant` ficou **sem uso pelas telas** (mantida no banco)
     - Migrations `20261116100000_insumos_schema.sql` e `20261116110000_insumos_rpcs.sql` (checks em `supabase/checks/`), **aplicadas em 16/11/2026, checks sem erro**
     - Docs: `docs/features/INSUMOS.md`; spec `docs/superpowers/specs/2026-11-16-anuncios-design.md`; plano `docs/superpowers/plans/2026-11-16-insumos.md`
+65. **Controle de anúncios por plataforma (Sessão 72)**
+    - Tela `/anuncios/controle` (`ControleAnuncios.tsx`, item "Controle" no menu de Anúncios): grade perfume × variante por plataforma (Mercado Livre / Shopify), com célula verde (criado), vermelha (falta criar) ou cinza (sem estoque) e estado do perfume (Completos, Aguardando estoque, Incompletos, Sem anúncio)
+    - Verde automática vem de `anuncios` publicados/pausados (contam como ML) e de `canal_vinculos` (não clicável, "vem do Horus"); marca manual na tabela nova `anuncio_marcas`; "Marcar todas" grava só as vermelhas
+    - Regras puras em `lib/controleAnuncios.ts` (com testes); migration `20261125100000_anuncio_marcas.sql` + check `supabase/checks/20261125100000_anuncio_marcas_check.sql`
+    - Spec `docs/superpowers/specs/2026-11-25-controle-anuncios-design.md`; plano `docs/superpowers/plans/2026-11-25-controle-anuncios.md`
 
 ## Estado atual
 
@@ -484,6 +489,7 @@
 - Anúncios, pendente do Luis (nesta ordem): criar o app no devcenter do ML (redirect `https://horusparfum-control-api.vercel.app/api/mercadolivre/callback`, escopos read/write/offline_access, PKCE off); cadastrar `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `ML_REDIRECT_URI` (e opcional `ANTHROPIC_API_KEY`) no painel Vercel do `horusparfum-control-api`; `npx vercel login` + `npx vercel --prod` em `backend/`; dar push na `main` (frontend publica sozinho); em Anúncios › Configuração clicar Conectar, definir margem padrão e preencher peso/medidas dos kits de envio em Estoque › Insumos.
 - Anúncios, limites conhecidos: busca de anúncios existentes para em 1000; anúncios ligados não têm `custo_base` (sem aviso de custo mudou); quantidade só sincroniza por botão; sem chave de idempotência no ML (falha de rede ao criar pede conferir no ML).
 - **Shopify e núcleo de canais (Sessão 71):** código **publicado** (push da `main` em 24/11/2026). SQL (`20261118100000_tipos_produto.sql` e `20261118110000_canais_nucleo.sql`) **aplicado e checks rodados** em 24/11/2026; app da Shopify **não criado**; variáveis `SHOPIFY_*` e `HORUS_SYNC_SECRET` não cadastradas. Doc: `docs/features/SHOPIFY.md` (telas, status do pedido, regras de quantidade e preço, limites). Antes de ativar, conferir na doc da Shopify os pontos listados em "Limites conhecidos e a conferir" (versão da API, `uri` x `callbackUrl`, `ignoreCompareQuantity`, `productSet`, `pg_net`, `variants(first: 100)`): conferidos no shopify.dev em 24/11/2026 (inventorySetQuantities passou a usar changeFromQuantity null e @idempotent; uri e productSet já estavam certos); falta só confirmar `API_VERSAO` na ativação (`pg_net` ok: a migration rodou). Revisão final corrigiu: dreno único com lease (`canal_sync_lease`), fila que avança `criado_em`, reserva de item ligado depois do pedido, `alerta_dispensado` (Manter/Ok não voltam), reembolso parcial em pedido aberto, confirmar enfileira os itens originais.
+- **Controle de anúncios (Sessão 72):** commits locais na `main`, **sem push**. ⚠️ Migration `20261125100000_anuncio_marcas.sql` e o check `supabase/checks/20261125100000_anuncio_marcas_check.sql` **a aplicar pelo Luis no SQL Editor antes do push** (sem a tabela, a tela `/anuncios/controle` mostra erro ao carregar).
 
 ## Decisões pendentes
 

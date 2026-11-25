@@ -1,3 +1,17 @@
+## 2026-11-25 - Sessão 72: controle de anúncios por plataforma
+
+**Responsável:** Claude + Luis
+
+### O que foi feito
+- Spec `docs/superpowers/specs/2026-11-25-controle-anuncios-design.md` e plano `docs/superpowers/plans/2026-11-25-controle-anuncios.md` executados por tarefas, commits locais na `main`, sem push.
+- Migration `20261125100000_anuncio_marcas.sql` (tabela `anuncio_marcas`, marca manual por produto, canal, tipo e ml) com check em `supabase/checks/`.
+- `lib/controleAnuncios.ts`: variantes do perfume, estado de cada célula (verde/vermelha/cinza) e do perfume, filtro e "Marcar todas", com testes.
+- Tela `/anuncios/controle` (`ControleAnuncios.tsx`) e item "Controle" no menu de Anúncios: plataforma (Mercado Livre / Shopify), situação, busca; clicar marca/desmarca; verde automática (de `anuncios` e `canal_vinculos`) não clicável.
+- Docs: `features/ANUNCIOS.md` (tabela de telas) e HANDOFF.
+
+### Pendente
+- Luis: aplicar a migration `20261125100000_anuncio_marcas.sql` e rodar o check no SQL Editor; depois, push da `main`.
+
 ## 2026-11-25 - Sessão 72: ativação da Shopify (parcial)
 
 **Responsável:** Claude + Luis

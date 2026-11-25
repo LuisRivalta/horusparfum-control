@@ -15,6 +15,7 @@ Parte 2 do módulo (spec: `docs/superpowers/specs/2026-11-16-anuncios-design.md`
 | `/anuncios` | `AnunciosLista` | Lista com perfume, tipo, tipo de anúncio, preço, status e nota (não mostra a quantidade; o botão "Atualizar quantidade" envia ao ML e mostra o número enviado); ações de quantidade, preço, pausar/reativar |
 | `/anuncios/novo` | `NovoAnuncio` | Passo a passo: perfume, o que anunciar, ficha, preço, fotos, título e descrição, publicar (`novo/*`) |
 | `/anuncios/:id` | `NovoAnuncio` | Reabre um rascunho ou anúncio com erro |
+| `/anuncios/controle` | `ControleAnuncios` | Grade perfume × variante (frasco e decants) por plataforma (Mercado Livre / Shopify): verde = criado (automático, vindo de `anuncios`/`canal_vinculos`, ou marca manual em `anuncio_marcas`), vermelha = falta criar, cinza = sem estoque; clicar marca/desmarca, "Marcar todas" grava as vermelhas; filtro por situação e busca |
 | `/anuncios/ligar` | `LigarAnuncios` | Liga anúncios que já existem no ML a um perfume do Horus |
 | `/anuncios/config` | `AnunciosConfig` | Conectar/desconectar o ML, margem padrão, IA, tamanhos de decant |
 
