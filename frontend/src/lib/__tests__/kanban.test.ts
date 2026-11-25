@@ -1,8 +1,39 @@
 import { describe, it, expect } from 'vitest'
-import { agrupar, ordemAoSoltar, situacaoPrazo, hojeLocal, COLUNAS, type Tarefa } from '../kanban'
+import { agrupar, ordemAoSoltar, ordemNoGrupo, situacaoPrazo, hojeLocal, COLUNAS, PRIORIDADES, type Tarefa } from '../kanban'
 
 const t = (over: Partial<Tarefa> = {}): Tarefa => ({
-  id: 't1', titulo: 'Tarefa', descricao: null, prazo: null, status: 'a_fazer', ordem: 0, ...over,
+  id: 't1', titulo: 'Tarefa', descricao: null, prazo: null, status: 'a_fazer', prioridade: 'media', ordem: 0, ...over,
+})
+
+describe('PRIORIDADES', () => {
+  it('Alta, Média, Baixa', () => expect(PRIORIDADES.map((p) => p.titulo)).toEqual(['Alta', 'Média', 'Baixa']))
+})
+
+describe('agrupar por prioridade', () => {
+  it('Alta em cima, depois Média e Baixa; empate pela ordem', () => {
+    const g = agrupar([
+      t({ id: 'baixa', prioridade: 'baixa', ordem: 0 }),
+      t({ id: 'media2', ordem: 5 }),
+      t({ id: 'alta', prioridade: 'alta', ordem: 9 }),
+      t({ id: 'media1', ordem: 1 }),
+    ])
+    expect(g.a_fazer.map((x) => x.id)).toEqual(['alta', 'media1', 'media2', 'baixa'])
+  })
+})
+
+describe('ordemNoGrupo', () => {
+  const col = agrupar([
+    t({ id: 'A', prioridade: 'alta', ordem: 1 }),
+    t({ id: 'm1', ordem: 1 }), t({ id: 'm2', ordem: 3 }),
+    t({ id: 'B', prioridade: 'baixa', ordem: 1 }),
+  ]).a_fazer
+  const movida = t({ id: 'x', status: 'fazendo', ordem: 7 })
+  it('mesma prioridade: entre os vizinhos', () => expect(ordemNoGrupo(col, 'm2', movida)).toBe(2))
+  it('soltar sobre prioridade mais alta: vira o 1º do grupo', () => expect(ordemNoGrupo(col, 'A', movida)).toBe(0))
+  it('soltar sobre prioridade mais baixa ou no vazio: fim do grupo', () => {
+    expect(ordemNoGrupo(col, 'B', movida)).toBe(4)
+    expect(ordemNoGrupo(col, null, movida)).toBe(4)
+  })
 })
 
 describe('COLUNAS', () => {

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { escolher } from '@/test/escolher'
 import { Kanban } from '../Kanban'
 
 const chamadas: { op: string; args: unknown[] }[] = []
@@ -26,9 +27,10 @@ beforeAll(() => {
 beforeEach(() => {
   chamadas.length = 0
   tarefas = [
-    { id: 'a', titulo: 'Higienizar a loja', descricao: 'balcão', prazo: '2020-01-01', status: 'a_fazer', ordem: 1 },
-    { id: 'b', titulo: 'Story Asad', descricao: null, prazo: null, status: 'a_fazer', ordem: 3 },
-    { id: 'c', titulo: 'Pedido no ML', descricao: null, prazo: '2020-01-01', status: 'feito', ordem: 1 },
+    { id: 'a', titulo: 'Higienizar a loja', descricao: 'balcão', prazo: '2020-01-01', status: 'a_fazer', prioridade: 'media', ordem: 1 },
+    { id: 'b', titulo: 'Story Asad', descricao: null, prazo: null, status: 'a_fazer', prioridade: 'media', ordem: 3 },
+    { id: 'c', titulo: 'Pedido no ML', descricao: null, prazo: '2020-01-01', status: 'feito', prioridade: 'media', ordem: 1 },
+    { id: 'd', titulo: 'Repor decants', descricao: null, prazo: null, status: 'a_fazer', prioridade: 'alta', ordem: 9 },
   ]
 })
 
@@ -53,7 +55,26 @@ describe('Kanban', () => {
     fireEvent.change(screen.getByLabelText('Prazo'), { target: { value: '2026-12-01' } })
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(op('insert')[0]?.args[0]).toEqual(
-      { titulo: 'Postar story', descricao: 'Asad', prazo: '2026-12-01', status: 'a_fazer', ordem: 4 }))
+      { titulo: 'Postar story', descricao: 'Asad', prazo: '2026-12-01', prioridade: 'media', status: 'a_fazer', ordem: 4 }))
+  })
+
+  it('Alta fica em cima na coluna e mostra o selo', async () => {
+    render(<Kanban />)
+    const aFazer = await screen.findByRole('region', { name: 'A fazer' })
+    await within(aFazer).findByText('Repor decants')
+    const titulos = within(aFazer).getAllByRole('article').map((a) => a.querySelector('p')?.textContent)
+    expect(titulos).toEqual(['Repor decants', 'Higienizar a loja', 'Story Asad'])
+    expect(within(aFazer).getByText('Alta')).toBeTruthy()
+  })
+
+  it('escolher Alta ao criar grava a prioridade', async () => {
+    render(<Kanban />)
+    await screen.findByText('Story Asad')
+    fireEvent.click(screen.getByRole('button', { name: /Nova tarefa/ }))
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Urgente' } })
+    escolher(screen.getByRole('combobox', { name: 'Prioridade' }), 'alta')
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(op('insert')[0]?.args[0]).toMatchObject({ prioridade: 'alta', ordem: 10 }))
   })
 
   it('título só com espaços não salva', async () => {
@@ -92,7 +113,7 @@ describe('Kanban', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Editar Story Asad' }))
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Story Asad Bourbon' } })
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }))
-    await waitFor(() => expect(op('update')[0]?.args[0]).toEqual({ titulo: 'Story Asad Bourbon', descricao: null, prazo: null }))
+    await waitFor(() => expect(op('update')[0]?.args[0]).toEqual({ titulo: 'Story Asad Bourbon', descricao: null, prazo: null, prioridade: 'media' }))
 
     fireEvent.click(await screen.findByRole('button', { name: 'Editar Higienizar a loja' }))
     fireEvent.click(screen.getByRole('button', { name: 'Excluir' }))

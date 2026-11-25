@@ -351,7 +351,7 @@ Gatilhos `produtos_canal_sync` (muda `estoque_atual`) e `frascos_abertos_canal_s
 
 ### Gestão
 
-`tarefas` (kanban do módulo Gestão; migration `20261125110000_tarefas.sql`, conferência em `supabase/checks/20261125110000_tarefas_check.sql`): `id`, `titulo` (não vazio), `descricao`, `prazo` date, `status` (`a_fazer`, `fazendo`, `feito`; default `a_fazer`), `ordem` double precision (fracionária: soltar entre dois cartões grava a média), `created_at`. Índice em (`status`, `ordem`). RLS para `authenticated`.
+`tarefas` (kanban do módulo Gestão; migration `20261125110000_tarefas.sql`, conferência em `supabase/checks/20261125110000_tarefas_check.sql`): `id`, `titulo` (não vazio), `descricao`, `prazo` date, `status` (`a_fazer`, `fazendo`, `feito`; default `a_fazer`), `ordem` double precision (fracionária: soltar entre dois cartões grava a média), `prioridade` (`alta`, `media`, `baixa`; default `media`; migration `20261125120000_tarefas_prioridade.sql`), `created_at`. Índice em (`status`, `ordem`). RLS para `authenticated`.
 
 ## Relações
 

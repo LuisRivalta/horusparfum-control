@@ -12,7 +12,9 @@ Módulo para ferramentas de gestão da loja. Hoje tem o **Quadro** (kanban).
 
 ## Regras
 
-- Cartão: título (obrigatório), descrição e prazo (opcionais).
+- Colunas coloridas como o kanban de parede: A fazer vermelho, Fazendo amarelo, Feito verde (faixa no topo + fundo suave).
+- Cartão: título (obrigatório), descrição, prazo e prioridade (Alta / Média / Baixa, padrão Média; selo em tom neutro para não confundir com as cores das colunas).
+- Dentro da coluna: Alta em cima, depois Média e Baixa; mesma prioridade segue a ordem manual. Soltar sobre um cartão de outra prioridade não muda de grupo (acima = 1º do grupo; abaixo = último). Migration `20261125120000_tarefas_prioridade.sql`.
 - Prazo: fora de "Feito", vencido = "Atrasado" (vermelho), hoje = "Hoje" (dourado). Data em dd/mm, comparada com o dia local.
 - Ordem: soltar sobre um cartão entra **antes** dele; no espaço vazio da coluna, no fim. Grava só a linha movida (`ordem` = média dos vizinhos).
 - Falha ao gravar mostra o aviso e recarrega do banco.

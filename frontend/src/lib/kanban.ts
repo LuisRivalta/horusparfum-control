@@ -6,19 +6,45 @@ export const COLUNAS: { status: Status; titulo: string }[] = [
   { status: 'feito', titulo: 'Feito' },
 ]
 
+export type Prioridade = 'alta' | 'media' | 'baixa'
+
+export const PRIORIDADES: { valor: Prioridade; titulo: string }[] = [
+  { valor: 'alta', titulo: 'Alta' },
+  { valor: 'media', titulo: 'Média' },
+  { valor: 'baixa', titulo: 'Baixa' },
+]
+
+const peso = (p: Prioridade) => PRIORIDADES.findIndex((x) => x.valor === p)
+
 export interface Tarefa {
   id: string
   titulo: string
   descricao: string | null
   prazo: string | null // aaaa-mm-dd
   status: Status
+  prioridade: Prioridade
   ordem: number
 }
 
+/** Por coluna: Alta em cima; mesma prioridade, pela ordem manual. */
 export function agrupar(ts: Tarefa[]): Record<Status, Tarefa[]> {
   const g: Record<Status, Tarefa[]> = { a_fazer: [], fazendo: [], feito: [] }
-  for (const x of [...ts].sort((a, b) => a.ordem - b.ordem)) g[x.status].push(x)
+  const ord = [...ts].sort((a, b) => peso(a.prioridade) - peso(b.prioridade) || a.ordem - b.ordem)
+  for (const x of ord) g[x.status].push(x)
   return g
+}
+
+/**
+ * Ordem ao soltar `movida` antes de `antesDeId` numa coluna já agrupada.
+ * Não pula de prioridade: alvo de prioridade mais alta = 1º do grupo; mais baixa ou vazio = fim.
+ */
+export function ordemNoGrupo(coluna: Tarefa[], antesDeId: string | null, movida: Pick<Tarefa, 'id' | 'prioridade'>): number {
+  const grupo = coluna.filter((x) => x.prioridade === movida.prioridade)
+  const alvo = coluna.find((x) => x.id === antesDeId)
+  let antes: string | null = null
+  if (alvo?.prioridade === movida.prioridade) antes = alvo.id
+  else if (alvo && peso(alvo.prioridade) < peso(movida.prioridade)) antes = grupo.find((x) => x.id !== movida.id)?.id ?? null
+  return ordemAoSoltar(grupo, antes, movida.id)
 }
 
 /** Ordem para a tarefa solta antes de `antesDeId` (ou no fim, se null). Uma linha só muda. */
