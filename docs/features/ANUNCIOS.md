@@ -16,6 +16,7 @@ Parte 2 do módulo (spec: `docs/superpowers/specs/2026-11-16-anuncios-design.md`
 | `/anuncios/novo` | `NovoAnuncio` | Passo a passo: perfume, o que anunciar, ficha, preço, fotos, título e descrição, publicar (`novo/*`) |
 | `/anuncios/:id` | `NovoAnuncio` | Reabre um rascunho ou anúncio com erro |
 | `/anuncios/controle` | `ControleAnuncios` | Grade perfume × variante (frasco e decants) por plataforma (Mercado Livre / Shopify): verde = criado (automático, vindo de `anuncios`/`canal_vinculos`, ou marca manual em `anuncio_marcas`), vermelha = falta criar, cinza = sem estoque; clicar marca/desmarca, "Marcar todas" grava as vermelhas; filtro por situação e busca |
+| `/anuncios/fotos` | `FotosAnuncios` | Escolhe o perfume e gerencia as fotos dele (`FotosPerfume`: subir, ordenar, apagar, alternar frasco/decant) e baixa uma ou todas (`<perfume>-01.jpg`). Apagar a foto tira só a linha de `produto_fotos`; o arquivo fica no bucket (pré-existente) |
 | `/anuncios/ligar` | `LigarAnuncios` | Liga anúncios que já existem no ML a um perfume do Horus |
 | `/anuncios/config` | `AnunciosConfig` | Conectar/desconectar o ML, margem padrão, IA, tamanhos de decant |
 

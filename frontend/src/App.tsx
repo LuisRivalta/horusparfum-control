@@ -27,6 +27,7 @@ import { PedidosLayout } from '@/pages/estoque/PedidosLayout'
 import { AnunciosConfig } from '@/pages/anuncios/AnunciosConfig'
 import { AnunciosLista } from '@/pages/anuncios/AnunciosLista'
 import { ControleAnuncios } from '@/pages/anuncios/ControleAnuncios'
+import { FotosAnuncios } from '@/pages/anuncios/Fotos'
 import { LigarAnuncios } from '@/pages/anuncios/LigarAnuncios'
 import { LigarShopify } from '@/pages/anuncios/LigarShopify'
 import { PublicarShopify } from '@/pages/anuncios/PublicarShopify'
@@ -74,6 +75,7 @@ export function App() {
         <Route path="/anuncios/shopify/novo" element={<PublicarShopify />} />
         <Route path="/anuncios/config" element={<AnunciosConfig />} />
         <Route path="/anuncios/controle" element={<ControleAnuncios />} />
+        <Route path="/anuncios/fotos" element={<FotosAnuncios />} />
         <Route path="/anuncios/:id" element={<NovoAnuncio />} />
       </Route>
     </Routes>

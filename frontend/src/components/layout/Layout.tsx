@@ -21,6 +21,7 @@ const FIN_NAV = [
 const ANU_NAV = [
   { id: 'anuncios', label: 'Anúncios', icon: 'tag', path: '/anuncios' },
   { id: 'controle', label: 'Controle', icon: 'check', path: '/anuncios/controle' },
+  { id: 'fotos', label: 'Fotos', icon: 'box', path: '/anuncios/fotos' },
   { id: 'novo', label: 'Novo anúncio', icon: 'plus', path: '/anuncios/novo' },
   { id: 'ligar', label: 'Ligar anúncios', icon: 'swap', path: '/anuncios/ligar' },
   { id: 'publicar-shopify', label: 'Publicar na Shopify', icon: 'plus', path: '/anuncios/shopify/novo' },

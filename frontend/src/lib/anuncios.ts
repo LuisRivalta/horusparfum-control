@@ -72,6 +72,14 @@ export function fotosDoAnuncio(fotos: Foto[], a: AlvoAnuncio): string[] {
   return [...por('frasco').slice(0, MAX_FOTOS - Math.min(decant.length, 2)), ...decant].slice(0, MAX_FOTOS)
 }
 
+/** Nome do arquivo ao baixar a foto: `asad-bourbon-01.jpg`. */
+export function nomeArquivoFoto(nome: string, indice: number, url: string): string {
+  const base = nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'foto'
+  const ext = /\.([a-z0-9]{2,5})$/i.exec(new URL(url, 'http://x').pathname)?.[1]?.toLowerCase() ?? 'jpg'
+  return `${base}-${String(indice + 1).padStart(2, '0')}.${ext}`
+}
+
 export function quantidadeDisponivel(
   p: { estoqueAtual: number; volumeMl: number | null }, mlAberto: number, a: AlvoAnuncio,
 ): number {

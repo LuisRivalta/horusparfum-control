@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { fotosDoAnuncio, type Foto } from '@/lib/anuncios'
+import { fotosDoAnuncio, nomeArquivoFoto, type Foto } from '@/lib/anuncios'
 import { ImageCropper } from '@/components/shared/ImageCropper'
 import { Button } from '@/components/shared/FormControls'
 import { Icon } from '@/components/shared/Icon'
@@ -23,7 +23,18 @@ function medir(file: File): Promise<{ w: number; h: number } | null> {
   })
 }
 
-export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onChange?: (fotos: Foto[]) => void }) {
+async function baixar(url: string, arquivo: string) {
+  const r = await fetch(url)
+  if (!r.ok) throw new Error(String(r.status))
+  const href = URL.createObjectURL(await r.blob())
+  const a = document.createElement('a')
+  a.href = href
+  a.download = arquivo
+  a.click()
+  URL.revokeObjectURL(href)
+}
+
+export function FotosPerfume({ produtoId, nome = 'foto', onChange }: { produtoId: string; nome?: string; onChange?: (fotos: Foto[]) => void }) {
   const [fotos, setFotos] = useState<Foto[]>([])
   const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [aviso, setAviso] = useState('')
@@ -87,6 +98,13 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
     aplicar(fotos.filter((x) => x.id !== f.id))
   })
 
+  // Na ordem da tela; uma falha para o resto e avisa.
+  async function baixarFotos(lista: { f: Foto; i: number }[]) {
+    setErro('')
+    try { for (const { f, i } of lista) await baixar(f.url, nomeArquivoFoto(nome, i, f.url)) }
+    catch { setErro('Não foi possível baixar a foto.') }
+  }
+
   function escolher(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
@@ -119,9 +137,16 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
     <div className="gold-hairline bg-surface border border-line rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-text">Fotos do perfume</h3>
-        <Button size="sm" variant="secondary" type="button" disabled={ocupado} onClick={() => inputRef.current?.click()}>
-          <Icon name="plus" size={14} /> Subir foto
-        </Button>
+        <div className="flex gap-2">
+          {fotos.length > 0 && (
+            <Button size="sm" variant="ghost" type="button" onClick={() => baixarFotos(fotos.map((f, i) => ({ f, i })))}>
+              <Icon name="download" size={14} /> Baixar todas
+            </Button>
+          )}
+          <Button size="sm" variant="secondary" type="button" disabled={ocupado} onClick={() => inputRef.current?.click()}>
+            <Icon name="plus" size={14} /> Subir foto
+          </Button>
+        </div>
         <input ref={inputRef} type="file" accept="image/*" hidden aria-label="Arquivo da foto" onChange={escolher} />
       </div>
 
@@ -155,6 +180,9 @@ export function FotosPerfume({ produtoId, onChange }: { produtoId: string; onCha
                 </Button>
                 <Button type="button" variant="ghost" size="sm" disabled={ocupado || i === fotos.length - 1} aria-label={`Mover foto ${i + 1} para a direita`} onClick={() => mover(i, i + 1)}>
                   <Icon name="chevron" size={14} />
+                </Button>
+                <Button type="button" variant="ghost" size="sm" aria-label={`Baixar foto ${i + 1}`} onClick={() => baixarFotos([{ f, i }])}>
+                  <Icon name="download" size={14} />
                 </Button>
                 <Button type="button" variant="ghost" size="sm" disabled={ocupado} aria-label={`Excluir foto ${i + 1}`} onClick={() => excluir(f)}>
                   <Icon name="trash" size={14} />

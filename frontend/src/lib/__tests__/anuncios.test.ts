@@ -85,3 +85,13 @@ describe('anuncios', () => {
     expect(bloqueia(pendencias({ ...ok, ficha: {} }))).toBe(true)
   })
 })
+
+import { nomeArquivoFoto } from '@/lib/anuncios'
+
+describe('nomeArquivoFoto', () => {
+  it('monta nome seguro com número de 2 dígitos e a extensão da URL', () => {
+    expect(nomeArquivoFoto('Asad Bourbon', 0, 'https://x/a.png')).toBe('asad-bourbon-01.png')
+    expect(nomeArquivoFoto('Árabe / Ñ', 9, 'https://x/b')).toBe('arabe-n-10.jpg')
+    expect(nomeArquivoFoto('X', 0, 'https://x/c.webp?t=1')).toBe('x-01.webp')
+  })
+})

@@ -96,3 +96,30 @@ describe('FotosPerfume', () => {
     await waitFor(() => expect(excluir().disabled).toBe(false))
   })
 })
+
+describe('FotosPerfume — baixar', () => {
+  it('baixar foto busca a imagem e salva com o nome do perfume', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['x'])) })
+    vi.stubGlobal('fetch', fetchMock)
+    URL.createObjectURL = vi.fn(() => 'blob:1')
+    URL.revokeObjectURL = vi.fn()
+    const nomes: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { nomes.push(this.download) })
+    render(<FotosPerfume produtoId="p" nome="Asad" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Baixar foto 1' }))
+    await waitFor(() => expect(nomes).toEqual(['asad-01.jpg']))
+    expect(fetchMock).toHaveBeenCalledWith('u1')
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar todas' }))
+    await waitFor(() => expect(nomes).toEqual(['asad-01.jpg', 'asad-01.jpg', 'asad-02.jpg', 'asad-03.jpg']))
+    click.mockRestore()
+    vi.unstubAllGlobals()
+  })
+
+  it('falha ao baixar mostra o erro', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('rede')))
+    render(<FotosPerfume produtoId="p" nome="Asad" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Baixar foto 1' }))
+    expect(await screen.findByText('Não foi possível baixar a foto.')).toBeTruthy()
+    vi.unstubAllGlobals()
+  })
+})
