@@ -70,20 +70,48 @@ Calculada em `services/canais/estoque.py` e enviada com `inventorySetQuantities`
 
 ## Checklist de ativação
 
-> Estado em 24/11/2026: código **publicado** (push da `main`, deploy na Vercel); passo 1 **feito** (migrations e checks rodados); app da Shopify **não criado**, variáveis não cadastradas (passos 2 em diante).
+> **Estado em 25/11/2026: esperando o sócio mandar o Client ID e o Client Secret do app.**
+>
+> | Passo | Estado |
+> |---|---|
+> | 1. Migrations e checks | ✅ 24/11 |
+> | 2. App no Dev Dashboard | ✅ criado pelo sócio (App URL = `https://horusparfum-control.vercel.app`); credenciais ainda não chegaram ao Luis |
+> | 3. Variáveis na Vercel | ⏳ só `HORUS_SYNC_SECRET` cadastrada; faltam `SHOPIFY_LOJA`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` e o **Redeploy** |
+> | 4. `canais_sync_config` | ✅ 25/11 (segredo gerado no próprio SQL Editor) |
+> | 5. Taxa do canal Shopify | ✅ 25/11 |
+> | 6. Conectar, Ligar, Sincronizar | ⏳ depende do passo 3 |
+> | 7. Teste de ponta a ponta | ⏳ depende do passo 6 |
+>
+> Deploy conferido em 24/11: site 200; `GET /api/shopify/conexao` sem login → 401 (rota nova no ar). Até o Redeploy com o `HORUS_SYNC_SECRET`, o `/api/canais/sync` responde 401 ao gatilho do banco; não estraga nada (a fila só acumula e drena depois; sem vínculos, nem enfileira).
 
 1. Aplicar no SQL Editor (projeto `wyobbztexoofhqdttxzq`) as migrations `20261118100000` e `20261118110000` e rodar os checks de `supabase/checks/`.
-2. **Dev Dashboard** da Shopify (na mesma organização da loja; senão o erro é `shop_not_permitted`): criar o app, dar os escopos `read_products, write_products, read_inventory, write_inventory, read_locations, read_orders` e instalar na loja.
-3. Vercel `horusparfum-control-api` → variáveis `SHOPIFY_LOJA` (domínio `*.myshopify.com`), `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` e `HORUS_SYNC_SECRET` (texto aleatório) → **Redeploy**.
-4. SQL Editor (o Luis digita o segredo lá, nunca no chat):
+2. **Dev Dashboard** da Shopify (`dev.shopify.com/dashboard`, na mesma organização da loja; senão o erro é `shop_not_permitted`): criar o app, App URL `https://horusparfum-control.vercel.app` (redirect pode ficar vazio: o Horus usa `client_credentials`), dar os escopos `read_products, write_products, read_inventory, write_inventory, read_locations, read_orders`, lançar a versão (Release) e instalar na loja. Credenciais: app › **Settings** › **Credentials** (Client ID e Client secret).
+3. Vercel `horusparfum-control-api` → Settings › Environment Variables: `SHOPIFY_LOJA` (domínio `*.myshopify.com`, não o domínio próprio), `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` e `HORUS_SYNC_SECRET` → Deployments › **Redeploy**. Sem as 3 da Shopify, Conectar responde 503 "Shopify não configurada".
+4. SQL Editor (o segredo nasce no banco, nunca passa pelo chat; depois copie o `select` para a variável `HORUS_SYNC_SECRET` da Vercel):
    ```sql
-   insert into canais_sync_config (id, url, segredo) values (1, 'https://horusparfum-control-api.vercel.app/api/canais/sync', '<mesmo HORUS_SYNC_SECRET>') on conflict (id) do update set url = excluded.url, segredo = excluded.segredo;
+   insert into canais_sync_config (id, url, segredo)
+   values (1, 'https://horusparfum-control-api.vercel.app/api/canais/sync',
+           encode(extensions.gen_random_bytes(32), 'hex'))
+   on conflict (id) do update set url = excluded.url, segredo = excluded.segredo;
+   select segredo from canais_sync_config where id = 1;
    ```
+   Rodar de novo **troca** o segredo: aí é preciso atualizar a Vercel e fazer Redeploy.
 5. Vendas › Configuração: definir a taxa padrão do canal Shopify.
 6. Anúncios › Configuração › **Conectar Shopify**; depois **Ligar produtos** (ligar as variantes) e **Sincronizar tudo**.
 7. Teste: compra real ou de teste na loja → aparece em A confirmar em menos de 1 minuto e a quantidade cai na loja; confirmar; cancelar um pedido de teste antes de confirmar e ver a quantidade voltar.
 
 O push da `main` publica backend e frontend sozinho (Vercel).
+
+### Se der erro na ativação
+
+| Sintoma | Causa provável |
+|---|---|
+| Conectar → 503 "Shopify não configurada" | falta variável `SHOPIFY_*` na Vercel ou faltou o Redeploy |
+| Conectar → 502 "token recusado (HTTP 4xx)" | Client ID/secret errados ou com espaço; app de outra organização do Dev Dashboard (`shop_not_permitted`); app não instalado na loja; `SHOPIFY_LOJA` com o domínio próprio em vez do `*.myshopify.com`. O corpo da resposta da Shopify não é mostrado: para ver o motivo exato, logs da função na Vercel |
+| Conectar → 502 falando de acesso/escopo ou "loja sem localização" | versão do app sem os 6 escopos (`read_locations`) ou não lançada |
+| Telas da Shopify → 409 "Shopify não conectada" | ainda não clicou em Conectar |
+| Pedido não chega em A confirmar | webhook não registrado (o Conectar registra os webhooks; clicar de novo é seguro, não muda o corte) ou HMAC falhando: o `SHOPIFY_CLIENT_SECRET` precisa ser o do mesmo app; abrir a tela "conferir" relê 7 dias |
+| Quantidade não muda na loja | `HORUS_SYNC_SECRET` da Vercel ≠ `canais_sync_config.segredo` (o sync responde 401), ou falta Redeploy; "Sincronizar tudo" força o envio |
 
 ## Limites conhecidos e a conferir
 

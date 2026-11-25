@@ -1,3 +1,16 @@
+## 2026-11-25 - Sessão 72: ativação da Shopify (parcial)
+
+**Responsável:** Claude + Luis
+
+### O que foi feito
+- Deploy conferido: site 200, `GET /api/shopify/conexao` sem login → 401 (rota nova no ar).
+- App criado no Dev Dashboard da Shopify pelo sócio (App URL `https://horusparfum-control.vercel.app`).
+- `canais_sync_config` gravada pelo Luis com o segredo gerado no próprio SQL Editor (`encode(extensions.gen_random_bytes(32),'hex')`), copiado para `HORUS_SYNC_SECRET` na Vercel. Taxa do canal Shopify definida.
+- Docs: `features/SHOPIFY.md` ganhou a tabela de estado, onde achar as credenciais, o SQL novo do passo 4 e "Se der erro na ativação"; HANDOFF atualizado; prompt de retomada em `docs/PROMPT_CONTINUAR_SHOPIFY.txt`.
+
+### Pendente
+- Sócio mandar Client ID/secret → Luis cadastra `SHOPIFY_LOJA`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` na Vercel e faz Redeploy → Conectar, Ligar produtos, Sincronizar tudo → teste com compra e cancelamento.
+
 ## 2026-11-24 - Sessão 71: Shopify e núcleo de vendas dos canais
 
 **Responsável:** Claude + Luis

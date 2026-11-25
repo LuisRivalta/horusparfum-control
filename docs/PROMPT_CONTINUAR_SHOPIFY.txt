@@ -1,0 +1,26 @@
+Vamos continuar a ativação da Shopify no Horus.
+
+Antes de tudo, leia:
+- docs/HANDOFF_IA.md (seção "Decisões pendentes", item "Ativação da Shopify em 25/11/2026")
+- docs/features/SHOPIFY.md ("Checklist de ativação", com a tabela de estado, e "Se der erro na ativação")
+
+Onde paramos (25/11/2026):
+- Código publicado na main (Vercel), migrations e checks aplicados.
+- App criado no Dev Dashboard da Shopify (App URL https://horusparfum-control.vercel.app).
+- canais_sync_config gravada e HORUS_SYNC_SECRET já está na Vercel.
+- Taxa do canal Shopify definida em Vendas > Configuração.
+- Estávamos esperando o sócio mandar o Client ID e o Client Secret.
+
+O que eu fiz desde então (ajuste antes de enviar):
+- [ ] Cadastrei SHOPIFY_LOJA, SHOPIFY_CLIENT_ID e SHOPIFY_CLIENT_SECRET na Vercel (projeto horusparfum-control-api)
+- [ ] Fiz o Redeploy
+- [ ] Cliquei em Conectar Shopify (Anúncios > Configuração). Resultado:
+
+Me guie no próximo passo (Conectar, Ligar produtos, Sincronizar tudo e o teste com compra e cancelamento). Se aparecer erro, use a tabela "Se der erro na ativação" para achar a causa.
+
+Lembretes:
+- Não use o MCP do Supabase: ele aponta para outro projeto. O SQL eu rodo à mão.
+- Nunca me peça para colar no chat o Client Secret, o token nem o HORUS_SYNC_SECRET.
+- Antes de ativar, confirme se a API_VERSAO '2026-10' (backend/app/services/shopify/cliente.py) continua estável.
+- Pode fazer commit na main, mas push só quando eu pedir, e nunca com a linha Co-Authored-By.
+- Ao terminar, atualize HANDOFF_IA.md e LOGS.md.
